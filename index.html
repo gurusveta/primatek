@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Приматек — Учет производства</title>
+
+  <!-- PWA настройки для телефона -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0072ce">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PRIMATEK">
+  <link rel="apple-touch-icon" href="icon-512.png">
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(() => console.log('PRIMATEK PWA: Service Worker готов'))
+          .catch((err) => console.log('SW error:', err));
+      });
+    }
+  </script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #080d1a; color: #f8fafc; padding: 12px; touch-action: manipulation; }
+    .container { max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; padding-bottom: 50px; }
+
+    .card { background-color: #131c31; border-radius: 14px; padding: 14px; border: 1px solid #233152; box-shadow: 0 4px 14px rgba(0,0,0,0.3); }
+    .label-title { font-size: 11px; font-weight: 700; color: #8fa0c2; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Шапка с фирменным лого PRIMATEK */
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0072ce; padding-bottom: 12px; }
+    .badge-shift { font-size: 11px; font-weight: 800; padding: 5px 9px; border-radius: 7px; background: #1a2744; color: #38bdf8; border: 1px solid #2c4270; }
+
+    /* Сетка линий */
+    .grid-lines { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .btn-line { background: #1c2742; border: 2px solid #2d3e66; color: #cbd5e1; font-size: 18px; font-weight: 800; padding: 12px 0; border-radius: 10px; cursor: pointer; transition: 0.1s; }
+    .btn-line.active { background: #0072ce; border-color: #38bdf8; color: #fff; transform: scale(0.97); }
+
+    /* Поля ввода */
+    input { width: 100%; background: #080d1a; border: 1px solid #29385c; border-radius: 9px; padding: 10px 12px; color: #fff; font-size: 15px; outline: none; }
+    input:focus { border-color: #0072ce; }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    /* Поле RAL */
+    .ral-group { display: flex; background: #080d1a; border: 1px solid #29385c; border-radius: 9px; overflow: hidden; }
+    .ral-prefix { background: #1c2742; color: #38bdf8; font-weight: 900; font-size: 13px; padding: 10px 12px; border-right: 1px solid #29385c; display: flex; align-items: center; }
+    .ral-group input { border: none; border-radius: 0; }
+
+    /* Статусы */
+    .grid-status { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btn-status { font-size: 12px; font-weight: 800; padding: 12px 6px; border-radius: 9px; border: none; cursor: pointer; background: #1c2742; color: #8fa0c2; }
+    .btn-status.active-work { background: #10b981; color: #fff; }
+    .btn-status.active-clean { background: #f59e0b; color: #000; }
+    .btn-status.active-sample { background: #0284c7; color: #fff; }
+    .btn-status.active-repair { background: #ef4444; color: #fff; }
+
+    /* Вкладки */
+    .tabs { display: flex; background: #080d1a; padding: 3px; border-radius: 9px; gap: 4px; margin-bottom: 12px; }
+    .tab { flex: 1; padding: 9px 0; font-size: 12px; font-weight: 700; border: none; background: transparent; color: #8fa0c2; border-radius: 7px; cursor: pointer; }
+    .tab.active { background: #0072ce; color: #fff; }
+
+    /* Кнопки */
+    .btn-action { background: #10b981; color: #fff; border: none; border-radius: 9px; padding: 11px 16px; font-size: 14px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+    .btn-action:active { transform: scale(0.97); }
+    .btn-secondary { background: #1c2742; color: #fca5a5; border: 1px solid #ef4444; border-radius: 9px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; width: 100%; }
+
+    .history-list { font-size: 11px; margin-top: 8px; color: #94a3b8; display: flex; flex-wrap: wrap; gap: 5px; max-height: 80px; overflow-y: auto; }
+    .tag-chip { background: #080d1a; border: 1px solid #233152; padding: 3px 7px; border-radius: 5px; color: #cbd5e1; }
+
+    /* Кнопка сдачи смены */
+    .btn-submit { background: linear-gradient(135deg, #0072ce, #0284c7); color: #fff; border: none; border-radius: 13px; padding: 16px; font-size: 16px; font-weight: 900; cursor: pointer; width: 100%; box-shadow: 0 4px 15px rgba(0, 114, 206, 0.4); }
+
+    /* Модалка сводки */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(5,9,20,0.88); z-index: 99; justify-content: center; align-items: center; padding: 16px; backdrop-filter: blur(2px); }
+    .modal { background: #131c31; border-radius: 16px; padding: 20px; width: 100%; max-width: 400px; border: 1px solid #2d3e66; }
+    .modal-line { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #1c2742; font-size: 13px; }
+    .modal-val { font-weight: 800; color: #fff; }
+
+    /* Блок приема смены */
+    .handover-card { background: #162238; border: 1px solid #2d4470; border-radius: 12px; padding: 14px; margin-top: 10px; display: none; }
+    .handover-card.warning { border-color: #ef4444; background: #1f1418; }
+    .handover-title { font-size: 13px; font-weight: 800; color: #38bdf8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .handover-info { font-size: 13px; line-height: 1.6; color: #cbd5e1; margin-bottom: 12px; }
+    .handover-info b { color: #fff; }
+    .handover-actions { display: flex; flex-direction: column; gap: 8px; }
+    .btn-handover-accept { background: #10b981; color: #fff; border: none; border-radius: 9px; padding: 13px; font-size: 14px; font-weight: 800; cursor: pointer; }
+    .btn-handover-accept:active { transform: scale(0.98); }
+    .btn-handover-other { background: #1c2742; color: #cbd5e1; border: 1px solid #2d3e66; border-radius: 9px; padding: 11px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Шапка: Логотип PRIMATEK -->
+  <div class="card header">
+    <div>
+      <svg width="195" height="42" viewBox="0 0 230 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="6" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.5"/>
+        <circle cx="16" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.8"/>
+        <circle cx="26" cy="11" r="3.2" fill="#0072ce"/>
+        
+        <circle cx="6" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.6"/>
+        <circle cx="16" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.9"/>
+        <circle cx="26" cy="22" r="3.2" fill="#0072ce"/>
+        
+        <circle cx="6" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.4"/>
+        <circle cx="16" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.7"/>
+        <circle cx="26" cy="33" r="3.2" fill="#0072ce"/>
+        
+        <text x="36" y="34" font-family="'Arial Black', 'Impact', sans-serif" font-weight="900" font-size="31" fill="#0072ce" letter-spacing="1">PRIMATEK</text>
+        <text x="38" y="47" font-family="Arial, sans-serif" font-weight="600" font-size="8" fill="#94a3b8" letter-spacing="0.8">ИННОВАЦИИ В ПОКРЫТИЯХ</text>
+      </svg>
+    </div>
+    <div style="text-align: right;">
+      <div id="shiftBadge" class="badge-shift">СМЕНА: ДЕНЬ</div>
+      <div id="clock" style="font-size: 12px; color: #8fa0c2; margin-top: 3px; font-family: monospace;">08:00</div>
+    </div>
+  </div>
+
+  <!-- 1. Номер линии -->
+  <div class="card">
+    <div class="label-title">1. Номер линии</div>
+    <div class="grid-lines" id="lineButtons"></div>
+
+    <!-- Блок приема смены -->
+    <div id="handoverCard" class="handover-card">
+      <div id="handoverTitle" class="handover-title">ПРИЕМ СМЕНЫ</div>
+      <div id="handoverInfo" class="handover-info">Загрузка данных прошлой смены...</div>
+      <div id="handoverActions" class="handover-actions">
+        <button id="btnHandoverContinue" class="btn-handover-accept" onclick="acceptHandover()">ПРИНЯТЬ СМЕНУ</button>
+      </div>
+    </div>
+
+    <div style="margin-top: 10px;">
+      <div class="label-title">ФИО Оператора</div>
+      <input type="text" id="operatorName" placeholder="Иванов И.И.">
+    </div>
+  </div>
+
+  <!-- 2. Партия и RAL -->
+  <div class="card">
+    <div class="row-2">
+      <div>
+        <div class="label-title">№ Партии</div>
+        <input type="text" id="batchNumber" placeholder="24-0419">
+      </div>
+      <div>
+        <div class="label-title">Цвет</div>
+        <div class="ral-group">
+          <div class="ral-prefix">RAL</div>
+          <input type="text" id="ralColor" placeholder="9005 Муар">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Состояние линии -->
+  <div class="card">
+    <div class="label-title">Состояние линии</div>
+    <div class="grid-status">
+      <button class="btn-status active-work" onclick="setStatus('В РАБОТЕ', this)">🟢 В РАБОТЕ</button>
+      <button class="btn-status" onclick="setStatus('ЧИСТКА', this)">🟡 ЧИСТКА</button>
+      <button class="btn-status" onclick="setStatus('ПРОБЫ', this)">🔵 ПРОБЫ</button>
+      <button class="btn-status" onclick="setStatus('РЕМОНТ', this)">🔴 РЕМОНТ</button>
+    </div>
+  </div>
+
+<!-- 4. Выпуск продукции -->
+  <div class="card">
+    <div class="label-title">
+      <span>Общий выпуск</span>
+      <span style="color: #38bdf8; font-size: 13px;" id="totalKgHeader">0 кг</span>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('boxes', this)">Коробки</button>
+      <button class="tab" onclick="switchTab('bags', this)">Мешки</button>
+    </div>
+
+    <!-- Коробки -->
+    <div id="tab-boxes">
+      <div class="row-2" style="margin-bottom: 8px;">
+        <div>
+          <div style="font-size: 11px; color: #8fa0c2; margin-bottom: 4px;">С коробки №</div>
+          <input type="number" id="boxStart" placeholder="1" oninput="calcBoxes()">
+        </div>
+        <div>
+          <div style="font-size: 11px; color: #8fa0c2; margin-bottom: 4px;">По коробку №</div>
+          <input type="number" id="boxEnd" placeholder="70" oninput="calcBoxes()">
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #8fa0c2; text-align: right;">
+        Изготовлено: <b id="boxesCountText" style="color:#fff;">0 шт</b> (<b id="boxesKgText" style="color:#38bdf8;">0 кг</b>)
+      </div>
+    </div>
+
+    <!-- Мешки -->
+    <div id="tab-bags" style="display: none;">
+      <div class="row-2" style="margin-bottom: 8px;">
+        <div>
+          <div style="font-size: 11px; color: #8fa0c2; margin-bottom: 4px;">С мешка №</div>
+          <input type="number" id="bagStart" placeholder="1" oninput="calcBags()">
+        </div>
+        <div>
+          <div style="font-size: 11px; color: #8fa0c2; margin-bottom: 4px;">По мешок №</div>
+          <input type="number" id="bagEnd" placeholder="15" oninput="calcBags()">
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #8fa0c2; text-align: right;">
+        Изготовлено: <b id="bagsCountText" style="color:#fff;">0 шт</b> (<b id="bagsKgText" style="color:#38bdf8;">0 кг</b>)
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Чипсы -->
+  <div class="card">
+    <div class="label-title">
+      <span>Чипсы</span>
+      <span style="color: #38bdf8; font-size: 13px;" id="chipsTotalHeader">Всего: 0 кг</span>
+    </div>
+    <div class="tabs" style="margin-bottom: 8px;">
+      <button class="tab active" onclick="setChipType('Обычные', this)">Обычные</button>
+      <button class="tab" onclick="setChipType('I п-ф', this)">I п-ф</button>
+      <button class="tab" onclick="setChipType('II п-ф', this)">II п-ф</button>
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <input type="number" id="chipWeightInput" placeholder="Вес чипсов (кг)">
+      <button class="btn-action" onclick="addChips()">Записать</button>
+    </div>
+    <div class="history-list" id="chipsList"></div>
+  </div>
+
+<!-- 6. Брак -->
+  <div class="card" style="border-color: #55222b;">
+    <div class="label-title" style="color: #f87171;">
+      <span>Брак</span>
+      <span id="defectHeader">0 кг (0 шт)</span>
+    </div>
+    <div class="row-2" style="margin-bottom: 8px;">
+      <input type="number" id="defectStart" placeholder="С коробки №">
+      <input type="number" id="defectEnd" placeholder="По коробку №">
+    </div>
+    <button class="btn-secondary" onclick="addDefect()">Отложить брак</button>
+    <div class="history-list" id="defectList"></div>
+  </div>
+
+  <!-- 7. Пыль -->
+  <div class="card">
+    <div class="label-title">
+      <span>Пыль</span>
+      <span style="color: #38bdf8;" id="dustTotalHeader">Всего: 0 кг</span>
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <input type="number" id="dustInput" placeholder="Вес мешка (кг)">
+      <button class="btn-action" style="background: #0284c7;" onclick="addDust()">+ Добавить</button>
+    </div>
+    <div class="history-list" id="dustHistory"></div>
+  </div>
+
+  <!-- 8. Кнопка сдачи смены -->
+  <button class="btn-submit" onclick="openSummary()">СДАТЬ СМЕНУ И ОТПРАВИТЬ</button>
+
+</div>
+
+<!-- Модалка сводки смены -->
+<div class="modal-overlay" id="summaryModal">
+  <div class="modal">
+    <h3 style="color: #38bdf8; margin-bottom: 12px; font-size: 17px; font-weight: 900;">Сводка за смену</h3>
+    <div class="modal-line"><span>Линия / Смена:</span><span class="modal-val" id="mLineShift">—</span></div>
+    <div class="modal-line"><span>Оператор:</span><span class="modal-val" id="mOperator">—</span></div>
+    <div class="modal-line"><span>Партия / RAL:</span><span class="modal-val" id="mBatchRal">—</span></div>
+    <div class="modal-line"><span>Общий выпуск:</span><span class="modal-val" id="mGood" style="color: #34d399;">0 кг</span></div>
+    <div class="modal-line"><span>Чипсы:</span><span class="modal-val" id="mChips" style="color: #38bdf8;">0 кг</span></div>
+    <div class="modal-line"><span>Брак:</span><span class="modal-val" id="mDefect" style="color: #f87171;">0 кг</span></div>
+    <div class="modal-line"><span>Пыль:</span><span class="modal-val" id="mDust">0 кг</span></div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 16px;">
+      <button id="btnSubmitDb" class="btn-action" style="background:#0072ce; padding: 13px;" onclick="submitData()">Подтвердить и записать в базу</button>
+      <button class="btn-secondary" style="color:#cbd5e1; border-color:#2c4270;" onclick="closeSummary()">Вернуться назад</button>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+  // Твои боевые ключи Supabase
+  const SUPABASE_BASE = "https://oqhrzruxubqthqyxmdcg.supabase.co/rest/v1";
+  const SUPABASE_KEY = "sb_publishable_m5YmzYjW1BpotrbaRpCdgA__kYvilf3";
+
+  const PRIMATEK_LINES = [1, 5, 6, 7, 8, 13, 14, 15];
+
+  let state = {
+    selectedLine: PRIMATEK_LINES[0],
+    packageType: 'box', // 'box' или 'bag'
+    status: 'В РАБОТЕ',
+    chipType: 'Обычные',
+    chips: [],
+    defects: [],
+    dust: []
+  };
+
+  let lastShiftData = null; // Данные последней смены с этой линии
+
+  const lineBox = document.getElementById('lineButtons');
+  PRIMATEK_LINES.forEach(num => {
+    const btn = document.createElement('button');
+    btn.className = `btn-line ${num === state.selectedLine ? 'active' : ''}`;
+    btn.innerText = '№' + num;
+    btn.onclick = () => {
+      document.querySelectorAll('.btn-line').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.selectedLine = num;
+      checkLineHandover(num);
+    };
+    lineBox.appendChild(btn);
+  });
+
+  function updateTime() {
+    const now = new Date();
+    document.getElementById('clock').innerText = now.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
+    const h = now.getHours();
+    const isDay = (h >= 8 && h < 20);
+    document.getElementById('shiftBadge').innerText = 'СМЕНА: ' + (isDay ? 'ДЕНЬ' : 'НОЧЬ');
+  }
+  updateTime();
+  setInterval(updateTime, 1000);
+
+  function setStatus(name, btn) {
+    document.querySelectorAll('.btn-status').forEach(b => b.className = 'btn-status');
+    state.status = name;
+    if (name === 'В РАБОТЕ') btn.classList.add('active-work');
+    if (name === 'ЧИСТКА') btn.classList.add('active-clean');
+    if (name === 'ПРОБЫ') btn.classList.add('active-sample');
+    if (name === 'РЕМОНТ') btn.classList.add('active-repair');
+  }
+
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    state.packageType = (tab === 'boxes') ? 'box' : 'bag';
+    document.getElementById('tab-boxes').style.display = tab === 'boxes' ? 'block' : 'none';
+    document.getElementById('tab-bags').style.display = tab === 'bags' ? 'block' : 'none';
+  }
+
+  function getBoxesCount() {
+    const s = parseInt(document.getElementById('boxStart').value);
+    const e = parseInt(document.getElementById('boxEnd').value);
+    if (!isNaN(s) && !isNaN(e) && e >= s) return (e - s + 1);
+    return 0;
+  }
+
+  function calcBoxes() {
+    const count = getBoxesCount();
+    document.getElementById('boxesCountText').innerText = count + ' шт';
+    document.getElementById('boxesKgText').innerText = (count * 20) + ' кг';
+    updateTotalHeader();
+  }
+
+  function getBagsCount() {
+    const s = parseInt(document.getElementById('bagStart').value);
+    const e = parseInt(document.getElementById('bagEnd').value);
+    if (!isNaN(s) && !isNaN(e) && e >= s) return (e - s + 1);
+    return 0;
+  }
+
+  function calcBags() {
+    const count = getBagsCount();
+    document.getElementById('bagsCountText').innerText = count + ' шт';
+    document.getElementById('bagsKgText').innerText = (count * 20) + ' кг';
+    updateTotalHeader();
+  }
+
+  function setChipType(type, btn) {
+    btn.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    state.chipType = type;
+  }
+
+  function addChips() {
+    const input = document.getElementById('chipWeightInput');
+    const weight = parseFloat(input.value);
+    if (weight && weight > 0) {
+      state.chips.push({ type: state.chipType, weight: weight });
+      input.value = '';
+      renderChips();
+      updateTotalHeader();
+    }
+  }
+
+  function renderChips() {
+    const sum = state.chips.reduce((s, c) => s + c.weight, 0);
+    document.getElementById('chipsTotalHeader').innerText = `Всего: ${sum.toFixed(1)} кг`;
+    const list = document.getElementById('chipsList');
+    list.innerHTML = state.chips.map(c => `<span class="tag-chip">${c.type}: <b>${c.weight} кг</b></span>`).join('');
+  }
+
+  function addDefect() {
+    const s = parseInt(document.getElementById('defectStart').value);
+    const e = parseInt(document.getElementById('defectEnd').value);
+    if (s && e && e >= s) {
+      const count = (e - s + 1);
+      state.defects.push({ from: s, to: e, count: count, kg: count * 20 });
+      document.getElementById('defectStart').value = '';
+      document.getElementById('defectEnd').value = '';
+      renderDefects();
+      updateTotalHeader();
+    } else {
+      alert('Укажите корректный диапазон коробок брака');
+    }
+  }
+
+  function renderDefects() {
+    const totalDefectKg = state.defects.reduce((s, d) => s + d.kg, 0);
+    const totalDefectPcs = state.defects.reduce((s, d) => s + d.count, 0);
+    document.getElementById('defectHeader').innerText = `${totalDefectKg} кг (${totalDefectPcs} шт)`;
+    const list = document.getElementById('defectList');
+    list.innerHTML = state.defects.map(d => `<span class="tag-chip" style="border-color:#ef4444; color:#fca5a5;">#${d.from}-#${d.to} (${d.count} шт = ${d.kg} кг)</span>`).join('');
+  }
+
+  function addDust() {
+    const input = document.getElementById('dustInput');
+    const val = parseFloat(input.value);
+    if (val && val > 0) {
+      state.dust.push(val);
+      input.value = '';
+      renderDust();
+    }
+  }
+
+  function renderDust() {
+    const sum = state.dust.reduce((s, d) => s + d, 0);
+    document.getElementById('dustTotalHeader').innerText = `Всего: ${sum.toFixed(1)} кг`;
+    const list = document.getElementById('dustHistory');
+    list.innerHTML = state.dust.map((d, i) => `<span class="tag-chip">#${i+1}: ${d} кг</span>`).join('');
+  }
+
+  function updateTotalHeader() {
+    const boxKg = getBoxesCount() * 20;
+    const bagKg = getBagsCount() * 20;
+    const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
+    const goodKg = Math.max(0, (boxKg + bagKg) - defectKg);
+    document.getElementById('totalKgHeader').innerText = goodKg + ' кг';
+  }
+
+  let finalPayload = {};
+
+  function openSummary() {
+    const boxCount = getBoxesCount();
+    const bagCount = getBagsCount();
+    const rawPaintKg = (boxCount * 20) + (bagCount * 20);
+
+    const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
+    const defectPcs = state.defects.reduce((s, d) => s + d.count, 0);
+
+    const goodPaintKg = Math.max(0, rawPaintKg - defectKg);
+    const chipsKg = state.chips.reduce((s, c) => s + c.weight, 0);
+    const dustKg = state.dust.reduce((s, d) => s + d, 0);
+
+    const shiftText = document.getElementById('shiftBadge').innerText.replace('СМЕНА: ', '');
+    const op = document.getElementById('operatorName').value.trim() || 'Не указан';
+    const batch = document.getElementById('batchNumber').value.trim() || '—';
+    const ral = document.getElementById('ralColor').value.trim();
+    const ralClean = ral ? ('RAL ' + ral) : '—';
+    const isBox = (state.packageType === 'box');
+    const uFrom = isBox ? (parseInt(document.getElementById('boxStart').value) || 0) : (parseInt(document.getElementById('bagStart').value) || 0);
+    const uTo = isBox ? (parseInt(document.getElementById('boxEnd').value) || 0) : (parseInt(document.getElementById('bagEnd').value) || 0);
+
+    document.getElementById('mLineShift').innerText = `Линия №${state.selectedLine} (${shiftText})`;
+    document.getElementById('mOperator').innerText = op;
+    document.getElementById('mBatchRal').innerText = `${batch} / ${ralClean}`;
+    document.getElementById('mGood').innerText = `${goodPaintKg} кг (${(goodPaintKg/20)} кор/меш)`;
+    document.getElementById('mChips').innerText = `${chipsKg} кг`;
+    document.getElementById('mDefect').innerText = `${defectKg} кг (${defectPcs} шт)`;
+    document.getElementById('mDust').innerText = `${dustKg.toFixed(1)} кг (${state.dust.length} меш.)`;
+
+    finalPayload = {
+      line_number: state.selectedLine,
+      shift_type: shiftText,
+      operator_name: op,
+      batch_number: batch,
+      ral_color: ralClean,
+      line_status: state.status,
+      good_boxes: boxCount,
+      good_bags: bagCount,
+      chips_kg: chipsKg,
+      chips_details: state.chips,
+      defect_boxes: defectPcs,
+      defect_kg: defectKg,
+      defect_details: state.defects,
+      dust_kg: dustKg,
+      dust_details: state.dust,
+      total_good_kg: goodPaintKg,
+      package_type: state.packageType,
+      unit_from: uFrom,
+      unit_to: uTo
+    };
+
+    document.getElementById('summaryModal').style.display = 'flex';
+  }
+
+  function closeSummary() {
+    document.getElementById('summaryModal').style.display = 'none';
+  }
+
+  async function submitData() {
+    const btn = document.getElementById('btnSubmitDb');
+    btn.innerText = "Сохраняем...";
+    btn.disabled = true;
+
+    try {
+      const response = await fetch(`${SUPABASE_BASE}/shift_reports`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(finalPayload)
+      });
+
+      if (response.ok) {
+        alert("✅ Смена успешно сохранена в базу данных Приматек!");
+        closeSummary();
+        // Перепроверяем линию после сдачи
+        checkLineHandover(state.selectedLine);
+      } else {
+        const err = await response.text();
+        alert("Ошибка от Supabase: " + err);
+      }
+    } catch (e) {
+      alert("Сетевая ошибка: " + e.message);
+    } finally {
+      btn.innerText = "Подтвердить и записать в базу";
+      btn.disabled = false;
+    }
+  }
+
+  // ===============================
+  // ЛОГИКА ПРИЕМА СМЕНЫ (HANDOVER)
+  // ===============================
+
+  async function checkLineHandover(lineNum) {
+    const card = document.getElementById('handoverCard');
+    const title = document.getElementById('handoverTitle');
+    const info = document.getElementById('handoverInfo');
+    const actions = document.getElementById('handoverActions');
+    const btnContinue = document.getElementById('btnHandoverContinue');
+
+    card.style.display = 'block';
+    card.classList.remove('warning');
+    title.innerText = `Линия №${lineNum}`;
+    info.innerText = `Запрос последней смены из базы данных...`;
+    actions.style.display = 'none';
+
+    try {
+      // Ищем последний отчет по выбранной линии
+      const response = await fetch(`${SUPABASE_BASE}/shift_reports?line_number=eq.${lineNum}&order=created_at.desc&limit=1`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Ошибка запроса');
+      const data = await response.json();
+
+      if (!data || data.length === 0) {
+        lastShiftData = null;
+        title.innerText = `Линия №${lineNum} — Начало работы`;
+        info.innerHTML = `В базе еще нет записей по этой линии.<br>Укажите вашу фамилию выше и нажмите кнопку ниже:`;
+        btnContinue.innerText = `ПРИНЯТЬ СМЕНУ (НАЧАТЬ РАБОТУ)`;
+        btnContinue.style.display = 'block';
+        actions.style.display = 'flex';
+        return;
+      }
+
+      const last = data[0];
+      lastShiftData = last;
+
+      // Если предыдущая смена сдана в статусе ЧИСТКА / ПРОБЫ / РЕМОНТ
+      if (last.line_status && last.line_status !== 'В РАБОТЕ') {
+        title.innerText = `Линия №${lineNum}: ${last.line_status}`;
+        info.innerHTML = `
+          Сдал: <b>${last.operator_name || 'Не указан'}</b> (${last.shift_type || '—'})<br>
+          Линия оставлена в статусе: <b>${last.line_status}</b><br>
+          <span style="color:#94a3b8; font-size:12px;">Укажите вашу фамилию выше и подтвердите прием смены:</span>
+        `;
+        btnContinue.innerText = `ПРИНЯТЬ СМЕНУ (${last.line_status})`;
+        btnContinue.style.display = 'block';
+        actions.style.display = 'flex';
+        return;
+      }
+
+      // Если предыдущая смена сдана «В РАБОТЕ»
+      const lastUnit = Number(last.unit_to || last.good_boxes || 0);
+      const nextUnit = lastUnit + 1;
+      const typeLabel = (last.package_type === 'bag') ? 'мешок' : 'коробка';
+
+      title.innerText = `Линия №${lineNum} — В РАБОТЕ`;
+      info.innerHTML = `
+        Сдал: <b>${last.operator_name || 'Не указан'}</b> (${last.shift_type || '—'})<br>
+        Партия: <b>${last.batch_number || '—'}</b> | Цвет: <b>${last.ral_color || '—'}</b><br>
+        Последняя ${typeLabel}: <b>№ ${lastUnit}</b><br>
+        <span style="color:#94a3b8; font-size:12px;">Укажите вашу фамилию выше и нажмите:</span>
+      `;
+      btnContinue.innerText = `ПРИНЯТЬ СМЕНУ И ПРОДОЛЖИТЬ (с №${nextUnit})`;
+      btnContinue.style.display = 'block';
+      actions.style.display = 'flex';
+
+    } catch (err) {
+      console.error(err);
+      title.innerText = `Линия №${lineNum} — Ошибка связи`;
+      info.innerText = `Не удалось связаться с базой данных. Проверьте интернет.`;
+      actions.style.display = 'flex';
+      btnContinue.style.display = 'none';
+    }
+  }
+
+  // Нажатие кнопки "ПРИНЯТЬ СМЕНУ"
+  function acceptHandover() {
+    const opInput = document.getElementById('operatorName');
+    const opName = opInput.value.trim();
+
+    // Проверяем заполнение фамилии
+    if (!opName) {
+      alert('⚠️ Пожалуйста, укажите вашу фамилию в поле выше перед тем, как принять смену!');
+      opInput.focus();
+      return;
+    }
+
+    const statusBtns = document.querySelectorAll('.grid-status .btn-status');
+
+    // СЛУЧАЙ 1: Нет предыдущих записей (новая линия)
+    if (!lastShiftData) {
+      document.getElementById('handoverCard').style.display = 'none';
+      alert(`Смена принята оператором ${opName}! Заполните партию или выберите статус линии.`);
+      return;
+    }
+
+    // СЛУЧАЙ 2: Предыдущий оператор сдал ЧИСТКУ / ПРОБЫ / РЕМОНТ
+    if (lastShiftData.line_status && lastShiftData.line_status !== 'В РАБОТЕ') {
+      const prevStatus = lastShiftData.line_status;
+      if (prevStatus === 'ЧИСТКА') setStatus('ЧИСТКА', statusBtns[1]);
+      else if (prevStatus === 'ПРОБЫ') setStatus('ПРОБЫ', statusBtns[2]);
+      else if (prevStatus === 'РЕМОНТ') setStatus('РЕМОНТ', statusBtns[3]);
+
+      // Очищаем номера коробок, так как линия не работает
+      document.getElementById('boxStart').value = '';
+      document.getElementById('boxEnd').value = '';
+      document.getElementById('bagStart').value = '';
+      document.getElementById('bagEnd').value = '';
+      calcBoxes();
+      calcBags();
+
+      document.getElementById('handoverCard').style.display = 'none';
+      alert(`Смена принята оператором ${opName}!\nЛиния принята в статусе: ${prevStatus}`);
+      return;
+    }
+
+    // СЛУЧАЙ 3: Предыдущая смена сдана «В РАБОТЕ»
+    if (lastShiftData.batch_number && lastShiftData.batch_number !== '—') {
+      document.getElementById('batchNumber').value = lastShiftData.batch_number;
+    }
+
+    if (lastShiftData.ral_color && lastShiftData.ral_color !== '—') {
+      const cleanRal = lastShiftData.ral_color.replace(/^RAL\s*/i, '');
+      document.getElementById('ralColor').value = cleanRal;
+    }
+
+    const isBag = (lastShiftData.package_type === 'bag');
+    const tabs = document.querySelectorAll('.tabs .tab');
+    const lastUnit = Number(lastShiftData.unit_to || (isBag ? lastShiftData.good_bags : lastShiftData.good_boxes) || 0);
+    const nextUnit = lastUnit + 1;
+
+    if (isBag) {
+      switchTab('bags', tabs[1]);
+      document.getElementById('bagStart').value = nextUnit;
+      document.getElementById('bagEnd').value = '';
+      calcBags();
+    } else {
+      switchTab('boxes', tabs[0]);
+      document.getElementById('boxStart').value = nextUnit;
+      document.getElementById('boxEnd').value = '';
+      calcBoxes();
+    }
+
+    setStatus('В РАБОТЕ', statusBtns[0]);
+    document.getElementById('handoverCard').style.display = 'none';
+    alert(`Смена принята оператором ${opName}!\nПродолжаем: Партия ${lastShiftData.batch_number || '—'}, ${isBag ? 'мешок' : 'коробка'} с №${nextUnit}`);
+  }
+
+  // Запуск проверки линии при загрузке приложения
+  window.addEventListener('DOMContentLoaded', () => {
+    checkLineHandover(state.selectedLine);
+  });
+</script>
+</body>
+</html>

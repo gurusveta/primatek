@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRIMATEK — Панель начальника смены</title>
+  <!-- Библиотека SheetJS для мгновенного скачивания Excel без сервера -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #070c18; color: #f8fafc; padding: 20px; }
+    .container { max-width: 1300px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+    /* Шапка */
+    .header { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 16px 24px; border-radius: 14px; border: 1px solid #1e293b; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+    .btn-excel { background: #059669; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.15s; box-shadow: 0 4px 10px rgba(5,150,105,0.3); }
+    .btn-excel:hover { background: #10b981; }
+    .btn-refresh { background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 10px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+    .btn-refresh:hover { background: #334155; }
+    .badge-shift { font-size: 13px; font-weight: 800; padding: 6px 12px; border-radius: 8px; background: #172554; color: #38bdf8; border: 1px solid #1e40af; }
+
+    /* 4 карточки KPI сверху */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+    .kpi-card { background: #0f172a; border-radius: 12px; padding: 16px 20px; border: 1px solid #1e293b; border-left: 4px solid #38bdf8; }
+    .kpi-title { font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .kpi-value { font-size: 28px; font-weight: 900; color: #fff; }
+    .kpi-sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+    /* Сетка линий завода */
+    .section-title { font-size: 16px; font-weight: 800; color: #cbd5e1; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .lines-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .line-card { background: #0f172a; border-radius: 12px; padding: 16px; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 8px; position: relative; }
+    .line-card-header { display: flex; justify-content: space-between; align-items: center; }
+    .line-num { font-size: 18px; font-weight: 900; color: #fff; }
+    .line-status { font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; }
+    
+    .status-work { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .status-clean { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .status-sample { background: rgba(2, 132, 199, 0.15); color: #38bdf8; border: 1px solid rgba(2, 132, 199, 0.3); }
+    .status-repair { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .status-idle { background: #1e293b; color: #64748b; border: 1px solid #334155; }
+
+    .line-row { display: flex; justify-content: space-between; font-size: 13px; color: #94a3b8; }
+    .line-row b { color: #f8fafc; font-weight: 700; }
+
+    /* Таблица отчетов */
+    .table-card { background: #0f172a; border-radius: 14px; padding: 18px; border: 1px solid #1e293b; }
+    .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
+    .search-input { background: #070c18; border: 1px solid #334155; border-radius: 8px; padding: 8px 14px; color: #fff; font-size: 13px; width: 260px; outline: none; }
+    .search-input:focus { border-color: #0072ce; }
+    
+    .scroll-table { overflow-x: auto; max-height: 480px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    th { background: #1e293b; color: #94a3b8; padding: 10px 12px; font-weight: 700; position: sticky; top: 0; z-index: 2; }
+    td { padding: 10px 12px; border-bottom: 1px solid #1e293b; color: #cbd5e1; }
+    tr:hover td { background: #172554; }
+
+    .tag-ral { background: #1e293b; border: 1px solid #334155; padding: 2px 6px; border-radius: 4px; font-weight: 700; color: #38bdf8; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  
+  <!-- Шапка -->
+  <div class="header">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <svg width="195" height="42" viewBox="0 0 230 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="6" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.5"/>
+        <circle cx="16" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.8"/>
+        <circle cx="26" cy="11" r="3.2" fill="#0072ce"/>
+        <circle cx="6" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.6"/>
+        <circle cx="16" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.9"/>
+        <circle cx="26" cy="33" r="3.2" fill="#0072ce"/>
+        <text x="36" y="34" font-family="'Arial Black', 'Impact', sans-serif" font-weight="900" font-size="31" fill="#0072ce" letter-spacing="1">PRIMATEK</text>
+        <text x="38" y="47" font-family="Arial, sans-serif" font-weight="600" font-size="8" fill="#94a3b8" letter-spacing="0.8">ИННОВАЦИИ В ПОКРЫТИЯХ</text>
+      </svg>
+      <span class="badge-shift" id="currentShiftBadge">СМЕНА: ДЕНЬ</span>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn-refresh" onclick="loadDashboardData()" title="Обновить данные">🔄 Обновить</button>
+      <button class="btn-excel" onclick="exportToExcel()">📊 Скачать в Excel</button>
+    </div>
+  </div>
+
+  <!-- 4 плашки KPI сводки -->
+  <div class="kpi-grid">
+    <div class="kpi-card" style="border-left-color: #38bdf8;">
+      <div class="kpi-title">ОБЩИЙ ВЫПУСК</div>
+      <div class="kpi-value" id="kpiGoodKg">0 кг</div>
+      <div class="kpi-sub" id="kpiGoodBoxes">0 кор. / 0 меш.</div>
+    </div>
+    <div class="kpi-card" style="border-left-color: #f59e0b;">
+      <div class="kpi-title">ЧИПСЫ</div>
+      <div class="kpi-value" style="color: #fbbf24;" id="kpiChipsKg">0 кг</div>
+      <div class="kpi-sub" id="kpiChipsCount">0 записей</div>
+    </div>
+    <div class="kpi-card" style="border-left-color: #ef4444;">
+      <div class="kpi-title">БРАК</div>
+      <div class="kpi-value" style="color: #f87171;" id="kpiDefectKg">0 кг</div>
+      <div class="kpi-sub" id="kpiDefectBoxes">0 коробок</div>
+    </div>
+    <div class="kpi-card" style="border-left-color: #94a3b8;">
+      <div class="kpi-title">ПЫЛЬ</div>
+      <div class="kpi-value" style="color: #cbd5e1;" id="kpiDustKg">0 кг</div>
+      <div class="kpi-sub" id="kpiActiveLines">Линий: 8</div>
+    </div>
+  </div>
+
+  <!-- Статус по производственным линиям -->
+  <div>
+    <div class="section-title">🏭 Линии завода PRIMATEK (текущее состояние)</div>
+    <div class="lines-grid" id="linesGrid"></div>
+  </div>
+
+  <!-- Журнал отчетов сдачи смен -->
+  <div class="table-card">
+    <div class="table-toolbar">
+      <div style="font-size: 15px; font-weight: 800; color: #fff;">📋 Журнал сдачи смен</div>
+      <input type="text" id="searchInput" class="search-input" placeholder="Поиск по оператору, партии, RAL..." oninput="filterTable()">
+    </div>
+    <div class="scroll-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Время</th>
+            <th>Линия</th>
+            <th>Смена</th>
+            <th>Оператор</th>
+            <th>Партия</th>
+            <th>Цвет RAL</th>
+            <th>Статус</th>
+            <th>Общий выпуск</th>
+            <th>Чипсы</th>
+            <th>Брак</th>
+            <th>Пыль</th>
+          </tr>
+        </thead>
+        <tbody id="reportsTableBody">
+          <tr><td colspan="11" style="text-align: center; color: #64748b; padding: 20px;">Загрузка данных...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const SUPABASE_BASE = "https://oqhrzruxubqthqyxmdcg.supabase.co/rest/v1";
+  const SUPABASE_KEY = "sb_publishable_m5YmzYjW1BpotrbaRpCdgA__kYvilf3";
+  const PRIMATEK_LINES = [1, 5, 6, 7, 8, 13, 14, 15];
+
+  let allReports = [];
+
+  function updateShiftHeader() {
+    const h = new Date().getHours();
+    const isDay = (h >= 8 && h < 20);
+    document.getElementById('currentShiftBadge').innerText = 'СМЕНА: ' + (isDay ? 'ДЕНЬ' : 'НОЧЬ');
+  }
+  updateShiftHeader();
+
+  async function loadDashboardData() {
+    try {
+      const res = await fetch(`${SUPABASE_BASE}/shift_reports?select=*&order=created_at.desc`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      });
+      if (res.ok) {
+        allReports = await res.json();
+        renderKPIs(allReports);
+        renderLineCards(allReports);
+        renderTable(allReports);
+      }
+    } catch (e) {
+      console.error("Ошибка загрузки данных:", e);
+    }
+  }
+
+  function renderKPIs(reports) {
+    let totalGoodKg = 0;
+    let totalBoxes = 0;
+    let totalBags = 0;
+    let totalChipsKg = 0;
+    let totalDefectKg = 0;
+    let totalDefectBoxes = 0;
+    let totalDustKg = 0;
+
+    reports.forEach(r => {
+      totalGoodKg += Number(r.total_good_kg) || 0;
+      totalBoxes += Number(r.good_boxes) || 0;
+      totalBags += Number(r.good_bags) || 0;
+      totalChipsKg += Number(r.chips_kg) || 0;
+      totalDefectKg += Number(r.defect_kg) || 0;
+      totalDefectBoxes += Number(r.defect_boxes) || 0;
+      totalDustKg += Number(r.dust_kg) || 0;
+    });
+
+    document.getElementById('kpiGoodKg').innerText = totalGoodKg.toLocaleString('ru-RU') + ' кг';
+    document.getElementById('kpiGoodBoxes').innerText = `${totalBoxes} кор. / ${totalBags} меш.`;
+    document.getElementById('kpiChipsKg').innerText = totalChipsKg.toLocaleString('ru-RU') + ' кг';
+    document.getElementById('kpiChipsCount').innerText = `${reports.filter(r => (Number(r.chips_kg)||0) > 0).length} смен с чипсами`;
+    document.getElementById('kpiDefectKg').innerText = totalDefectKg.toLocaleString('ru-RU') + ' кг';
+    document.getElementById('kpiDefectBoxes').innerText = `${totalDefectBoxes} коробок`;
+    document.getElementById('kpiDustKg').innerText = totalDustKg.toFixed(1) + ' кг';
+  }
+
+  function renderLineCards(reports) {
+    const grid = document.getElementById('linesGrid');
+    grid.innerHTML = '';
+
+    PRIMATEK_LINES.forEach(lineNum => {
+      const latest = reports.find(r => Number(r.line_number) === lineNum);
+
+      let statusClass = 'status-idle';
+      let statusText = 'НЕТ ДАННЫХ';
+      let op = '—';
+      let batch = '—';
+      let ral = '—';
+      let output = '—';
+
+      if (latest) {
+        statusText = latest.line_status || 'В РАБОТЕ';
+        if (statusText === 'В РАБОТЕ') statusClass = 'status-work';
+        else if (statusText === 'ЧИСТКА') statusClass = 'status-clean';
+        else if (statusText === 'ПРОБЫ') statusClass = 'status-sample';
+        else if (statusText === 'РЕМОНТ') statusClass = 'status-repair';
+
+        op = latest.operator_name || '—';
+        batch = latest.batch_number || '—';
+        ral = latest.ral_color || '—';
+        output = `${latest.total_good_kg || 0} кг`;
+      }
+
+      const card = document.createElement('div');
+      card.className = 'line-card';
+      card.innerHTML = `
+        <div class="line-card-header">
+          <span class="line-num">Линия №${lineNum}</span>
+          <span class="line-status ${statusClass}">${statusText}</span>
+        </div>
+        <div class="line-row"><span>Оператор:</span><b>${op}</b></div>
+        <div class="line-row"><span>Партия / Цвет:</span><b>${batch} (${ral})</b></div>
+        <div class="line-row" style="margin-top: 4px; border-top: 1px solid #1e293b; padding-top: 6px;">
+          <span>Общий выпуск:</span><b style="color: #38bdf8; font-size: 15px;">${output}</b>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderTable(reports) {
+    const tbody = document.getElementById('reportsTableBody');
+    if (!reports.length) {
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: #64748b; padding: 20px;">Нет отчетов</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = reports.map(r => {
+      const dt = new Date(r.created_at);
+      const timeStr = dt.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'}) + ' ' + dt.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
+
+      let statusBadge = `<span class="line-status status-work">${r.line_status || 'В РАБОТЕ'}</span>`;
+      if (r.line_status === 'ЧИСТКА') statusBadge = `<span class="line-status status-clean">ЧИСТКА</span>`;
+      if (r.line_status === 'ПРОБЫ') statusBadge = `<span class="line-status status-sample">ПРОБЫ</span>`;
+      if (r.line_status === 'РЕМОНТ') statusBadge = `<span class="line-status status-repair">РЕМОНТ</span>`;
+
+      return `
+        <tr>
+          <td style="color: #94a3b8; font-family: monospace;">${timeStr}</td>
+          <td><b>№${r.line_number}</b></td>
+          <td>${r.shift_type || '—'}</td>
+          <td><b>${r.operator_name || '—'}</b></td>
+          <td>${r.batch_number || '—'}</td>
+          <td><span class="tag-ral">${r.ral_color || '—'}</span></td>
+          <td>${statusBadge}</td>
+          <td><b style="color: #34d399;">${r.total_good_kg || 0} кг</b></td>
+          <td style="color: #fbbf24;">${r.chips_kg || 0} кг</td>
+          <td style="color: #f87171;">${r.defect_kg || 0} кг</td>
+          <td>${Number(r.dust_kg || 0).toFixed(1)} кг</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function filterTable() {
+    const val = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allReports.filter(r => {
+      const op = (r.operator_name || '').toLowerCase();
+      const batch = (r.batch_number || '').toLowerCase();
+      const ral = (r.ral_color || '').toLowerCase();
+      const line = '№' + r.line_number;
+      return op.includes(val) || batch.includes(val) || ral.includes(val) || line.includes(val);
+    });
+    renderTable(filtered);
+  }
+
+  function exportToExcel() {
+    if (!allReports.length) {
+      alert("Нет данных для выгрузки");
+      return;
+    }
+
+    const excelData = allReports.map(r => ({
+      "Дата и время": new Date(r.created_at).toLocaleString('ru-RU'),
+      "Линия": "№" + r.line_number,
+      "Смена": r.shift_type || "",
+      "Оператор": r.operator_name || "",
+      "Партия": r.batch_number || "",
+      "Цвет RAL": r.ral_color || "",
+      "Состояние линии": r.line_status || "",
+      "Общий выпуск (кг)": r.total_good_kg || 0,
+      "Чипсы (кг)": r.chips_kg || 0,
+      "Брак (кг)": r.defect_kg || 0,
+      "Брак (кор)": r.defect_boxes || 0,
+      "Пыль (кг)": r.dust_kg || 0
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Отчеты смен");
+
+    const fileName = `PRIMATEK_Смены_${new Date().toISOString().slice(0,10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  }
+
+  loadDashboardData();
+  setInterval(loadDashboardData, 30000);
+</script>
+
+</body>
+</html>
