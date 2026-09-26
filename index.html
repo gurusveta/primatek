@@ -34,6 +34,8 @@
     /* Шапка с фирменным лого PRIMATEK */
     .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0072ce; padding-bottom: 12px; }
     .badge-shift { font-size: 11px; font-weight: 800; padding: 5px 9px; border-radius: 7px; background: #1a2744; color: #38bdf8; border: 1px solid #2c4270; }
+    .btn-stats-header { background: #172554; border: 1px solid #1e40af; color: #38bdf8; font-size: 11px; font-weight: 800; padding: 6px 10px; border-radius: 8px; cursor: pointer; margin-top: 6px; text-transform: uppercase; }
+    .btn-stats-header:active { transform: scale(0.96); }
 
     /* Сетка линий */
     .grid-lines { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
@@ -41,8 +43,8 @@
     .btn-line.active { background: #0072ce; border-color: #38bdf8; color: #fff; transform: scale(0.97); }
 
     /* Поля ввода */
-    input { width: 100%; background: #080d1a; border: 1px solid #29385c; border-radius: 9px; padding: 10px 12px; color: #fff; font-size: 15px; outline: none; }
-    input:focus { border-color: #0072ce; }
+    input, select { width: 100%; background: #080d1a; border: 1px solid #29385c; border-radius: 9px; padding: 10px 12px; color: #fff; font-size: 15px; outline: none; }
+    input:focus, select:focus { border-color: #0072ce; }
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
     /* Поле RAL */
@@ -74,9 +76,9 @@
     /* Кнопка сдачи смены */
     .btn-submit { background: linear-gradient(135deg, #0072ce, #0284c7); color: #fff; border: none; border-radius: 13px; padding: 16px; font-size: 16px; font-weight: 900; cursor: pointer; width: 100%; box-shadow: 0 4px 15px rgba(0, 114, 206, 0.4); }
 
-    /* Модалка сводки */
+    /* Модалки */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(5,9,20,0.88); z-index: 99; justify-content: center; align-items: center; padding: 16px; backdrop-filter: blur(2px); }
-    .modal { background: #131c31; border-radius: 16px; padding: 20px; width: 100%; max-width: 400px; border: 1px solid #2d3e66; }
+    .modal { background: #131c31; border-radius: 16px; padding: 20px; width: 100%; max-width: 420px; border: 1px solid #2d3e66; max-height: 90vh; overflow-y: auto; }
     .modal-line { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #1c2742; font-size: 13px; }
     .modal-val { font-weight: 800; color: #fff; }
 
@@ -89,14 +91,30 @@
     .handover-actions { display: flex; flex-direction: column; gap: 8px; }
     .btn-handover-accept { background: #10b981; color: #fff; border: none; border-radius: 9px; padding: 13px; font-size: 14px; font-weight: 800; cursor: pointer; }
     .btn-handover-accept:active { transform: scale(0.98); }
-    .btn-handover-other { background: #1c2742; color: #cbd5e1; border: 1px solid #2d3e66; border-radius: 9px; padding: 11px; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+    /* Стили Личного кабинета "Моя выработка" */
+    .stats-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid #233152; padding-bottom: 10px; }
+    .stats-period-pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+    .pill-btn { background: #080d1a; border: 1px solid #233152; color: #94a3b8; font-size: 11px; font-weight: 700; padding: 8px 4px; border-radius: 8px; cursor: pointer; text-align: center; }
+    .pill-btn.active { background: #0072ce; color: #fff; border-color: #38bdf8; }
+    
+    .stats-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .stats-box { background: #080d1a; border: 1px solid #233152; border-radius: 10px; padding: 10px 12px; }
+    .stats-box-title { font-size: 10px; font-weight: 800; color: #8fa0c2; text-transform: uppercase; margin-bottom: 4px; }
+    .stats-box-value { font-size: 20px; font-weight: 900; color: #fff; }
+    .stats-box-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+    .stats-shifts-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+    .shift-row-card { background: #080d1a; border: 1px solid #1e293b; border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+    .shift-row-top { display: flex; justify-content: space-between; font-weight: 700; color: #cbd5e1; margin-bottom: 4px; }
+    .shift-row-bottom { display: flex; justify-content: space-between; color: #94a3b8; font-size: 11px; }
   </style>
 </head>
 <body>
 
 <div class="container">
 
-  <!-- Шапка: Логотип PRIMATEK -->
+  <!-- Шапка: Логотип PRIMATEK + Кнопка "Моя выработка" -->
   <div class="card header">
     <div>
       <svg width="195" height="42" viewBox="0 0 230 50" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -118,7 +136,9 @@
     </div>
     <div style="text-align: right;">
       <div id="shiftBadge" class="badge-shift">СМЕНА: ДЕНЬ</div>
-      <div id="clock" style="font-size: 12px; color: #8fa0c2; margin-top: 3px; font-family: monospace;">08:00</div>
+      <div>
+        <button class="btn-stats-header" onclick="openStatsModal()">Моя выработка</button>
+      </div>
     </div>
   </div>
 
@@ -170,7 +190,7 @@
     </div>
   </div>
 
-<!-- 4. Выпуск продукции -->
+  <!-- 4. Выпуск продукции -->
   <div class="card">
     <div class="label-title">
       <span>Общий выпуск</span>
@@ -235,7 +255,7 @@
     <div class="history-list" id="chipsList"></div>
   </div>
 
-<!-- 6. Брак -->
+  <!-- 6. Брак -->
   <div class="card" style="border-color: #55222b;">
     <div class="label-title" style="color: #f87171;">
       <span>Брак</span>
@@ -267,7 +287,7 @@
 
 </div>
 
-<!-- Модалка сводки смены -->
+<!-- МОДАЛКА: СВОДКА СМЕНЫ -->
 <div class="modal-overlay" id="summaryModal">
   <div class="modal">
     <h3 style="color: #38bdf8; margin-bottom: 12px; font-size: 17px; font-weight: 900;">Сводка за смену</h3>
@@ -286,7 +306,63 @@
   </div>
 </div>
 
+<!-- МОДАЛКА: ЛИЧНЫЙ КАБИНЕТ ОПЕРАТОРА («МОЯ ВЫРАБОТКА») -->
+<div class="modal-overlay" id="statsModal">
+  <div class="modal">
+    <div class="stats-header-bar">
+      <div>
+        <h3 style="color: #38bdf8; font-size: 17px; font-weight: 900;">Моя выработка</h3>
+        <span style="font-size: 11px; color: #8fa0c2;">Сверка смен и килограммов</span>
+      </div>
+      <button style="background:transparent; border:none; color:#94a3b8; font-size:22px; cursor:pointer;" onclick="closeStatsModal()">✕</button>
+    </div>
 
+    <!-- Выбор ФИО оператора для статистики -->
+    <div style="margin-bottom: 12px;">
+      <div style="font-size: 11px; font-weight: 700; color: #8fa0c2; margin-bottom: 4px;">ФИО Оператора:</div>
+      <div style="display: flex; gap: 6px;">
+        <input type="text" id="statsOperatorInput" placeholder="Введите фамилию" onchange="loadOperatorStats()">
+        <button class="btn-action" style="padding: 10px 14px;" onclick="loadOperatorStats()">Найти</button>
+      </div>
+    </div>
+
+    <!-- Кнопки выбора периода -->
+    <div class="stats-period-pills">
+      <button class="pill-btn active" id="pillMonth" onclick="setStatsPeriod('this_month')">Этот месяц</button>
+      <button class="pill-btn" id="pillPrevMonth" onclick="setStatsPeriod('prev_month')">Прошлый месяц</button>
+      <button class="pill-btn" id="pillAll" onclick="setStatsPeriod('all')">За все время</button>
+    </div>
+
+    <!-- Сводка (Смены, Краска, Чипсы) -->
+    <div class="stats-summary-grid">
+      <div class="stats-box" style="border-left: 3px solid #38bdf8;">
+        <div class="stats-box-title">ВСЕГО СМЕН</div>
+        <div class="stats-box-value" id="stTotalShifts">0</div>
+        <div class="stats-box-sub" id="stShiftTypes">День: 0 / Ночь: 0</div>
+      </div>
+
+      <div class="stats-box" style="border-left: 3px solid #10b981;">
+        <div class="stats-box-title">СДЕЛАНО КРАСКИ</div>
+        <div class="stats-box-value" style="color: #34d399;" id="stPaintKg">0 кг</div>
+        <div class="stats-box-sub">Готовая продукция</div>
+      </div>
+
+      <div class="stats-box" style="grid-column: span 2; border-left: 3px solid #f59e0b;">
+        <div class="stats-box-title">ЧИПСЫ</div>
+        <div class="stats-box-value" style="color: #fbbf24;" id="stChipsKg">0 кг</div>
+        <div class="stats-box-sub" id="stChipsCount">0 смен с чипсами</div>
+      </div>
+    </div>
+
+    <!-- Детализация смен списком -->
+    <div style="font-size: 12px; font-weight: 800; color: #cbd5e1; margin-bottom: 8px;">Список смен за период:</div>
+    <div class="stats-shifts-list" id="statsShiftsList">
+      <div style="text-align: center; color: #64748b; padding: 20px; font-size: 12px;">Укажите фамилию и нажмите «Найти»</div>
+    </div>
+
+    <button class="btn-secondary" style="margin-top: 14px; color:#cbd5e1; border-color:#2c4270;" onclick="closeStatsModal()">Закрыть</button>
+  </div>
+</div>
 
 <script>
   // Твои боевые ключи Supabase
@@ -323,13 +399,12 @@
 
   function updateTime() {
     const now = new Date();
-    document.getElementById('clock').innerText = now.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
     const h = now.getHours();
     const isDay = (h >= 8 && h < 20);
     document.getElementById('shiftBadge').innerText = 'СМЕНА: ' + (isDay ? 'ДЕНЬ' : 'НОЧЬ');
   }
   updateTime();
-  setInterval(updateTime, 1000);
+  setInterval(updateTime, 60000);
 
   function setStatus(name, btn) {
     document.querySelectorAll('.btn-status').forEach(b => b.className = 'btn-status');
@@ -528,7 +603,6 @@
       if (response.ok) {
         alert("✅ Смена успешно сохранена в базу данных Приматек!");
         closeSummary();
-        // Перепроверяем линию после сдачи
         checkLineHandover(state.selectedLine);
       } else {
         const err = await response.text();
@@ -560,7 +634,6 @@
     actions.style.display = 'none';
 
     try {
-      // Ищем последний отчет по выбранной линии
       const response = await fetch(`${SUPABASE_BASE}/shift_reports?line_number=eq.${lineNum}&order=created_at.desc&limit=1`, {
         headers: {
           'apikey': SUPABASE_KEY,
@@ -584,7 +657,6 @@
       const last = data[0];
       lastShiftData = last;
 
-      // Если предыдущая смена сдана в статусе ЧИСТКА / ПРОБЫ / РЕМОНТ
       if (last.line_status && last.line_status !== 'В РАБОТЕ') {
         title.innerText = `Линия №${lineNum}: ${last.line_status}`;
         info.innerHTML = `
@@ -598,7 +670,6 @@
         return;
       }
 
-      // Если предыдущая смена сдана «В РАБОТЕ»
       const lastUnit = Number(last.unit_to || last.good_boxes || 0);
       const nextUnit = lastUnit + 1;
       const typeLabel = (last.package_type === 'bag') ? 'мешок' : 'коробка';
@@ -623,12 +694,10 @@
     }
   }
 
-  // Нажатие кнопки "ПРИНЯТЬ СМЕНУ"
   function acceptHandover() {
     const opInput = document.getElementById('operatorName');
     const opName = opInput.value.trim();
 
-    // Проверяем заполнение фамилии
     if (!opName) {
       alert('⚠️ Пожалуйста, укажите вашу фамилию в поле выше перед тем, как принять смену!');
       opInput.focus();
@@ -637,21 +706,18 @@
 
     const statusBtns = document.querySelectorAll('.grid-status .btn-status');
 
-    // СЛУЧАЙ 1: Нет предыдущих записей (новая линия)
     if (!lastShiftData) {
       document.getElementById('handoverCard').style.display = 'none';
       alert(`Смена принята оператором ${opName}! Заполните партию или выберите статус линии.`);
       return;
     }
 
-    // СЛУЧАЙ 2: Предыдущий оператор сдал ЧИСТКУ / ПРОБЫ / РЕМОНТ
     if (lastShiftData.line_status && lastShiftData.line_status !== 'В РАБОТЕ') {
       const prevStatus = lastShiftData.line_status;
       if (prevStatus === 'ЧИСТКА') setStatus('ЧИСТКА', statusBtns[1]);
       else if (prevStatus === 'ПРОБЫ') setStatus('ПРОБЫ', statusBtns[2]);
       else if (prevStatus === 'РЕМОНТ') setStatus('РЕМОНТ', statusBtns[3]);
 
-      // Очищаем номера коробок, так как линия не работает
       document.getElementById('boxStart').value = '';
       document.getElementById('boxEnd').value = '';
       document.getElementById('bagStart').value = '';
@@ -664,7 +730,6 @@
       return;
     }
 
-    // СЛУЧАЙ 3: Предыдущая смена сдана «В РАБОТЕ»
     if (lastShiftData.batch_number && lastShiftData.batch_number !== '—') {
       document.getElementById('batchNumber').value = lastShiftData.batch_number;
     }
@@ -694,6 +759,148 @@
     setStatus('В РАБОТЕ', statusBtns[0]);
     document.getElementById('handoverCard').style.display = 'none';
     alert(`Смена принята оператором ${opName}!\nПродолжаем: Партия ${lastShiftData.batch_number || '—'}, ${isBag ? 'мешок' : 'коробка'} с №${nextUnit}`);
+  }
+
+  // ===============================
+  // ЛОГИКА ЛИЧНОГО КАБИНЕТА ОПЕРАТОРА
+  // ===============================
+
+  let currentStatsPeriod = 'this_month';
+  let cachedOperatorReports = [];
+
+  function openStatsModal() {
+    const mainOp = document.getElementById('operatorName').value.trim();
+    const statsInput = document.getElementById('statsOperatorInput');
+    if (mainOp && !statsInput.value) {
+      statsInput.value = mainOp;
+    }
+    document.getElementById('statsModal').style.display = 'flex';
+    if (statsInput.value.trim()) {
+      loadOperatorStats();
+    }
+  }
+
+  function closeStatsModal() {
+    document.getElementById('statsModal').style.display = 'none';
+  }
+
+  function setStatsPeriod(period) {
+    currentStatsPeriod = period;
+    document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+    if (period === 'this_month') document.getElementById('pillMonth').classList.add('active');
+    if (period === 'prev_month') document.getElementById('pillPrevMonth').classList.add('active');
+    if (period === 'all') document.getElementById('pillAll').classList.add('active');
+    renderOperatorStats();
+  }
+
+  async function loadOperatorStats() {
+    const op = document.getElementById('statsOperatorInput').value.trim();
+    if (!op) {
+      alert('Пожалуйста, введите фамилию оператора');
+      return;
+    }
+
+    const list = document.getElementById('statsShiftsList');
+    list.innerHTML = `<div style="text-align:center; color:#64748b; padding:15px;">Загрузка данных...</div>`;
+
+    try {
+      const res = await fetch(`${SUPABASE_BASE}/shift_reports?operator_name=ilike.*${encodeURIComponent(op)}*&order=created_at.desc`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      });
+
+      if (res.ok) {
+        cachedOperatorReports = await res.json();
+        renderOperatorStats();
+      } else {
+        list.innerHTML = `<div style="text-align:center; color:#ef4444; padding:15px;">Ошибка загрузки</div>`;
+      }
+    } catch (e) {
+      list.innerHTML = `<div style="text-align:center; color:#ef4444; padding:15px;">Сетевая ошибка</div>`;
+    }
+  }
+
+  function renderOperatorStats() {
+    const list = document.getElementById('statsShiftsList');
+    if (!cachedOperatorReports.length) {
+      document.getElementById('stTotalShifts').innerText = '0';
+      document.getElementById('stShiftTypes').innerText = 'День: 0 / Ночь: 0';
+      document.getElementById('stPaintKg').innerText = '0 кг';
+      document.getElementById('stChipsKg').innerText = '0 кг';
+      document.getElementById('stChipsCount').innerText = '0 смен с чипсами';
+      list.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px;">Нет смен по оператору</div>`;
+      return;
+    }
+
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth();
+
+    const filtered = cachedOperatorReports.filter(r => {
+      if (!r.created_at) return true;
+      const d = new Date(r.created_at);
+      if (currentStatsPeriod === 'this_month') {
+        return d.getFullYear() === curYear && d.getMonth() === curMonth;
+      }
+      if (currentStatsPeriod === 'prev_month') {
+        const prevM = curMonth === 0 ? 11 : curMonth - 1;
+        const prevY = curMonth === 0 ? curYear - 1 : curYear;
+        return d.getFullYear() === prevY && d.getMonth() === prevM;
+      }
+      return true;
+    });
+
+    let totalShifts = filtered.length;
+    let dayShifts = 0;
+    let nightShifts = 0;
+    let totalPaintKg = 0;
+    let totalChipsKg = 0;
+    let shiftsWithChips = 0;
+
+    filtered.forEach(r => {
+      const isDay = (r.shift_type || '').toUpperCase().includes('ДЕНЬ');
+      if (isDay) dayShifts++; else nightShifts++;
+
+      totalPaintKg += Number(r.total_good_kg) || 0;
+      const chips = Number(r.chips_kg) || 0;
+      totalChipsKg += chips;
+      if (chips > 0) shiftsWithChips++;
+    });
+
+    document.getElementById('stTotalShifts').innerText = totalShifts;
+    document.getElementById('stShiftTypes').innerText = `День: ${dayShifts} / Ночь: ${nightShifts}`;
+    document.getElementById('stPaintKg').innerText = totalPaintKg.toLocaleString('ru-RU') + ' кг';
+    document.getElementById('stChipsKg').innerText = totalChipsKg.toLocaleString('ru-RU') + ' кг';
+    document.getElementById('stChipsCount').innerText = `${shiftsWithChips} смен с чипсами`;
+
+    if (!filtered.length) {
+      list.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px;">За выбранный период смен не найдено</div>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(r => {
+      const dt = new Date(r.created_at);
+      const dateStr = dt.toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit'});
+      const isDay = (r.shift_type || '').includes('ДЕНЬ');
+      const shiftName = isDay ? 'День' : 'Ночь';
+      const paintKg = Number(r.total_good_kg) || 0;
+      const chipsKg = Number(r.chips_kg) || 0;
+
+      return `
+        <div class="shift-row-card">
+          <div class="shift-row-top">
+            <span>${dateStr} (${shiftName}) • Линия №${r.line_number}</span>
+            <span style="color: #34d399; font-weight: 800;">${paintKg} кг</span>
+          </div>
+          <div class="shift-row-bottom">
+            <span>${r.batch_number || '—'} (${r.ral_color || '—'})</span>
+            <span>Чипсы: <b style="color: #fbbf24;">${chipsKg} кг</b></span>
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
   // Запуск проверки линии при загрузке приложения
