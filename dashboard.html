@@ -58,22 +58,20 @@
     .line-row { display: flex; justify-content: space-between; font-size: 13px; color: #94a3b8; }
     .line-row b { color: #f8fafc; font-weight: 700; }
     .box-badge { background: #1e293b; color: #38bdf8; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 13px; border: 1px solid #334155; }
-    .checkpoint-badge-card { background: rgba(99, 102, 241, 0.12); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3); padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-top: 4px; display: flex; justify-content: space-between; }
+    
+    /* Плашка текущего замера внутри карточки линии */
+    .checkpoint-badge-card { background: rgba(99, 102, 241, 0.14); color: #c7d2fe; border: 1px solid rgba(99, 102, 241, 0.35); padding: 5px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-top: 4px; display: flex; justify-content: space-between; align-items: center; }
 
-    /* Таблица отчетов и переключатель вкладок */
+    /* Таблицы */
     .table-card { background: #0f172a; border-radius: 14px; padding: 20px; border: 1px solid #1e293b; }
-    .table-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #1e293b; padding-bottom: 12px; }
-    .tab-btn { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 9px 16px; border-radius: 8px; font-weight: 800; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-    .tab-btn.active { background: #0072ce; color: #fff; border-color: #38bdf8; }
-
-    .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+    .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
     .filters-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     
     .filter-select, .search-input { background: #070c18; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; color: #fff; font-size: 13px; outline: none; }
     .search-input { width: 250px; }
     .filter-select:focus, .search-input:focus { border-color: #0072ce; }
     
-    .scroll-table { overflow-x: auto; max-height: 550px; }
+    .scroll-table { overflow-x: auto; max-height: 480px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
     th { background: #1e293b; color: #94a3b8; padding: 12px 14px; font-weight: 700; position: sticky; top: 0; z-index: 2; white-space: nowrap; }
     td { padding: 12px 14px; border-bottom: 1px solid #1e293b; color: #cbd5e1; white-space: nowrap; }
@@ -106,11 +104,11 @@
 
     <div class="header-actions">
       <button class="btn-refresh" onclick="loadDashboardData()" title="Обновить данные">🔄 Обновить</button>
-      <button class="btn-excel" onclick="exportToExcel()">📊 Скачать в Excel</button>
+      <button class="btn-excel" onclick="exportToExcel()">📊 Скачать смены в Excel</button>
     </div>
   </div>
 
-  <!-- 4 плашки KPI сводки -->
+  <!-- 4 плашки KPI сводки (строго закрытые сдачи смен) -->
   <div class="kpi-grid">
     <div class="kpi-card" style="border-left-color: #38bdf8;">
       <div class="kpi-title">ОБЩИЙ ВЫПУСК (СДАННЫЕ СМЕНЫ)</div>
@@ -140,24 +138,18 @@
     <div class="lines-grid" id="linesGrid"></div>
   </div>
 
-  <!-- Раздел журналов с вкладками -->
+  <!-- 1. ТАБЛИЦА: ТОЛЬКО ЗАКРЫТЫЕ СДАЧИ СМЕН (ОСНОВНАЯ) -->
   <div class="table-card">
-    <div class="table-tabs">
-      <button id="tabBtnShifts" class="tab-btn active" onclick="switchTableTab('shifts')">📋 Журнал сдачи смен</button>
-      <button id="tabBtnCheckpoints" class="tab-btn" onclick="switchTableTab('checkpoints')">⏱ Промежуточные замеры (текущий результат)</button>
-    </div>
-
     <div class="table-toolbar">
-      <div id="tableHeaderTitle" style="font-size: 15px; font-weight: 800; color: #fff;">Официальные сдачи смен</div>
+      <div style="font-size: 16px; font-weight: 800; color: #fff;">📋 Журнал сдачи смен (официальные закрытия)</div>
       
-      <!-- Панель фильтров -->
       <div class="filters-group">
-        <select id="filterDate" class="filter-select" onchange="applyFilters()">
+        <select id="filterDate" class="filter-select" onchange="filterShiftsTable()">
           <option value="today">Сегодня</option>
           <option value="all" selected>За все время</option>
         </select>
 
-        <select id="filterLine" class="filter-select" onchange="applyFilters()">
+        <select id="filterLine" class="filter-select" onchange="filterShiftsTable()">
           <option value="all">Все линии</option>
           <option value="1">Линия №1</option>
           <option value="5">Линия №5</option>
@@ -169,17 +161,62 @@
           <option value="15">Линия №15</option>
         </select>
 
-        <input type="text" id="searchInput" class="search-input" placeholder="Поиск (оператор, RAL, партия)..." oninput="applyFilters()">
+        <input type="text" id="searchInput" class="search-input" placeholder="Поиск (оператор, RAL, партия)..." oninput="filterShiftsTable()">
       </div>
     </div>
 
     <div class="scroll-table">
-      <table id="mainTable">
-        <thead id="tableHead">
-          <!-- Генерируется скриптом -->
+      <table>
+        <thead>
+          <tr>
+            <th>Время сдачи</th>
+            <th>Линия</th>
+            <th>Смена</th>
+            <th>Оператор</th>
+            <th>Партия</th>
+            <th>Цвет RAL</th>
+            <th>Статус</th>
+            <th>Диапазон коробок</th>
+            <th>Сдано (кг)</th>
+            <th>Чипсы</th>
+            <th>Брак</th>
+            <th>Пыль</th>
+          </tr>
         </thead>
-        <tbody id="reportsTableBody">
+        <tbody id="shiftsTableBody">
           <tr><td colspan="12" style="text-align: center; color: #64748b; padding: 25px;">Загрузка данных...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 2. ТАБЛИЦА: ТОЛЬКО ПРОМЕЖУТОЧНЫЕ ЗАМЕРЫ (КОНТРОЛЬ ТЕМПА) -->
+  <div class="table-card" style="border-color: #312e81;">
+    <div class="table-toolbar">
+      <div>
+        <div style="font-size: 15px; font-weight: 800; color: #a5b4fc;">⏱ Оперативные замеры в течение смены (текущий результат)</div>
+        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Замеры на момент обхода директоров и мастеров</div>
+      </div>
+    </div>
+
+    <div class="scroll-table" style="max-height: 320px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Время замера</th>
+            <th>Линия</th>
+            <th>Смена</th>
+            <th>Оператор</th>
+            <th>Партия</th>
+            <th>Цвет RAL</th>
+            <th>Состояние</th>
+            <th>Текущие коробки</th>
+            <th>Выпуск к этому часу</th>
+            <th>Чипсы</th>
+          </tr>
+        </thead>
+        <tbody id="checkpointsTableBody">
+          <tr><td colspan="10" style="text-align: center; color: #64748b; padding: 20px;">Замеров пока нет</td></tr>
         </tbody>
       </table>
     </div>
@@ -192,8 +229,9 @@
   const SUPABASE_KEY = "sb_publishable_m5YmzYjW1BpotrbaRpCdgA__kYvilf3";
   const PRIMATEK_LINES = [1, 5, 6, 7, 8, 13, 14, 15];
 
-  let allReports = [];
-  let currentActiveTab = 'shifts'; // 'shifts' или 'checkpoints'
+  let rawReports = [];
+  let closedShiftsList = [];
+  let checkpointsList = [];
 
   function updateShiftHeader() {
     const h = new Date().getHours();
@@ -202,7 +240,7 @@
   }
   updateShiftHeader();
 
-  function isCheckpointReport(r) {
+  function isCheckpoint(r) {
     return (r.shift_type || '').includes('ТЕКУЩИЙ');
   }
 
@@ -224,16 +262,6 @@
     return { text: '—', count: 0 };
   }
 
-  function switchTableTab(tab) {
-    currentActiveTab = tab;
-    document.getElementById('tabBtnShifts').classList.toggle('active', tab === 'shifts');
-    document.getElementById('tabBtnCheckpoints').classList.toggle('active', tab === 'checkpoints');
-    document.getElementById('tableHeaderTitle').innerText = tab === 'shifts' 
-      ? 'Официальные сдачи смен (итоговые закрытия)' 
-      : 'Промежуточные замеры темпа линий (текущий результат)';
-    applyFilters();
-  }
-
   async function loadDashboardData() {
     try {
       const res = await fetch(`${SUPABASE_BASE}/shift_reports?select=*&order=created_at.desc`, {
@@ -243,19 +271,25 @@
         }
       });
       if (res.ok) {
-        allReports = await res.json();
+        rawReports = await res.json();
         document.getElementById('lastSyncTime').innerText = 'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
-        renderKPIs(allReports);
-        renderLineCards(allReports);
-        applyFilters();
+
+        // ЖЕСТКОЕ РАЗДЕЛЕНИЕ: Сдачи смен отдельно, Замеры отдельно
+        closedShiftsList = rawReports.filter(r => !isCheckpoint(r));
+        checkpointsList = rawReports.filter(r => isCheckpoint(r));
+
+        renderKPIs(closedShiftsList);
+        renderLineCards(rawReports);
+        filterShiftsTable();
+        renderCheckpointsTable(checkpointsList);
       }
     } catch (e) {
       console.error("Ошибка загрузки данных:", e);
     }
   }
 
-  // В сводке KPI считаем ТОЛЬКО закрытые сдачи смен
-  function renderKPIs(reports) {
+  // KPI считает ТОЛЬКО закрытые сдачи
+  function renderKPIs(shifts) {
     let totalGoodKg = 0;
     let totalBoxes = 0;
     let totalBags = 0;
@@ -264,9 +298,7 @@
     let totalDefectBoxes = 0;
     let totalDustKg = 0;
 
-    const closedShifts = reports.filter(r => !isCheckpointReport(r));
-
-    closedShifts.forEach(r => {
+    shifts.forEach(r => {
       totalGoodKg += Number(r.total_good_kg) || 0;
       totalBoxes += Number(r.good_boxes) || 0;
       totalBags += Number(r.good_bags) || 0;
@@ -279,7 +311,7 @@
     document.getElementById('kpiGoodKg').innerText = totalGoodKg.toLocaleString('ru-RU') + ' кг';
     document.getElementById('kpiGoodBoxes').innerText = `${totalBoxes} кор. / ${totalBags} меш.`;
     document.getElementById('kpiChipsKg').innerText = totalChipsKg.toLocaleString('ru-RU') + ' кг';
-    document.getElementById('kpiChipsCount').innerText = `${closedShifts.filter(r => (Number(r.chips_kg)||0) > 0).length} смен с чипсами`;
+    document.getElementById('kpiChipsCount').innerText = `${shifts.filter(r => (Number(r.chips_kg)||0) > 0).length} смен с чипсами`;
     document.getElementById('kpiDefectKg').innerText = totalDefectKg.toLocaleString('ru-RU') + ' кг';
     document.getElementById('kpiDefectBoxes').innerText = `${totalDefectBoxes} коробок`;
     document.getElementById('kpiDustKg').innerText = totalDustKg.toFixed(1) + ' кг';
@@ -290,10 +322,8 @@
     grid.innerHTML = '';
 
     PRIMATEK_LINES.forEach(lineNum => {
-      // Ищем последнюю закрытую смену
-      const latestShift = reports.find(r => Number(r.line_number) === lineNum && !isCheckpointReport(r));
-      // Ищем самый свежий промежуточный замер
-      const latestCheckpoint = reports.find(r => Number(r.line_number) === lineNum && isCheckpointReport(r));
+      const latestShift = reports.find(r => Number(r.line_number) === lineNum && !isCheckpoint(r));
+      const latestCp = reports.find(r => Number(r.line_number) === lineNum && isCheckpoint(r));
 
       let statusClass = 'status-idle';
       let statusText = 'НЕТ ДАННЫХ';
@@ -303,7 +333,7 @@
       let output = '—';
       let boxInfo = '—';
 
-      const baseRecord = latestShift || latestCheckpoint;
+      const baseRecord = latestShift || latestCp;
 
       if (baseRecord) {
         statusText = baseRecord.line_status || 'В РАБОТЕ';
@@ -323,19 +353,19 @@
         }
       }
 
-      // Проверяем, есть ли свежий промежуточный замер сделанный ПОЗЖЕ последней сдачи смены
+      // Если после сдачи смены был замер
       let checkpointHtml = '';
-      if (latestCheckpoint) {
-        const cpTime = new Date(latestCheckpoint.created_at).getTime();
+      if (latestCp) {
+        const cpTime = new Date(latestCp.created_at).getTime();
         const shiftTime = latestShift ? new Date(latestShift.created_at).getTime() : 0;
 
         if (cpTime > shiftTime) {
-          const tStr = new Date(latestCheckpoint.created_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
-          const cpBox = getBoxRange(latestCheckpoint);
+          const tStr = new Date(latestCp.created_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+          const cpBox = getBoxRange(latestCp);
           checkpointHtml = `
             <div class="checkpoint-badge-card">
               <span>⏱ Замер в ${tStr} (${cpBox.text}):</span>
-              <b>${latestCheckpoint.total_good_kg || 0} кг</b>
+              <b style="color: #fff;">${latestCp.total_good_kg || 0} кг</b>
             </div>
           `;
         }
@@ -360,80 +390,33 @@
     });
   }
 
-  function applyFilters() {
+  function filterShiftsTable() {
     const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
     const lineVal = document.getElementById('filterLine').value;
     const dateVal = document.getElementById('filterDate').value;
     const todayStr = new Date().toISOString().slice(0, 10);
 
-    const filtered = allReports.filter(r => {
-      // 1. Фильтр вкладки: сдачи смен или замеры
-      const isCp = isCheckpointReport(r);
-      if (currentActiveTab === 'shifts' && isCp) return false;
-      if (currentActiveTab === 'checkpoints' && !isCp) return false;
-
-      // 2. Поиск по тексту
+    const filtered = closedShiftsList.filter(r => {
       const op = (r.operator_name || '').toLowerCase();
       const batch = (r.batch_number || '').toLowerCase();
       const ral = (r.ral_color || '').toLowerCase();
       const matchSearch = !searchVal || op.includes(searchVal) || batch.includes(searchVal) || ral.includes(searchVal);
-
-      // 3. Линия
       const matchLine = (lineVal === 'all') || (String(r.line_number) === String(lineVal));
 
-      // 4. Дата
       let matchDate = true;
       if (dateVal === 'today' && r.created_at) {
         matchDate = r.created_at.slice(0, 10) === todayStr;
       }
-
       return matchSearch && matchLine && matchDate;
     });
 
-    renderTable(filtered);
+    renderShiftsTable(filtered);
   }
 
-  function renderTable(reports) {
-    const thead = document.getElementById('tableHead');
-    const tbody = document.getElementById('reportsTableBody');
-
-    if (currentActiveTab === 'shifts') {
-      thead.innerHTML = `
-        <tr>
-          <th>Время сдачи</th>
-          <th>Линия</th>
-          <th>Смена</th>
-          <th>Оператор</th>
-          <th>Партия</th>
-          <th>Цвет RAL</th>
-          <th>Статус</th>
-          <th>Диапазон коробок</th>
-          <th>Сдано (кг)</th>
-          <th>Чипсы</th>
-          <th>Брак</th>
-          <th>Пыль</th>
-        </tr>
-      `;
-    } else {
-      thead.innerHTML = `
-        <tr>
-          <th>Время замера</th>
-          <th>Линия</th>
-          <th>Текущая смена</th>
-          <th>Оператор</th>
-          <th>Партия</th>
-          <th>Цвет RAL</th>
-          <th>Статус</th>
-          <th>Текущие коробки</th>
-          <th>Намолочено к этому часу</th>
-          <th>Чипсы</th>
-        </tr>
-      `;
-    }
-
+  function renderShiftsTable(reports) {
+    const tbody = document.getElementById('shiftsTableBody');
     if (!reports.length) {
-      const colCount = currentActiveTab === 'shifts' ? 12 : 10;
-      tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align: center; color: #64748b; padding: 25px;">Записей в этой категории не найдено</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; color: #64748b; padding: 25px;">Смен по фильтрам не найдено</td></tr>`;
       return;
     }
 
@@ -450,51 +433,63 @@
       const box = getBoxRange(r);
       const boxHtml = (box.text !== '—') ? `<span class="tag-range">${box.text}</span>` : `<span style="color:#64748b;">—</span>`;
 
-      if (currentActiveTab === 'shifts') {
-        return `
-          <tr>
-            <td style="color: #94a3b8; font-family: monospace;">${timeStr}</td>
-            <td><b>№${r.line_number}</b></td>
-            <td>${r.shift_type || '—'}</td>
-            <td><b>${r.operator_name || '—'}</b></td>
-            <td>${r.batch_number || '—'}</td>
-            <td><span class="tag-ral">${r.ral_color || '—'}</span></td>
-            <td>${statusBadge}</td>
-            <td>${boxHtml}</td>
-            <td><b style="color: #34d399; font-size:14px;">${r.total_good_kg || 0} кг</b></td>
-            <td style="color: #fbbf24;">${r.chips_kg || 0} кг</td>
-            <td style="color: #f87171;">${r.defect_kg || 0} кг</td>
-            <td>${Number(r.dust_kg || 0).toFixed(1)} кг</td>
-          </tr>
-        `;
-      } else {
-        const cleanShift = (r.shift_type || '').replace('ТЕКУЩИЙ (','').replace(')','');
-        return `
-          <tr style="background: rgba(99, 102, 241, 0.05);">
-            <td style="color: #a5b4fc; font-family: monospace; font-weight:700;">⏱ ${timeStr}</td>
-            <td><b>№${r.line_number}</b></td>
-            <td>${cleanShift}</td>
-            <td><b>${r.operator_name || '—'}</b></td>
-            <td>${r.batch_number || '—'}</td>
-            <td><span class="tag-ral">${r.ral_color || '—'}</span></td>
-            <td>${statusBadge}</td>
-            <td>${boxHtml}</td>
-            <td><b style="color: #a5b4fc; font-size:14px;">${r.total_good_kg || 0} кг</b></td>
-            <td style="color: #fbbf24;">${r.chips_kg || 0} кг</td>
-          </tr>
-        `;
-      }
+      return `
+        <tr>
+          <td style="color: #94a3b8; font-family: monospace;">${timeStr}</td>
+          <td><b>№${r.line_number}</b></td>
+          <td>${r.shift_type || '—'}</td>
+          <td><b>${r.operator_name || '—'}</b></td>
+          <td>${r.batch_number || '—'}</td>
+          <td><span class="tag-ral">${r.ral_color || '—'}</span></td>
+          <td>${statusBadge}</td>
+          <td>${boxHtml}</td>
+          <td><b style="color: #34d399; font-size:14px;">${r.total_good_kg || 0} кг</b></td>
+          <td style="color: #fbbf24;">${r.chips_kg || 0} кг</td>
+          <td style="color: #f87171;">${r.defect_kg || 0} кг</td>
+          <td>${Number(r.dust_kg || 0).toFixed(1)} кг</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function renderCheckpointsTable(reports) {
+    const tbody = document.getElementById('checkpointsTableBody');
+    if (!reports.length) {
+      tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: #64748b; padding: 20px;">Замеров пока нет</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = reports.map(r => {
+      const dt = new Date(r.created_at);
+      const timeStr = dt.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'}) + ' ' + dt.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
+      const box = getBoxRange(r);
+      const boxHtml = (box.text !== '—') ? `<span class="tag-range">${box.text}</span>` : `—`;
+      const cleanShift = (r.shift_type || '').replace('ТЕКУЩИЙ (','').replace(')','');
+
+      return `
+        <tr style="background: rgba(99, 102, 241, 0.04);">
+          <td style="color: #a5b4fc; font-family: monospace; font-weight:700;">⏱ ${timeStr}</td>
+          <td><b>№${r.line_number}</b></td>
+          <td>${cleanShift}</td>
+          <td><b>${r.operator_name || '—'}</b></td>
+          <td>${r.batch_number || '—'}</td>
+          <td><span class="tag-ral">${r.ral_color || '—'}</span></td>
+          <td><span style="color:#94a3b8; font-weight:700;">${r.line_status || 'В РАБОТЕ'}</span></td>
+          <td>${boxHtml}</td>
+          <td><b style="color: #a5b4fc; font-size:14px;">${r.total_good_kg || 0} кг</b></td>
+          <td style="color: #fbbf24;">${r.chips_kg || 0} кг</td>
+        </tr>
+      `;
     }).join('');
   }
 
   function exportToExcel() {
-    const exportDataList = allReports.filter(r => !isCheckpointReport(r));
-    if (!exportDataList.length) {
-      alert("Нет данных для выгрузки");
+    if (!closedShiftsList.length) {
+      alert("Нет смен для выгрузки");
       return;
     }
 
-    const excelData = exportDataList.map(r => {
+    const excelData = closedShiftsList.map(r => {
       const box = getBoxRange(r);
       return {
         "Дата и время": new Date(r.created_at).toLocaleString('ru-RU'),
@@ -505,7 +500,7 @@
         "Цвет RAL": r.ral_color || "",
         "Состояние линии": r.line_status || "В РАБОТЕ",
         "Диапазон": box.text,
-        "Коробок/Мешков": box.count || 0,
+        "Штук": box.count || 0,
         "Выпуск (кг)": r.total_good_kg || 0,
         "Чипсы (кг)": r.chips_kg || 0,
         "Брак (кг)": r.defect_kg || 0,
@@ -515,7 +510,7 @@
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Отчеты смен PRIMATEK");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Смены PRIMATEK");
 
     const fileName = `PRIMATEK_Смены_${new Date().toISOString().slice(0,10)}.xlsx`;
     XLSX.writeFile(workbook, fileName);
