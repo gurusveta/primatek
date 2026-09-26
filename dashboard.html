@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PRIMATEK — Панель начальника смены</title>
-  <!-- Библиотека SheetJS для мгновенного скачивания Excel без сервера -->
+  <!-- Библиотека SheetJS для выгрузки Excel -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -14,7 +14,7 @@
     /* Шапка */
     .header { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 16px 24px; border-radius: 14px; border: 1px solid #1e293b; box-shadow: 0 4px 15px rgba(0,0,0,0.3); flex-wrap: wrap; gap: 14px; }
     .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .btn-excel { background: #059669; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.15s; box-shadow: 0 4px 10px rgba(5,150,105,0.3); }
+    .btn-excel { background: #059669; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.15s; }
     .btn-excel:hover { background: #10b981; }
     .btn-refresh { background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 10px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; }
     .btn-refresh:hover { background: #334155; }
@@ -58,9 +58,14 @@
     .line-row { display: flex; justify-content: space-between; font-size: 13px; color: #94a3b8; }
     .line-row b { color: #f8fafc; font-weight: 700; }
     .box-badge { background: #1e293b; color: #38bdf8; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 13px; border: 1px solid #334155; }
+    .checkpoint-badge-card { background: rgba(99, 102, 241, 0.12); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3); padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-top: 4px; display: flex; justify-content: space-between; }
 
-    /* Таблица отчетов и фильтры */
+    /* Таблица отчетов и переключатель вкладок */
     .table-card { background: #0f172a; border-radius: 14px; padding: 20px; border: 1px solid #1e293b; }
+    .table-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #1e293b; padding-bottom: 12px; }
+    .tab-btn { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 9px 16px; border-radius: 8px; font-weight: 800; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .tab-btn.active { background: #0072ce; color: #fff; border-color: #38bdf8; }
+
     .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
     .filters-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     
@@ -76,9 +81,6 @@
 
     .tag-ral { background: #1e293b; border: 1px solid #334155; padding: 2px 6px; border-radius: 4px; font-weight: 700; color: #38bdf8; font-size: 12px; }
     .tag-range { color: #facc15; font-family: monospace; font-weight: 800; background: rgba(250, 204, 21, 0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(250, 204, 21, 0.2); }
-
-    /* Бейдж промежуточного замера */
-    .badge-checkpoint { background: #312e81; color: #c7d2fe; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 6px; border: 1px solid #4338ca; text-transform: uppercase; }
   </style>
 </head>
 <body>
@@ -108,10 +110,10 @@
     </div>
   </div>
 
-  <!-- 4 плашки KPI сводки (только закрытые смены, без дублей от замеров) -->
+  <!-- 4 плашки KPI сводки -->
   <div class="kpi-grid">
     <div class="kpi-card" style="border-left-color: #38bdf8;">
-      <div class="kpi-title">ОБЩИЙ ВЫПУСК (ИТОГИ СМЕН)</div>
+      <div class="kpi-title">ОБЩИЙ ВЫПУСК (СДАННЫЕ СМЕНЫ)</div>
       <div class="kpi-value" id="kpiGoodKg">0 кг</div>
       <div class="kpi-sub" id="kpiGoodBoxes">0 кор. / 0 меш.</div>
     </div>
@@ -138,19 +140,18 @@
     <div class="lines-grid" id="linesGrid"></div>
   </div>
 
-  <!-- Журнал отчетов сдачи смен и замеров -->
+  <!-- Раздел журналов с вкладками -->
   <div class="table-card">
+    <div class="table-tabs">
+      <button id="tabBtnShifts" class="tab-btn active" onclick="switchTableTab('shifts')">📋 Журнал сдачи смен</button>
+      <button id="tabBtnCheckpoints" class="tab-btn" onclick="switchTableTab('checkpoints')">⏱ Промежуточные замеры (текущий результат)</button>
+    </div>
+
     <div class="table-toolbar">
-      <div style="font-size: 16px; font-weight: 800; color: #fff;">📋 Журнал смен и замеров</div>
+      <div id="tableHeaderTitle" style="font-size: 15px; font-weight: 800; color: #fff;">Официальные сдачи смен</div>
       
       <!-- Панель фильтров -->
       <div class="filters-group">
-        <select id="filterType" class="filter-select" onchange="applyFilters()">
-          <option value="all">Все записи</option>
-          <option value="shifts">Только сдачи смен</option>
-          <option value="checkpoints">Только замеры (текущий)</option>
-        </select>
-
         <select id="filterDate" class="filter-select" onchange="applyFilters()">
           <option value="today">Сегодня</option>
           <option value="all" selected>За все время</option>
@@ -173,22 +174,9 @@
     </div>
 
     <div class="scroll-table">
-      <table>
-        <thead>
-          <tr>
-            <th>Время</th>
-            <th>Линия</th>
-            <th>Тип записи</th>
-            <th>Оператор</th>
-            <th>Партия</th>
-            <th>Цвет RAL</th>
-            <th>Статус</th>
-            <th>Диапазон</th>
-            <th>Выпуск (кг)</th>
-            <th>Чипсы</th>
-            <th>Брак</th>
-            <th>Пыль</th>
-          </tr>
+      <table id="mainTable">
+        <thead id="tableHead">
+          <!-- Генерируется скриптом -->
         </thead>
         <tbody id="reportsTableBody">
           <tr><td colspan="12" style="text-align: center; color: #64748b; padding: 25px;">Загрузка данных...</td></tr>
@@ -205,6 +193,7 @@
   const PRIMATEK_LINES = [1, 5, 6, 7, 8, 13, 14, 15];
 
   let allReports = [];
+  let currentActiveTab = 'shifts'; // 'shifts' или 'checkpoints'
 
   function updateShiftHeader() {
     const h = new Date().getHours();
@@ -235,6 +224,16 @@
     return { text: '—', count: 0 };
   }
 
+  function switchTableTab(tab) {
+    currentActiveTab = tab;
+    document.getElementById('tabBtnShifts').classList.toggle('active', tab === 'shifts');
+    document.getElementById('tabBtnCheckpoints').classList.toggle('active', tab === 'checkpoints');
+    document.getElementById('tableHeaderTitle').innerText = tab === 'shifts' 
+      ? 'Официальные сдачи смен (итоговые закрытия)' 
+      : 'Промежуточные замеры темпа линий (текущий результат)';
+    applyFilters();
+  }
+
   async function loadDashboardData() {
     try {
       const res = await fetch(`${SUPABASE_BASE}/shift_reports?select=*&order=created_at.desc`, {
@@ -255,7 +254,7 @@
     }
   }
 
-  // Считаем KPI ТОЛЬКО по закрытым сменам (исключаем промежуточные срезы, чтобы не двоить вес)
+  // В сводке KPI считаем ТОЛЬКО закрытые сдачи смен
   function renderKPIs(reports) {
     let totalGoodKg = 0;
     let totalBoxes = 0;
@@ -291,8 +290,10 @@
     grid.innerHTML = '';
 
     PRIMATEK_LINES.forEach(lineNum => {
-      // Ищем самую свежую запись (это может быть как сдача, так и свежий замер)
-      const latest = reports.find(r => Number(r.line_number) === lineNum);
+      // Ищем последнюю закрытую смену
+      const latestShift = reports.find(r => Number(r.line_number) === lineNum && !isCheckpointReport(r));
+      // Ищем самый свежий промежуточный замер
+      const latestCheckpoint = reports.find(r => Number(r.line_number) === lineNum && isCheckpointReport(r));
 
       let statusClass = 'status-idle';
       let statusText = 'НЕТ ДАННЫХ';
@@ -301,29 +302,42 @@
       let ral = '—';
       let output = '—';
       let boxInfo = '—';
-      let timeAgo = '';
-      let isCheckpoint = false;
 
-      if (latest) {
-        isCheckpoint = isCheckpointReport(latest);
-        statusText = latest.line_status || 'В РАБОТЕ';
+      const baseRecord = latestShift || latestCheckpoint;
 
+      if (baseRecord) {
+        statusText = baseRecord.line_status || 'В РАБОТЕ';
         if (statusText === 'В РАБОТЕ') statusClass = 'status-work';
         else if (statusText === 'ЧИСТКА') statusClass = 'status-clean';
         else if (statusText === 'ПРОБЫ') statusClass = 'status-sample';
         else if (statusText === 'РЕМОНТ') statusClass = 'status-repair';
 
-        op = latest.operator_name || '—';
-        batch = latest.batch_number || '—';
-        ral = latest.ral_color || '—';
-        output = `${latest.total_good_kg || 0} кг`;
+        op = baseRecord.operator_name || '—';
+        batch = baseRecord.batch_number || '—';
+        ral = baseRecord.ral_color || '—';
 
-        const bInfo = getBoxRange(latest);
-        boxInfo = (statusText === 'В РАБОТЕ') ? `<span class="box-badge">${bInfo.text}</span>` : `<span style="color:#94a3b8;">${statusText}</span>`;
+        if (latestShift) {
+          output = `${latestShift.total_good_kg || 0} кг`;
+          const bInfo = getBoxRange(latestShift);
+          boxInfo = (statusText === 'В РАБОТЕ') ? `<span class="box-badge">${bInfo.text}</span>` : `<span style="color:#94a3b8;">${statusText}</span>`;
+        }
+      }
 
-        if (latest.created_at) {
-          const d = new Date(latest.created_at);
-          timeAgo = d.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'}) + ' ' + d.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
+      // Проверяем, есть ли свежий промежуточный замер сделанный ПОЗЖЕ последней сдачи смены
+      let checkpointHtml = '';
+      if (latestCheckpoint) {
+        const cpTime = new Date(latestCheckpoint.created_at).getTime();
+        const shiftTime = latestShift ? new Date(latestShift.created_at).getTime() : 0;
+
+        if (cpTime > shiftTime) {
+          const tStr = new Date(latestCheckpoint.created_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+          const cpBox = getBoxRange(latestCheckpoint);
+          checkpointHtml = `
+            <div class="checkpoint-badge-card">
+              <span>⏱ Замер в ${tStr} (${cpBox.text}):</span>
+              <b>${latestCheckpoint.total_good_kg || 0} кг</b>
+            </div>
+          `;
         }
       }
 
@@ -331,19 +345,16 @@
       card.className = 'line-card';
       card.innerHTML = `
         <div class="line-card-header">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span class="line-num">Линия №${lineNum}</span>
-            ${isCheckpoint ? `<span class="badge-checkpoint">ЗАМЕР</span>` : ''}
-            ${timeAgo ? `<span style="font-size:11px; color:#64748b;">${timeAgo}</span>` : ''}
-          </div>
+          <span class="line-num">Линия №${lineNum}</span>
           <span class="line-status ${statusClass}"><span class="status-dot"></span>${statusText}</span>
         </div>
         <div class="line-row"><span>Оператор:</span><b>${op}</b></div>
         <div class="line-row"><span>Партия / RAL:</span><b>${batch} (${ral})</b></div>
         <div class="line-row"><span>Коробки:</span>${boxInfo}</div>
         <div class="line-row" style="margin-top: 4px; border-top: 1px solid #1e293b; padding-top: 6px;">
-          <span>${isCheckpoint ? 'Текущий замер:' : 'Выпуск:'}</span><b style="color: ${isCheckpoint ? '#a5b4fc' : '#38bdf8'}; font-size: 15px;">${output}</b>
+          <span>Сдано в смену:</span><b style="color: #38bdf8; font-size: 15px;">${output}</b>
         </div>
+        ${checkpointHtml}
       `;
       grid.appendChild(card);
     });
@@ -352,26 +363,23 @@
   function applyFilters() {
     const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
     const lineVal = document.getElementById('filterLine').value;
-    const typeVal = document.getElementById('filterType').value;
     const dateVal = document.getElementById('filterDate').value;
-
     const todayStr = new Date().toISOString().slice(0, 10);
 
     const filtered = allReports.filter(r => {
-      // 1. Поиск по тексту
+      // 1. Фильтр вкладки: сдачи смен или замеры
+      const isCp = isCheckpointReport(r);
+      if (currentActiveTab === 'shifts' && isCp) return false;
+      if (currentActiveTab === 'checkpoints' && !isCp) return false;
+
+      // 2. Поиск по тексту
       const op = (r.operator_name || '').toLowerCase();
       const batch = (r.batch_number || '').toLowerCase();
       const ral = (r.ral_color || '').toLowerCase();
       const matchSearch = !searchVal || op.includes(searchVal) || batch.includes(searchVal) || ral.includes(searchVal);
 
-      // 2. Линия
+      // 3. Линия
       const matchLine = (lineVal === 'all') || (String(r.line_number) === String(lineVal));
-
-      // 3. Тип записи (Смена или Замер)
-      const isCp = isCheckpointReport(r);
-      let matchType = true;
-      if (typeVal === 'shifts') matchType = !isCp;
-      if (typeVal === 'checkpoints') matchType = isCp;
 
       // 4. Дата
       let matchDate = true;
@@ -379,16 +387,53 @@
         matchDate = r.created_at.slice(0, 10) === todayStr;
       }
 
-      return matchSearch && matchLine && matchType && matchDate;
+      return matchSearch && matchLine && matchDate;
     });
 
     renderTable(filtered);
   }
 
   function renderTable(reports) {
+    const thead = document.getElementById('tableHead');
     const tbody = document.getElementById('reportsTableBody');
+
+    if (currentActiveTab === 'shifts') {
+      thead.innerHTML = `
+        <tr>
+          <th>Время сдачи</th>
+          <th>Линия</th>
+          <th>Смена</th>
+          <th>Оператор</th>
+          <th>Партия</th>
+          <th>Цвет RAL</th>
+          <th>Статус</th>
+          <th>Диапазон коробок</th>
+          <th>Сдано (кг)</th>
+          <th>Чипсы</th>
+          <th>Брак</th>
+          <th>Пыль</th>
+        </tr>
+      `;
+    } else {
+      thead.innerHTML = `
+        <tr>
+          <th>Время замера</th>
+          <th>Линия</th>
+          <th>Текущая смена</th>
+          <th>Оператор</th>
+          <th>Партия</th>
+          <th>Цвет RAL</th>
+          <th>Статус</th>
+          <th>Текущие коробки</th>
+          <th>Намолочено к этому часу</th>
+          <th>Чипсы</th>
+        </tr>
+      `;
+    }
+
     if (!reports.length) {
-      tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; color: #64748b; padding: 25px;">Записей по заданным фильтрам не найдено</td></tr>`;
+      const colCount = currentActiveTab === 'shifts' ? 12 : 10;
+      tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align: center; color: #64748b; padding: 25px;">Записей в этой категории не найдено</td></tr>`;
       return;
     }
 
@@ -402,51 +447,65 @@
       if (status === 'ПРОБЫ') statusBadge = `<span class="line-status status-sample"><span class="status-dot"></span>ПРОБЫ</span>`;
       if (status === 'РЕМОНТ') statusBadge = `<span class="line-status status-repair"><span class="status-dot"></span>РЕМОНТ</span>`;
 
-      const isCp = isCheckpointReport(r);
-      const typeBadge = isCp 
-        ? `<span class="badge-checkpoint">⏱ ЗАМЕР (${r.shift_type.replace('ТЕКУЩИЙ (','').replace(')','')})</span>` 
-        : `<span>${r.shift_type || '—'}</span>`;
-
       const box = getBoxRange(r);
       const boxHtml = (box.text !== '—') ? `<span class="tag-range">${box.text}</span>` : `<span style="color:#64748b;">—</span>`;
 
-      return `
-        <tr style="${isCp ? 'background: rgba(49, 46, 129, 0.12);' : ''}">
-          <td style="color: #94a3b8; font-family: monospace;">${timeStr}</td>
-          <td><b>№${r.line_number}</b></td>
-          <td>${typeBadge}</td>
-          <td><b>${r.operator_name || '—'}</b></td>
-          <td>${r.batch_number || '—'}</td>
-          <td><span class="tag-ral">${r.ral_color || '—'}</span></td>
-          <td>${statusBadge}</td>
-          <td>${boxHtml}</td>
-          <td><b style="color: ${isCp ? '#a5b4fc' : '#34d399'};">${r.total_good_kg || 0} кг</b></td>
-          <td style="color: #fbbf24;">${r.chips_kg || 0} кг</td>
-          <td style="color: #f87171;">${r.defect_kg || 0} кг</td>
-          <td>${Number(r.dust_kg || 0).toFixed(1)} кг</td>
-        </tr>
-      `;
+      if (currentActiveTab === 'shifts') {
+        return `
+          <tr>
+            <td style="color: #94a3b8; font-family: monospace;">${timeStr}</td>
+            <td><b>№${r.line_number}</b></td>
+            <td>${r.shift_type || '—'}</td>
+            <td><b>${r.operator_name || '—'}</b></td>
+            <td>${r.batch_number || '—'}</td>
+            <td><span class="tag-ral">${r.ral_color || '—'}</span></td>
+            <td>${statusBadge}</td>
+            <td>${boxHtml}</td>
+            <td><b style="color: #34d399; font-size:14px;">${r.total_good_kg || 0} кг</b></td>
+            <td style="color: #fbbf24;">${r.chips_kg || 0} кг</td>
+            <td style="color: #f87171;">${r.defect_kg || 0} кг</td>
+            <td>${Number(r.dust_kg || 0).toFixed(1)} кг</td>
+          </tr>
+        `;
+      } else {
+        const cleanShift = (r.shift_type || '').replace('ТЕКУЩИЙ (','').replace(')','');
+        return `
+          <tr style="background: rgba(99, 102, 241, 0.05);">
+            <td style="color: #a5b4fc; font-family: monospace; font-weight:700;">⏱ ${timeStr}</td>
+            <td><b>№${r.line_number}</b></td>
+            <td>${cleanShift}</td>
+            <td><b>${r.operator_name || '—'}</b></td>
+            <td>${r.batch_number || '—'}</td>
+            <td><span class="tag-ral">${r.ral_color || '—'}</span></td>
+            <td>${statusBadge}</td>
+            <td>${boxHtml}</td>
+            <td><b style="color: #a5b4fc; font-size:14px;">${r.total_good_kg || 0} кг</b></td>
+            <td style="color: #fbbf24;">${r.chips_kg || 0} кг</td>
+          </tr>
+        `;
+      }
     }).join('');
   }
 
   function exportToExcel() {
-    if (!allReports.length) {
+    const exportDataList = allReports.filter(r => !isCheckpointReport(r));
+    if (!exportDataList.length) {
       alert("Нет данных для выгрузки");
       return;
     }
 
-    const excelData = allReports.map(r => {
+    const excelData = exportDataList.map(r => {
       const box = getBoxRange(r);
       return {
         "Дата и время": new Date(r.created_at).toLocaleString('ru-RU'),
         "Линия": "№" + r.line_number,
-        "Тип": r.shift_type || "",
+        "Смена": r.shift_type || "",
         "Оператор": r.operator_name || "",
         "Партия": r.batch_number || "",
         "Цвет RAL": r.ral_color || "",
         "Состояние линии": r.line_status || "В РАБОТЕ",
         "Диапазон": box.text,
-        "Штук": box.count || 0,
+        "Коробок/Мешков": box.count || 0,
         "Выпуск (кг)": r.total_good_kg || 0,
         "Чипсы (кг)": r.chips_kg || 0,
         "Брак (кг)": r.defect_kg || 0,
