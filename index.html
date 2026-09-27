@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Приматек — Учет производства</title>
 
-  <!-- PWA настройки для телефона -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0072ce">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -29,28 +28,23 @@
     .card { background-color: #131c31; border-radius: 14px; padding: 14px; border: 1px solid #233152; box-shadow: 0 4px 14px rgba(0,0,0,0.3); }
     .label-title { font-size: 11px; font-weight: 700; color: #8fa0c2; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
 
-    /* Шапка */
     .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0072ce; padding-bottom: 12px; }
     .badge-shift { font-size: 11px; font-weight: 800; padding: 5px 9px; border-radius: 7px; background: #1a2744; color: #38bdf8; border: 1px solid #2c4270; }
     .btn-stats-header { background: #172554; border: 1px solid #1e40af; color: #38bdf8; font-size: 11px; font-weight: 800; padding: 6px 10px; border-radius: 8px; cursor: pointer; margin-top: 6px; text-transform: uppercase; }
     .btn-stats-header:active { transform: scale(0.96); }
 
-    /* Сетка линий */
     .grid-lines { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
     .btn-line { background: #1c2742; border: 2px solid #2d3e66; color: #cbd5e1; font-size: 18px; font-weight: 800; padding: 12px 0; border-radius: 10px; cursor: pointer; transition: 0.1s; }
     .btn-line.active { background: #0072ce; border-color: #38bdf8; color: #fff; transform: scale(0.97); }
 
-    /* Поля ввода */
     input, select { width: 100%; background: #080d1a; border: 1px solid #29385c; border-radius: 9px; padding: 10px 12px; color: #fff; font-size: 15px; outline: none; }
     input:focus, select:focus { border-color: #0072ce; }
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-    /* Поле RAL */
     .ral-group { display: flex; background: #080d1a; border: 1px solid #29385c; border-radius: 9px; overflow: hidden; }
     .ral-prefix { background: #1c2742; color: #38bdf8; font-weight: 900; font-size: 13px; padding: 10px 12px; border-right: 1px solid #29385c; display: flex; align-items: center; }
     .ral-group input { border: none; border-radius: 0; }
 
-    /* Статусы */
     .grid-status { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .btn-status { font-size: 12px; font-weight: 800; padding: 12px 6px; border-radius: 9px; border: 2px solid #233152; cursor: pointer; background: #1c2742; color: #8fa0c2; transition: 0.15s; }
     .btn-status.active-work { background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #34d399; }
@@ -58,18 +52,15 @@
     .btn-status.active-sample { background: rgba(2, 132, 199, 0.2); border-color: #38bdf8; color: #38bdf8; }
     .btn-status.active-repair { background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #f87171; }
 
-    /* Вкладки */
     .tabs { display: flex; background: #080d1a; padding: 3px; border-radius: 9px; gap: 4px; margin-bottom: 12px; }
     .tab { flex: 1; padding: 9px 0; font-size: 12px; font-weight: 700; border: none; background: transparent; color: #8fa0c2; border-radius: 7px; cursor: pointer; }
     .tab.active { background: #0072ce; color: #fff; }
 
-    /* Кнопки */
     .btn-action { background: #10b981; color: #fff; border: none; border-radius: 9px; padding: 11px 16px; font-size: 14px; font-weight: 800; cursor: pointer; white-space: nowrap; }
     .btn-action:active { transform: scale(0.97); }
     .btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-secondary { background: #1c2742; color: #fca5a5; border: 1px solid #ef4444; border-radius: 9px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; width: 100%; }
 
-    /* Кнопка "ТЕКУЩИЙ РЕЗУЛЬТАТ" */
     .btn-checkpoint { background: #1e1b4b; color: #a5b4fc; border: 1px solid #4338ca; border-radius: 9px; padding: 12px; font-size: 14px; font-weight: 800; cursor: pointer; width: 100%; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; transition: 0.15s; }
     .btn-checkpoint:hover { background: #312e81; color: #fff; }
     .btn-checkpoint:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -78,11 +69,9 @@
     .history-list { font-size: 11px; margin-top: 8px; color: #94a3b8; display: flex; flex-wrap: wrap; gap: 5px; max-height: 80px; overflow-y: auto; }
     .tag-chip { background: #080d1a; border: 1px solid #233152; padding: 3px 7px; border-radius: 5px; color: #cbd5e1; }
 
-    /* Кнопка сдачи смены */
     .btn-submit { background: linear-gradient(135deg, #0072ce, #0284c7); color: #fff; border: none; border-radius: 13px; padding: 16px; font-size: 16px; font-weight: 900; cursor: pointer; width: 100%; box-shadow: 0 4px 15px rgba(0, 114, 206, 0.4); }
     .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* Блок приема смены */
     .handover-card { background: #162238; border: 2px solid #2d4470; border-radius: 12px; padding: 14px; margin-top: 10px; }
     .handover-card.ready-state { border-color: #10b981; }
     .handover-title { font-size: 13px; font-weight: 800; color: #38bdf8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -91,13 +80,11 @@
     .btn-handover-accept { background: #10b981; color: #fff; border: none; border-radius: 9px; padding: 13px; font-size: 14px; font-weight: 800; cursor: pointer; width: 100%; }
     .btn-handover-accept:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* Модалки */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(5,9,20,0.88); z-index: 99; justify-content: center; align-items: center; padding: 16px; backdrop-filter: blur(2px); }
     .modal { background: #131c31; border-radius: 16px; padding: 20px; width: 100%; max-width: 420px; border: 1px solid #2d3e66; max-height: 90vh; overflow-y: auto; }
     .modal-line { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #1c2742; font-size: 13px; }
     .modal-val { font-weight: 800; color: #fff; }
 
-    /* Личный кабинет */
     .stats-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid #233152; padding-bottom: 10px; }
     .stats-period-pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
     .pill-btn { background: #080d1a; border: 1px solid #233152; color: #94a3b8; font-size: 11px; font-weight: 700; padding: 8px 4px; border-radius: 8px; cursor: pointer; text-align: center; }
@@ -117,7 +104,7 @@
 
 <div class="container">
 
-  <!-- Шапка: Логотип PRIMATEK + Кнопка "Моя выработка" -->
+  <!-- Шапка -->
   <div class="card header">
     <div>
       <svg width="195" height="42" viewBox="0 0 230 50" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -177,7 +164,7 @@
     </div>
   </div>
 
-  <!-- 3. Состояние линии (Активный статус) -->
+  <!-- 3. Состояние линии -->
   <div class="card">
     <div class="label-title">
       <span>Состояние линии прямо сейчас</span>
@@ -237,17 +224,16 @@
       </div>
     </div>
 
-    <!-- КНОПКА ТЕКУЩИЙ РЕЗУЛЬТАТ / ПЕРЕДАЧА СТАТУСА -->
     <button id="btnCheckpoint" class="btn-checkpoint" onclick="recordCheckpoint()">
-      ⏱ ОТПРАВИТЬ ТЕКУЩИЙ РЕЗУЛЬТАТ НА ДАШБОРД
+      ОТПРАВИТЬ ТЕКУЩИЙ РЕЗУЛЬТАТ НА ДАШБОРД
     </button>
     <div id="checkpointNotice" class="checkpoint-notice"></div>
   </div>
 
-  <!-- 5. Чипсы и полуфабрикат (ВЫРАБОТКА) -->
+  <!-- 5. Чипсы и полуфабрикат -->
   <div class="card">
     <div class="label-title">
-      <span>Чипсы и полуфабрикат (выработка)</span>
+      <span>Чипсы и полуфабрикат</span>
       <span style="color: #fbbf24; font-size: 13px;" id="chipsTotalHeader">Всего: 0 кг</span>
     </div>
     <div class="tabs" style="margin-bottom: 8px;">
@@ -262,7 +248,7 @@
     <div class="history-list" id="chipsList"></div>
   </div>
 
-  <!-- 6. Брак краски (вычитается из коробок) -->
+  <!-- 6. Брак краски -->
   <div class="card" style="border-color: #55222b;">
     <div class="label-title" style="color: #f87171;">
       <span>Брак краски</span>
@@ -276,15 +262,15 @@
     <div class="history-list" id="defectList"></div>
   </div>
 
-  <!-- 7. Пыль (технологический отход / выкидывается) -->
+  <!-- 7. Пыль -->
   <div class="card">
     <div class="label-title">
-      <span>Пыль (отход, не выработка)</span>
+      <span>Пыль</span>
       <span style="color: #94a3b8;" id="dustTotalHeader">Сброшено: 0 кг</span>
     </div>
     <div style="display: flex; gap: 6px;">
       <input type="number" id="dustInput" placeholder="Вес мешка (кг)">
-      <button class="btn-action" style="background: #0284c7;" onclick="addDust()">+ Зафиксировать</button>
+      <button class="btn-action" style="background: #0284c7;" onclick="addDust()">+ Добавить</button>
     </div>
     <div class="history-list" id="dustHistory"></div>
   </div>
@@ -306,7 +292,7 @@
     <div class="modal-line"><span>Готовая краска:</span><span class="modal-val" id="mGood" style="color: #34d399;">0 кг</span></div>
     <div class="modal-line"><span>Чипсы / П-ф:</span><span class="modal-val" id="mChips" style="color: #fbbf24;">0 кг</span></div>
     <div class="modal-line"><span>Брак:</span><span class="modal-val" id="mDefect" style="color: #f87171;">0 кг</span></div>
-    <div class="modal-line"><span>Пыль (отход):</span><span class="modal-val" id="mDust" style="color: #94a3b8;">0 кг</span></div>
+    <div class="modal-line"><span>Пыль:</span><span class="modal-val" id="mDust" style="color: #94a3b8;">0 кг</span></div>
 
     <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 16px;">
       <button id="btnSubmitDb" class="btn-action" style="background:#0072ce; padding: 13px;" onclick="submitData()">
@@ -390,7 +376,6 @@
   let lastSubmissionHash = null;
   let lastSubmissionTime = 0;
 
-  // Восстановление оператора из памяти
   const savedOp = localStorage.getItem('primatek_operator_name');
   if (savedOp) {
     document.getElementById('operatorName').value = savedOp;
@@ -401,7 +386,6 @@
     localStorage.setItem('primatek_operator_name', val);
   }
 
-  // Отрисовка кнопок линий
   const lineBox = document.getElementById('lineButtons');
   PRIMATEK_LINES.forEach(num => {
     const btn = document.createElement('button');
@@ -560,10 +544,6 @@
     document.getElementById('totalKgHeader').innerText = txt;
   }
 
-  // ========================================================
-  // 1. ПРИЕМКА СМЕНЫ
-  // ========================================================
-
   async function checkLineHandover(lineNum) {
     const card = document.getElementById('handoverCard');
     const title = document.getElementById('handoverTitle');
@@ -705,10 +685,6 @@
     alert(`✅ Смена на Линии №${state.selectedLine} успешно принята!\nОператор: ${op}\nСтатус: ${state.status}\nИнформация передана на дашборд начальника.`);
   }
 
-  // ========================================================
-  // 2. ФИКСАЦИЯ ТЕКУЩЕГО РЕЗУЛЬТАТА
-  // ========================================================
-
   async function recordCheckpoint() {
     const op = document.getElementById('operatorName').value.trim();
     if (!op) {
@@ -772,8 +748,8 @@
       chips_details: state.chips,
       defect_boxes: state.defects.reduce((s, d) => s + d.count, 0),
       defect_kg: defectKg,
-      total_good_kg: currentGoodPaintKg, // Только краска
-      dust_kg: state.dust.reduce((s, d) => s + d, 0), // Пыль
+      total_good_kg: currentGoodPaintKg,
+      dust_kg: state.dust.reduce((s, d) => s + d, 0),
       package_type: state.packageType,
       unit_from: uStart,
       unit_to: uEnd
@@ -810,13 +786,9 @@
       alert("Сетевая ошибка: " + e.message);
     } finally {
       btn.disabled = false;
-      btn.innerText = "⏱ ОТПРАВИТЬ ТЕКУЩИЙ РЕЗУЛЬТАТ НА ДАШБОРД";
+      btn.innerText = "ОТПРАВИТЬ ТЕКУЩИЙ РЕЗУЛЬТАТ НА ДАШБОРД";
     }
   }
-
-  // ========================================================
-  // 3. СДАЧА СМЕНЫ
-  // ========================================================
 
   let finalPayload = {};
 
@@ -853,11 +825,10 @@
     document.getElementById('mBatchRal').innerText = `${batch} / ${ralClean}`;
     document.getElementById('mRange').innerText = (uFrom && uTo) ? `№${uFrom} — №${uTo}` : '—';
     
-    // Краска и чипсы раздельно
     document.getElementById('mGood').innerText = `${goodPaintKg} кг (${(boxCount + bagCount)} шт)`;
     document.getElementById('mChips').innerText = `${chipsKg} кг (в т.ч. полуфабрикат)`;
     document.getElementById('mDefect').innerText = `${defectKg} кг (${defectPcs} шт)`;
-    document.getElementById('mDust').innerText = `${dustKg.toFixed(1)} кг (отход / выкинуто)`;
+    document.getElementById('mDust').innerText = `${dustKg.toFixed(1)} кг`;
 
     finalPayload = {
       line_number: state.selectedLine,
@@ -875,7 +846,7 @@
       defect_details: state.defects,
       dust_kg: dustKg,
       dust_details: state.dust,
-      total_good_kg: goodPaintKg, // ТОЛЬКО КРАСКА
+      total_good_kg: goodPaintKg,
       package_type: state.packageType,
       unit_from: uFrom,
       unit_to: uTo
@@ -940,10 +911,6 @@
       btn.disabled = false;
     }
   }
-
-  // ========================================================
-  // 4. ЛИЧНЫЙ КАБИНЕТ («МОЯ ВЫРАБОТКА»)
-  // ========================================================
 
   let currentStatsPeriod = 'this_month';
   let cachedOperatorReports = [];
@@ -1083,7 +1050,6 @@
     }).join('');
   }
 
-  // Старт при загрузке страницы
   window.addEventListener('DOMContentLoaded', () => {
     checkLineHandover(state.selectedLine);
   });
