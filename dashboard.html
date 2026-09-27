@@ -36,7 +36,7 @@
     .summary-grid { display: grid; grid-template-columns: 1.4fr 1.4fr 1.6fr 1fr 1fr; gap: 12px; }
     @media (max-width: 1100px) { .summary-grid { grid-template-columns: 1fr 1fr; } }
     
-    .summary-card { background: #0f172a; border-radius: 12px; padding: 14px 18px; border: 1px solid #1e293b; display: flex; flex-direction: column; justify-content: space-between; }
+    .summary-card { background: #0f172a; border-radius: 12px; padding: 14px 18px; border: 1px solid #1e293b; display: flex; flex-direction: column; justify-content: space-between; border-left: 4px solid #334155; }
     .card-title { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
     .card-val { font-size: 26px; font-weight: 900; color: #fff; }
     .card-sub { font-size: 12px; color: #64748b; margin-top: 4px; }
@@ -48,7 +48,7 @@
     .progress-bar-bg { width: 100%; height: 7px; background: #1e293b; border-radius: 4px; overflow: hidden; margin-top: 6px; }
     .progress-bar-fill { height: 100%; background: #10b981; width: 0%; transition: width 0.4s; }
 
-    /* Основная зона: 8 КАРТОЧЕК ЛИНИЙ (Живой цех прямо сейчас) */
+    /* Основная зона: 8 КАРТОЧЕК ЛИНИЙ */
     .section-header { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; margin-bottom: 2px; }
     .section-title { font-size: 16px; font-weight: 900; color: #f8fafc; letter-spacing: 0.4px; }
     
@@ -79,14 +79,15 @@
     .line-details b { color: #f8fafc; font-weight: 700; }
     .ral-tag { background: #1e293b; color: #38bdf8; font-weight: 800; padding: 2px 7px; border-radius: 5px; font-size: 12px; border: 1px solid #334155; }
 
-    /* Центральное окно карточки: КРУПНЫЙ ТЕКУЩИЙ РЕЗУЛЬТАТ */
+    /* Центральное окно карточки */
     .line-output-box { background: #070c18; border: 1px solid #1e293b; border-radius: 10px; padding: 12px; text-align: center; display: flex; flex-direction: column; gap: 3px; }
     .output-label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
-    .output-val { font-size: 26px; font-weight: 900; color: #34d399; }
+    .output-val { font-size: 24px; font-weight: 900; color: #34d399; }
+    .output-chips { font-size: 13px; font-weight: 800; color: #fbbf24; margin-top: 2px; }
     .output-sub { font-size: 12px; color: #94a3b8; font-weight: 700; }
     .output-time { font-size: 11px; color: #475569; margin-top: 2px; }
 
-    /* Таблица истории (Архив сданных смен) */
+    /* Таблица истории */
     .table-card { background: #0f172a; border-radius: 14px; padding: 20px; border: 1px solid #1e293b; }
     .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
     .filters-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -147,7 +148,6 @@
 
   <!-- 2. Блок ПЛАН / ФАКТ смены -->
   <div class="summary-grid">
-    <!-- ПЛАН -->
     <div class="summary-card" style="border-left-color: #6366f1;">
       <div class="card-title">🏁 ПЛАН НА СМЕНУ</div>
       <div class="plan-input-group">
@@ -157,14 +157,12 @@
       <div class="card-sub" id="planRemainingSub">Осталось: 20 000 кг</div>
     </div>
 
-    <!-- УЖЕ СДЕЛАНО (ЖИВОЙ ФАКТ) -->
     <div class="summary-card" style="border-left-color: #38bdf8;">
-      <div class="card-title">⚡ УЖЕ СДЕЛАНО (ФАКТ)</div>
+      <div class="card-title">⚡ КРАСКА (ЖИВОЙ ФАКТ)</div>
       <div class="card-val" id="sumLiveKg" style="color: #38bdf8;">0 кг</div>
       <div class="card-sub" id="sumLivePcs">0 кор./меш. на линиях</div>
     </div>
 
-    <!-- ВЫПОЛНЕНИЕ ПЛАНА -->
     <div class="summary-card" style="border-left-color: #10b981;">
       <div class="card-title">
         <span>📊 ВЫПОЛНЕНИЕ ПЛАНА</span>
@@ -176,22 +174,20 @@
       <div class="card-sub" id="sumPaceText">Идет учет текущей смены</div>
     </div>
 
-    <!-- БРАК -->
     <div class="summary-card" style="border-left-color: #ef4444;">
       <div class="card-title">БРАК ЗА СМЕНУ</div>
       <div class="card-val" id="sumDefectKg" style="color: #f87171;">0 кг</div>
       <div class="card-sub" id="sumDefectBoxes">0 коробок</div>
     </div>
 
-    <!-- ЧИПСЫ -->
     <div class="summary-card" style="border-left-color: #f59e0b;">
-      <div class="card-title">ЧИПСЫ ЗА СМЕНУ</div>
+      <div class="card-title">ЧИПСЫ / П-Ф ЗА СМЕНУ</div>
       <div class="card-val" id="sumChipsKg" style="color: #fbbf24;">0 кг</div>
-      <div class="card-sub" id="sumDustKg">Пыль: 0 кг</div>
+      <div class="card-sub" id="sumDustKg">Пыль (отход): 0 кг</div>
     </div>
   </div>
 
-  <!-- 3. КАРТОЧКИ 8 ЛИНИЙ (Живой пульс завода прямо сейчас) -->
+  <!-- 3. КАРТОЧКИ 8 ЛИНИЙ -->
   <div>
     <div class="section-header">
       <div class="section-title">Текущее состояние линий</div>
@@ -241,11 +237,11 @@
             <th>Партия</th>
             <th>Цвет RAL</th>
             <th>Статус</th>
-            <th>Диапазон коробок</th>
-            <th>Сдано (кг)</th>
-            <th>Чипсы</th>
+            <th>Диапазон</th>
+            <th>Краска (кг)</th>
+            <th>Чипсы / П-ф</th>
             <th>Брак</th>
-            <th>Пыль</th>
+            <th>Пыль (отход)</th>
           </tr>
         </thead>
         <tbody id="shiftsTableBody">
@@ -266,7 +262,6 @@
   let closedShiftsList = [];
   let currentShiftPlanKg = Number(localStorage.getItem('primatek_shift_plan') || 20000);
 
-  // Инициализация сохраненного начальника смены и плана
   const savedBoss = localStorage.getItem('primatek_shift_boss');
   if (savedBoss) {
     document.getElementById('shiftBossSelect').value = savedBoss;
@@ -285,7 +280,6 @@
     renderTopSummary();
   }
 
-  // Расчет границ текущей смены (08:00 - 20:00 или 20:00 - 08:00)
   function getCurrentShiftWindow() {
     const now = new Date();
     const h = now.getHours();
@@ -341,16 +335,22 @@
     return { text: '—', count: 0 };
   }
 
+  // Мгновенная базовая отрисовка карточек
+  renderLiveLineCards();
+
   async function loadDashboardData() {
     const btn = document.getElementById('btnRefresh');
     btn.classList.add('spinning');
 
     try {
-      const nocacheUrl = `${SUPABASE_BASE}/shift_reports?select=*&order=created_at.desc&_t=${Date.now()}`;
-      const res = await fetch(nocacheUrl, {
+      // БЕЗ сбойного &_t=, чистый URL, кэш сбрасывается заголовками
+      const url = `${SUPABASE_BASE}/shift_reports?select=*&order=created_at.desc&limit=250`;
+      const res = await fetch(url, {
         headers: {
           'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         },
         cache: 'no-store'
       });
@@ -364,19 +364,22 @@
         renderTopSummary();
         renderLiveLineCards();
         filterShiftsTable();
+      } else {
+        const errText = await res.text();
+        console.error("Ошибка Supabase:", errText);
+        document.getElementById('lastSyncTime').innerText = 'Ошибка связи: ' + res.status;
       }
     } catch (e) {
       console.error("Ошибка загрузки:", e);
+      document.getElementById('lastSyncTime').innerText = 'Сетевая ошибка';
     } finally {
       setTimeout(() => btn.classList.remove('spinning'), 500);
     }
   }
 
-  // Расчет плашек ПЛАН / ФАКТ по текущей смене
   function renderTopSummary() {
     const { start: shiftStart, end: shiftEnd } = getCurrentShiftWindow();
 
-    // Записи строго текущей смены
     const shiftReports = rawReports.filter(r => {
       if (!r.created_at) return false;
       const t = new Date(r.created_at).getTime();
@@ -390,11 +393,10 @@
     let shiftChipsKg = 0;
     let shiftDustKg = 0;
 
-    // Считаем актуальный вес по линиям
     PRIMATEK_LINES.forEach(lineNum => {
       const lineReports = shiftReports.filter(r => Number(r.line_number) === lineNum);
       if (lineReports.length > 0) {
-        const latest = lineReports[0]; // Самый свежий замер или сдача
+        const latest = lineReports[0];
         totalLiveKg += Number(latest.total_good_kg) || 0;
         totalLivePcs += Number(latest.good_boxes || latest.good_bags) || 0;
       }
@@ -407,33 +409,28 @@
       shiftDustKg += Number(r.dust_kg) || 0;
     });
 
-    // Факт
     document.getElementById('sumLiveKg').innerText = totalLiveKg.toLocaleString('ru-RU') + ' кг';
-    document.getElementById('sumLivePcs').innerText = `${totalLivePcs} кор./меш. на линиях`;
+    document.getElementById('sumLivePcs').innerText = `${totalLivePcs} кор./меш. краски`;
 
-    // План и прогресс
     const plan = currentShiftPlanKg > 0 ? currentShiftPlanKg : 20000;
     const percent = Math.min(100, Math.round((totalLiveKg / plan) * 100));
     document.getElementById('sumPlanPercent').innerText = `${percent}%`;
     document.getElementById('sumProgressBar').style.width = `${percent}%`;
 
     const remaining = Math.max(0, plan - totalLiveKg);
-    document.getElementById('planRemainingSub').innerText = `Осталось: ${remaining.toLocaleString('ru-RU')} кг`;
+    document.getElementById('planRemainingSub').innerText = `Осталось краски: ${remaining.toLocaleString('ru-RU')} кг`;
 
-    // Брак и чипсы
     document.getElementById('sumDefectKg').innerText = `${shiftDefectKg.toLocaleString('ru-RU')} кг`;
     document.getElementById('sumDefectBoxes').innerText = `${shiftDefectBoxes} коробок`;
     document.getElementById('sumChipsKg').innerText = `${shiftChipsKg.toLocaleString('ru-RU')} кг`;
-    document.getElementById('sumDustKg').innerText = `Пыль: ${shiftDustKg.toFixed(1)} кг`;
+    document.getElementById('sumDustKg').innerText = `Пыль (отход): ${shiftDustKg.toFixed(1)} кг`;
   }
 
-  // ОТРИСОВКА 8 КАРТОЧЕК ЛИНИЙ (ЖИВОЙ ЦЕХ С КРУПНЫМ ТЕКУЩИМ РЕЗУЛЬТАТОМ)
   function renderLiveLineCards() {
     const grid = document.getElementById('linesGrid');
     grid.innerHTML = '';
 
     PRIMATEK_LINES.forEach(lineNum => {
-      // Ищем самую последнюю запись по этой линии (замер или сдачу)
       const latest = rawReports.find(r => Number(r.line_number) === lineNum);
 
       let statusClass = 'st-idle';
@@ -442,6 +439,7 @@
       let batch = '—';
       let ral = '—';
       let currentKg = 0;
+      let chipsKg = 0;
       let boxText = '—';
       let timeText = 'Замеров не было';
 
@@ -456,6 +454,7 @@
         batch = latest.batch_number || '—';
         ral = latest.ral_color || '—';
         currentKg = Number(latest.total_good_kg) || 0;
+        chipsKg = Number(latest.chips_kg) || 0;
 
         const bInfo = getBoxRange(latest);
         boxText = bInfo.text;
@@ -466,20 +465,23 @@
         }
       }
 
-      // Если линия не в работе (чистка, ремонт), то крупно показываем именно статус
       let centralOutputHtml = '';
       if (statusText === 'В РАБОТЕ') {
+        const chipsHtml = (chipsKg > 0) ? `<div class="output-chips">+ ${chipsKg} кг чипсы / п-ф</div>` : '';
         centralOutputHtml = `
-          <div class="output-label">Текущий результат линии</div>
+          <div class="output-label">Текущий результат</div>
           <div class="output-val">${currentKg.toLocaleString('ru-RU')} кг</div>
           <div class="output-sub">${boxText}</div>
+          ${chipsHtml}
           <div class="output-time">${timeText}</div>
         `;
       } else {
+        const chipsHtml = (chipsKg > 0) ? `<div class="output-chips">Чипсы/П-ф: ${chipsKg} кг</div>` : '';
         centralOutputHtml = `
           <div class="output-label">Состояние линии</div>
           <div class="output-val" style="font-size:22px; color: ${statusClass === 'st-clean' ? '#fbbf24' : '#f87171'};">${statusText}</div>
           <div class="output-sub">Партия: ${batch}</div>
+          ${chipsHtml}
           <div class="output-time">${timeText}</div>
         `;
       }
@@ -505,7 +507,6 @@
     });
   }
 
-  // Фильтрация нижней таблицы истории
   function filterShiftsTable() {
     const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
     const lineVal = document.getElementById('filterLine').value;
@@ -560,9 +561,9 @@
           <td>${statusBadge}</td>
           <td>${boxHtml}</td>
           <td><b style="color: #34d399; font-size:14px;">${r.total_good_kg || 0} кг</b></td>
-          <td style="color: #fbbf24;">${r.chips_kg || 0} кг</td>
+          <td style="color: #fbbf24; font-weight:700;">${r.chips_kg || 0} кг</td>
           <td style="color: #f87171;">${r.defect_kg || 0} кг</td>
-          <td>${Number(r.dust_kg || 0).toFixed(1)} кг</td>
+          <td style="color: #94a3b8;">${Number(r.dust_kg || 0).toFixed(1)} кг</td>
         </tr>
       `;
     }).join('');
@@ -589,10 +590,10 @@
         "Состояние линии": r.line_status || "В РАБОТЕ",
         "Диапазон": box.text,
         "Коробок/Мешков": box.count || 0,
-        "Выпуск (кг)": r.total_good_kg || 0,
-        "Чипсы (кг)": r.chips_kg || 0,
+        "Краска (кг)": r.total_good_kg || 0,
+        "Чипсы / П-ф (кг)": r.chips_kg || 0,
         "Брак (кг)": r.defect_kg || 0,
-        "Пыль (кг)": r.dust_kg || 0
+        "Пыль отход (кг)": r.dust_kg || 0
       };
     });
 
