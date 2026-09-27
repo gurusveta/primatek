@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PRIMATEK — Панель начальника смены</title>
-  <!-- Библиотека SheetJS для выгрузки Excel -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -121,7 +120,7 @@
       </svg>
       
       <div class="header-info">
-        <div class="date-badge" id="currentDateText">📅 Загрузка даты...</div>
+        <div class="date-badge" id="currentDateText">Загрузка даты...</div>
         <div class="shift-badge" id="currentShiftBadge">СМЕНА: ДЕНЬ (08:00 – 20:00)</div>
       </div>
 
@@ -141,7 +140,7 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
         Обновить
       </button>
-      <button class="btn-excel" onclick="exportToExcel()">📊 Скачать смены в Excel</button>
+      <button class="btn-excel" onclick="exportToExcel()">Скачать смены в Excel</button>
       <div class="sync-time" id="lastSyncTime">Обновлено: —</div>
     </div>
   </div>
@@ -149,7 +148,7 @@
   <!-- 2. Блок ПЛАН / ФАКТ смены -->
   <div class="summary-grid">
     <div class="summary-card" style="border-left-color: #6366f1;">
-      <div class="card-title">🏁 ПЛАН НА СМЕНУ</div>
+      <div class="card-title">ПЛАН НА СМЕНУ</div>
       <div class="plan-input-group">
         <input type="number" id="shiftPlanInput" class="plan-input" value="20000" step="500" onchange="updateShiftPlan()">
         <span style="font-weight: 800; font-size: 16px; color:#fff;">кг</span>
@@ -158,14 +157,14 @@
     </div>
 
     <div class="summary-card" style="border-left-color: #38bdf8;">
-      <div class="card-title">⚡ КРАСКА (ЖИВОЙ ФАКТ)</div>
+      <div class="card-title">ИЗГОТОВЛЕНО ПО ФАКТУ</div>
       <div class="card-val" id="sumLiveKg" style="color: #38bdf8;">0 кг</div>
       <div class="card-sub" id="sumLivePcs">0 кор./меш. краски</div>
     </div>
 
     <div class="summary-card" style="border-left-color: #10b981;">
       <div class="card-title">
-        <span>📊 ВЫПОЛНЕНИЕ ПЛАНА</span>
+        <span>ВЫПОЛНЕНИЕ ПЛАНА</span>
         <span id="sumPlanPercent" style="color: #34d399; font-weight: 900; font-size: 14px;">0%</span>
       </div>
       <div class="progress-bar-bg">
@@ -183,7 +182,7 @@
     <div class="summary-card" style="border-left-color: #f59e0b;">
       <div class="card-title">ЧИПСЫ / П-Ф ЗА СМЕНУ</div>
       <div class="card-val" id="sumChipsKg" style="color: #fbbf24;">0 кг</div>
-      <div class="card-sub" id="sumDustKg">Пыль (отход): 0 кг</div>
+      <div class="card-sub" id="sumDustKg">Пыль: 0 кг</div>
     </div>
   </div>
 
@@ -200,7 +199,7 @@
   <div class="table-card">
     <div class="table-toolbar">
       <div>
-        <div style="font-size: 16px; font-weight: 900; color: #fff;">📋 Журнал сданных смен (Архив)</div>
+        <div style="font-size: 16px; font-weight: 900; color: #fff;">Журнал сданных смен (Архив)</div>
         <div style="font-size: 11px; color: #64748b;">Официально закрытые смены без промежуточных срезов</div>
       </div>
       
@@ -241,7 +240,7 @@
             <th>Краска (кг)</th>
             <th>Чипсы / П-ф</th>
             <th>Брак</th>
-            <th>Пыль (отход)</th>
+            <th>Пыль</th>
           </tr>
         </thead>
         <tbody id="shiftsTableBody">
@@ -306,7 +305,7 @@
     const now = new Date();
     const options = { day: 'numeric', month: 'long', year: 'numeric' };
     const dateStr = now.toLocaleDateString('ru-RU', options);
-    document.getElementById('currentDateText').innerText = `📅 ${dateStr}`;
+    document.getElementById('currentDateText').innerText = dateStr;
 
     const { isDay } = getCurrentShiftWindow();
     document.getElementById('currentShiftBadge').innerText = 'СМЕНА: ' + (isDay ? 'ДЕНЬ (08:00 – 20:00)' : 'НОЧЬ (20:00 – 08:00)');
@@ -335,7 +334,6 @@
     return { text: '—', count: 0 };
   }
 
-  // Мгновенная базовая отрисовка карточек
   renderLiveLineCards();
 
   async function loadDashboardData() {
@@ -364,12 +362,9 @@
         renderLiveLineCards();
         filterShiftsTable();
       } else {
-        const errText = await res.text();
-        console.error("Ошибка Supabase:", errText);
         document.getElementById('lastSyncTime').innerText = 'Ошибка связи: ' + res.status;
       }
     } catch (e) {
-      console.error("Ошибка загрузки:", e);
       document.getElementById('lastSyncTime').innerText = 'Сетевая ошибка';
     } finally {
       setTimeout(() => btn.classList.remove('spinning'), 500);
@@ -422,10 +417,9 @@
     document.getElementById('sumDefectKg').innerText = `${shiftDefectKg.toLocaleString('ru-RU')} кг`;
     document.getElementById('sumDefectBoxes').innerText = `${shiftDefectBoxes} коробок`;
     document.getElementById('sumChipsKg').innerText = `${shiftChipsKg.toLocaleString('ru-RU')} кг`;
-    document.getElementById('sumDustKg').innerText = `Пыль (отход): ${shiftDustKg.toFixed(1)} кг`;
+    document.getElementById('sumDustKg').innerText = `Пыль: ${shiftDustKg.toFixed(1)} кг`;
   }
 
-  // ОТРИСОВКА 8 КАРТОЧЕК ЛИНИЙ С КОНТРОЛЕМ ТЕКУЩЕЙ СМЕНЫ
   function renderLiveLineCards() {
     const grid = document.getElementById('linesGrid');
     grid.innerHTML = '';
@@ -455,7 +449,6 @@
       let centralOutputHtml = '';
 
       if (latestAny && isCurrentShift) {
-        // ДАННЫЕ ТЕКУЩЕЙ СМЕНЫ — ЛИНИЯ АКТИВНА
         statusText = latestAny.line_status || 'В РАБОТЕ';
         if (statusText === 'В РАБОТЕ') statusClass = 'st-work';
         else if (statusText === 'ЧИСТКА') statusClass = 'st-clean';
@@ -494,7 +487,6 @@
           `;
         }
       } else if (latestAny && !isCurrentShift) {
-        // ЛИНИЯ В ЭТУ СМЕНУ ЕЩЕ НЕ ПРИНЯТА ОПЕРАТОРОМ
         statusClass = 'st-idle';
         statusText = 'НЕ ПРИНЯТА';
         op = `<span style="color:#64748b;">Ожидает оператора</span>`;
@@ -631,7 +623,7 @@
         "Краска (кг)": r.total_good_kg || 0,
         "Чипсы / П-ф (кг)": r.chips_kg || 0,
         "Брак (кг)": r.defect_kg || 0,
-        "Пыль отход (кг)": r.dust_kg || 0
+        "Пыль (кг)": r.dust_kg || 0
       };
     });
 
