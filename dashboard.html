@@ -1,4 +1,431 @@
-// ОТРИСОВКА 8 КАРТОЧЕК ЛИНИЙ С КОНТРОЛЕМ ТЕКУЩЕЙ СМЕНЫ
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRIMATEK — Панель начальника смены</title>
+  <!-- Библиотека SheetJS для выгрузки Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #070c18; color: #f8fafc; padding: 18px; }
+    .container { max-width: 1440px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+
+    /* Шапка диспетчера */
+    .header { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 16px 22px; border-radius: 14px; border: 1px solid #1e293b; box-shadow: 0 4px 15px rgba(0,0,0,0.3); flex-wrap: wrap; gap: 14px; }
+    .header-left { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+    .header-info { display: flex; flex-direction: column; gap: 4px; }
+    .date-badge { font-size: 14px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .shift-badge { font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 6px; background: #172554; color: #38bdf8; border: 1px solid #1e40af; width: fit-content; }
+    
+    .boss-select-wrap { display: flex; align-items: center; gap: 8px; background: #070c18; border: 1px solid #334155; padding: 6px 12px; border-radius: 9px; }
+    .boss-label { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
+    .boss-select { background: transparent; border: none; color: #facc15; font-size: 14px; font-weight: 900; outline: none; cursor: pointer; }
+    .boss-select option { background: #0f172a; color: #fff; }
+
+    .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .btn-excel { background: #059669; color: #fff; border: none; padding: 9px 16px; border-radius: 8px; font-weight: 800; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.15s; }
+    .btn-excel:hover { background: #10b981; }
+    .btn-refresh { background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 9px 14px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .btn-refresh:hover { background: #334155; }
+    .btn-refresh.spinning svg { animation: spin 0.8s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .sync-time { font-size: 11px; color: #64748b; }
+
+    /* Блок ПЛАН / ФАКТ смены */
+    .summary-grid { display: grid; grid-template-columns: 1.4fr 1.4fr 1.6fr 1fr 1fr; gap: 12px; }
+    @media (max-width: 1100px) { .summary-grid { grid-template-columns: 1fr 1fr; } }
+    
+    .summary-card { background: #0f172a; border-radius: 12px; padding: 14px 18px; border: 1px solid #1e293b; display: flex; flex-direction: column; justify-content: space-between; border-left: 4px solid #334155; }
+    .card-title { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .card-val { font-size: 26px; font-weight: 900; color: #fff; }
+    .card-sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+    .plan-input-group { display: flex; align-items: center; gap: 6px; }
+    .plan-input { width: 120px; background: #070c18; border: 1px solid #334155; border-radius: 6px; padding: 4px 8px; color: #38bdf8; font-weight: 900; font-size: 18px; text-align: right; outline: none; }
+    .plan-input:focus { border-color: #0072ce; }
+
+    .progress-bar-bg { width: 100%; height: 7px; background: #1e293b; border-radius: 4px; overflow: hidden; margin-top: 6px; }
+    .progress-bar-fill { height: 100%; background: #10b981; width: 0%; transition: width 0.4s; }
+
+    /* Основная зона: 8 КАРТОЧЕК ЛИНИЙ */
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; margin-bottom: 2px; }
+    .section-title { font-size: 16px; font-weight: 900; color: #f8fafc; letter-spacing: 0.4px; }
+    
+    .lines-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    @media (max-width: 1200px) { .lines-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 650px) { .lines-grid { grid-template-columns: 1fr; } }
+
+    .line-card { background: #0f172a; border-radius: 14px; padding: 16px; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 10px; transition: transform 0.15s, border-color 0.15s; }
+    .line-card:hover { border-color: #334155; transform: translateY(-2px); }
+    .line-card-top { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
+    .line-num { font-size: 20px; font-weight: 900; color: #fff; }
+
+    /* Статусы линий */
+    .status-badge { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .st-work { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .st-work .status-dot { background: #34d399; box-shadow: 0 0 8px #34d399; }
+    .st-clean { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .st-clean .status-dot { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
+    .st-sample { background: rgba(2, 132, 199, 0.15); color: #38bdf8; border: 1px solid rgba(2, 132, 199, 0.3); }
+    .st-sample .status-dot { background: #38bdf8; box-shadow: 0 0 8px #38bdf8; }
+    .st-repair { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .st-repair .status-dot { background: #f87171; box-shadow: 0 0 8px #f87171; }
+    .st-idle { background: #1e293b; color: #64748b; border: 1px solid #334155; }
+    .st-idle .status-dot { background: #64748b; }
+
+    .line-details { font-size: 13px; color: #94a3b8; display: flex; flex-direction: column; gap: 4px; }
+    .line-details b { color: #f8fafc; font-weight: 700; }
+    .ral-tag { background: #1e293b; color: #38bdf8; font-weight: 800; padding: 2px 7px; border-radius: 5px; font-size: 12px; border: 1px solid #334155; }
+
+    /* Центральное окно карточки */
+    .line-output-box { background: #070c18; border: 1px solid #1e293b; border-radius: 10px; padding: 12px; text-align: center; display: flex; flex-direction: column; gap: 3px; }
+    .output-label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    .output-val { font-size: 24px; font-weight: 900; color: #34d399; }
+    .output-chips { font-size: 13px; font-weight: 800; color: #fbbf24; margin-top: 2px; }
+    .output-sub { font-size: 12px; color: #94a3b8; font-weight: 700; }
+    .output-time { font-size: 11px; color: #475569; margin-top: 2px; }
+
+    /* Таблица истории */
+    .table-card { background: #0f172a; border-radius: 14px; padding: 20px; border: 1px solid #1e293b; }
+    .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
+    .filters-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .filter-select, .search-input { background: #070c18; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; color: #fff; font-size: 13px; outline: none; }
+    .search-input { width: 240px; }
+    
+    .scroll-table { overflow-x: auto; max-height: 440px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    th { background: #1e293b; color: #94a3b8; padding: 12px 14px; font-weight: 700; position: sticky; top: 0; z-index: 2; white-space: nowrap; }
+    td { padding: 12px 14px; border-bottom: 1px solid #1e293b; color: #cbd5e1; white-space: nowrap; }
+    tr:hover td { background: #172554; }
+    .tag-range { color: #facc15; font-family: monospace; font-weight: 800; background: rgba(250, 204, 21, 0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(250, 204, 21, 0.2); }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  
+  <!-- 1. Шапка диспетчера -->
+  <div class="header">
+    <div class="header-left">
+      <svg width="195" height="42" viewBox="0 0 230 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="6" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.5"/>
+        <circle cx="16" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.8"/>
+        <circle cx="26" cy="11" r="3.2" fill="#0072ce"/>
+        <circle cx="6" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.6"/>
+        <circle cx="16" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.9"/>
+        <circle cx="26" cy="33" r="3.2" fill="#0072ce"/>
+        <text x="36" y="34" font-family="'Arial Black', 'Impact', sans-serif" font-weight="900" font-size="31" fill="#0072ce" letter-spacing="1">PRIMATEK</text>
+        <text x="38" y="47" font-family="Arial, sans-serif" font-weight="600" font-size="8" fill="#94a3b8" letter-spacing="0.8">ИННОВАЦИИ В ПОКРЫТИЯХ</text>
+      </svg>
+      
+      <div class="header-info">
+        <div class="date-badge" id="currentDateText">📅 Загрузка даты...</div>
+        <div class="shift-badge" id="currentShiftBadge">СМЕНА: ДЕНЬ (08:00 – 20:00)</div>
+      </div>
+
+      <!-- Выбор начальника смены -->
+      <div class="boss-select-wrap">
+        <span class="boss-label">Начальник смены:</span>
+        <select id="shiftBossSelect" class="boss-select" onchange="saveShiftBoss()">
+          <option value="Шарапов">Шарапов</option>
+          <option value="Крылова">Крылова</option>
+          <option value="Токин">Токин</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button id="btnRefresh" class="btn-refresh" onclick="loadDashboardData()" title="Обновить">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        Обновить
+      </button>
+      <button class="btn-excel" onclick="exportToExcel()">📊 Скачать смены в Excel</button>
+      <div class="sync-time" id="lastSyncTime">Обновлено: —</div>
+    </div>
+  </div>
+
+  <!-- 2. Блок ПЛАН / ФАКТ смены -->
+  <div class="summary-grid">
+    <div class="summary-card" style="border-left-color: #6366f1;">
+      <div class="card-title">🏁 ПЛАН НА СМЕНУ</div>
+      <div class="plan-input-group">
+        <input type="number" id="shiftPlanInput" class="plan-input" value="20000" step="500" onchange="updateShiftPlan()">
+        <span style="font-weight: 800; font-size: 16px; color:#fff;">кг</span>
+      </div>
+      <div class="card-sub" id="planRemainingSub">Осталось: 20 000 кг</div>
+    </div>
+
+    <div class="summary-card" style="border-left-color: #38bdf8;">
+      <div class="card-title">⚡ КРАСКА (ЖИВОЙ ФАКТ)</div>
+      <div class="card-val" id="sumLiveKg" style="color: #38bdf8;">0 кг</div>
+      <div class="card-sub" id="sumLivePcs">0 кор./меш. краски</div>
+    </div>
+
+    <div class="summary-card" style="border-left-color: #10b981;">
+      <div class="card-title">
+        <span>📊 ВЫПОЛНЕНИЕ ПЛАНА</span>
+        <span id="sumPlanPercent" style="color: #34d399; font-weight: 900; font-size: 14px;">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div id="sumProgressBar" class="progress-bar-fill"></div>
+      </div>
+      <div class="card-sub" id="sumPaceText">Идет учет текущей смены</div>
+    </div>
+
+    <div class="summary-card" style="border-left-color: #ef4444;">
+      <div class="card-title">БРАК ЗА СМЕНУ</div>
+      <div class="card-val" id="sumDefectKg" style="color: #f87171;">0 кг</div>
+      <div class="card-sub" id="sumDefectBoxes">0 коробок</div>
+    </div>
+
+    <div class="summary-card" style="border-left-color: #f59e0b;">
+      <div class="card-title">ЧИПСЫ / П-Ф ЗА СМЕНУ</div>
+      <div class="card-val" id="sumChipsKg" style="color: #fbbf24;">0 кг</div>
+      <div class="card-sub" id="sumDustKg">Пыль (отход): 0 кг</div>
+    </div>
+  </div>
+
+  <!-- 3. КАРТОЧКИ 8 ЛИНИЙ -->
+  <div>
+    <div class="section-header">
+      <div class="section-title">Текущее состояние линий</div>
+      <span style="font-size: 12px; color: #64748b;">Данные обновляются в реальном времени при нажатии оператором</span>
+    </div>
+    <div class="lines-grid" id="linesGrid"></div>
+  </div>
+
+  <!-- 4. Таблица: История сданных смен (Архив) -->
+  <div class="table-card">
+    <div class="table-toolbar">
+      <div>
+        <div style="font-size: 16px; font-weight: 900; color: #fff;">📋 Журнал сданных смен (Архив)</div>
+        <div style="font-size: 11px; color: #64748b;">Официально закрытые смены без промежуточных срезов</div>
+      </div>
+      
+      <div class="filters-group">
+        <select id="filterDate" class="filter-select" onchange="filterShiftsTable()">
+          <option value="today">Сегодня</option>
+          <option value="all" selected>За все время</option>
+        </select>
+
+        <select id="filterLine" class="filter-select" onchange="filterShiftsTable()">
+          <option value="all">Все линии</option>
+          <option value="1">Линия №1</option>
+          <option value="5">Линия №5</option>
+          <option value="6">Линия №6</option>
+          <option value="7">Линия №7</option>
+          <option value="8">Линия №8</option>
+          <option value="13">Линия №13</option>
+          <option value="14">Линия №14</option>
+          <option value="15">Линия №15</option>
+        </select>
+
+        <input type="text" id="searchInput" class="search-input" placeholder="Поиск (оператор, RAL, партия)..." oninput="filterShiftsTable()">
+      </div>
+    </div>
+
+    <div class="scroll-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Время сдачи</th>
+            <th>Линия</th>
+            <th>Смена</th>
+            <th>Оператор</th>
+            <th>Партия</th>
+            <th>Цвет RAL</th>
+            <th>Статус</th>
+            <th>Диапазон</th>
+            <th>Краска (кг)</th>
+            <th>Чипсы / П-ф</th>
+            <th>Брак</th>
+            <th>Пыль (отход)</th>
+          </tr>
+        </thead>
+        <tbody id="shiftsTableBody">
+          <tr><td colspan="12" style="text-align: center; color: #64748b; padding: 25px;">Загрузка истории смен...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const SUPABASE_BASE = "https://oqhrzruxubqthqyxmdcg.supabase.co/rest/v1";
+  const SUPABASE_KEY = "sb_publishable_m5YmzYjW1BpotrbaRpCdgA__kYvilf3";
+  const PRIMATEK_LINES = [1, 5, 6, 7, 8, 13, 14, 15];
+
+  let rawReports = [];
+  let closedShiftsList = [];
+  let currentShiftPlanKg = Number(localStorage.getItem('primatek_shift_plan') || 20000);
+
+  const savedBoss = localStorage.getItem('primatek_shift_boss');
+  if (savedBoss) {
+    document.getElementById('shiftBossSelect').value = savedBoss;
+  }
+  document.getElementById('shiftPlanInput').value = currentShiftPlanKg;
+
+  function saveShiftBoss() {
+    const val = document.getElementById('shiftBossSelect').value;
+    localStorage.setItem('primatek_shift_boss', val);
+  }
+
+  function updateShiftPlan() {
+    const val = Number(document.getElementById('shiftPlanInput').value) || 20000;
+    currentShiftPlanKg = val;
+    localStorage.setItem('primatek_shift_plan', val);
+    renderTopSummary();
+  }
+
+  function getCurrentShiftWindow() {
+    const now = new Date();
+    const h = now.getHours();
+    const isDay = (h >= 8 && h < 20);
+
+    let start = new Date(now);
+    let end = new Date(now);
+
+    if (isDay) {
+      start.setHours(8, 0, 0, 0);
+      end.setHours(20, 0, 0, 0);
+    } else {
+      if (h < 8) start.setDate(start.getDate() - 1);
+      start.setHours(20, 0, 0, 0);
+      end = new Date(start);
+      end.setDate(end.getDate() + 1);
+      end.setHours(8, 0, 0, 0);
+    }
+
+    return { isDay, start, end };
+  }
+
+  function updateDateAndShiftDisplay() {
+    const now = new Date();
+    const options = { day: 'numeric', month: 'long', year: 'numeric' };
+    const dateStr = now.toLocaleDateString('ru-RU', options);
+    document.getElementById('currentDateText').innerText = `📅 ${dateStr}`;
+
+    const { isDay } = getCurrentShiftWindow();
+    document.getElementById('currentShiftBadge').innerText = 'СМЕНА: ' + (isDay ? 'ДЕНЬ (08:00 – 20:00)' : 'НОЧЬ (20:00 – 08:00)');
+  }
+  updateDateAndShiftDisplay();
+
+  function isCheckpoint(r) {
+    return (r.shift_type || '').includes('ТЕКУЩИЙ');
+  }
+
+  function getBoxRange(r) {
+    const start = r.unit_from || r.box_from || r.start_box || null;
+    const end = r.unit_to || r.box_to || r.end_box || null;
+    const count = Number(r.good_boxes || r.good_bags) || 0;
+
+    if (start && end) {
+      return { text: `№ ${start} — № ${end}`, count: (end - start + 1) };
+    }
+    if (end && count) {
+      const calcStart = Math.max(1, end - count + 1);
+      return { text: `№ ${calcStart} — № ${end}`, count: count };
+    }
+    if (count > 0) {
+      return { text: `${count} шт.`, count: count };
+    }
+    return { text: '—', count: 0 };
+  }
+
+  // Мгновенная базовая отрисовка карточек
+  renderLiveLineCards();
+
+  async function loadDashboardData() {
+    const btn = document.getElementById('btnRefresh');
+    btn.classList.add('spinning');
+
+    try {
+      const url = `${SUPABASE_BASE}/shift_reports?select=*&order=created_at.desc&limit=250`;
+      const res = await fetch(url, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        },
+        cache: 'no-store'
+      });
+
+      if (res.ok) {
+        rawReports = await res.json();
+        document.getElementById('lastSyncTime').innerText = 'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
+
+        closedShiftsList = rawReports.filter(r => !isCheckpoint(r));
+
+        renderTopSummary();
+        renderLiveLineCards();
+        filterShiftsTable();
+      } else {
+        const errText = await res.text();
+        console.error("Ошибка Supabase:", errText);
+        document.getElementById('lastSyncTime').innerText = 'Ошибка связи: ' + res.status;
+      }
+    } catch (e) {
+      console.error("Ошибка загрузки:", e);
+      document.getElementById('lastSyncTime').innerText = 'Сетевая ошибка';
+    } finally {
+      setTimeout(() => btn.classList.remove('spinning'), 500);
+    }
+  }
+
+  function renderTopSummary() {
+    const { start: shiftStart, end: shiftEnd } = getCurrentShiftWindow();
+
+    const shiftReports = rawReports.filter(r => {
+      if (!r.created_at) return false;
+      const t = new Date(r.created_at).getTime();
+      return t >= shiftStart.getTime() && t <= shiftEnd.getTime();
+    });
+
+    let totalLiveKg = 0;
+    let totalLivePcs = 0;
+    let shiftDefectKg = 0;
+    let shiftDefectBoxes = 0;
+    let shiftChipsKg = 0;
+    let shiftDustKg = 0;
+
+    PRIMATEK_LINES.forEach(lineNum => {
+      const lineReports = shiftReports.filter(r => Number(r.line_number) === lineNum);
+      if (lineReports.length > 0) {
+        const latest = lineReports[0];
+        totalLiveKg += Number(latest.total_good_kg) || 0;
+        totalLivePcs += Number(latest.good_boxes || latest.good_bags) || 0;
+      }
+    });
+
+    shiftReports.forEach(r => {
+      shiftDefectKg += Number(r.defect_kg) || 0;
+      shiftDefectBoxes += Number(r.defect_boxes) || 0;
+      shiftChipsKg += Number(r.chips_kg) || 0;
+      shiftDustKg += Number(r.dust_kg) || 0;
+    });
+
+    document.getElementById('sumLiveKg').innerText = totalLiveKg.toLocaleString('ru-RU') + ' кг';
+    document.getElementById('sumLivePcs').innerText = `${totalLivePcs} кор./меш. краски`;
+
+    const plan = currentShiftPlanKg > 0 ? currentShiftPlanKg : 20000;
+    const percent = Math.min(100, Math.round((totalLiveKg / plan) * 100));
+    document.getElementById('sumPlanPercent').innerText = `${percent}%`;
+    document.getElementById('sumProgressBar').style.width = `${percent}%`;
+
+    const remaining = Math.max(0, plan - totalLiveKg);
+    document.getElementById('planRemainingSub').innerText = `Осталось краски: ${remaining.toLocaleString('ru-RU')} кг`;
+
+    document.getElementById('sumDefectKg').innerText = `${shiftDefectKg.toLocaleString('ru-RU')} кг`;
+    document.getElementById('sumDefectBoxes').innerText = `${shiftDefectBoxes} коробок`;
+    document.getElementById('sumChipsKg').innerText = `${shiftChipsKg.toLocaleString('ru-RU')} кг`;
+    document.getElementById('sumDustKg').innerText = `Пыль (отход): ${shiftDustKg.toFixed(1)} кг`;
+  }
+
+  // ОТРИСОВКА 8 КАРТОЧЕК ЛИНИЙ С КОНТРОЛЕМ ТЕКУЩЕЙ СМЕНЫ
   function renderLiveLineCards() {
     const grid = document.getElementById('linesGrid');
     grid.innerHTML = '';
@@ -8,10 +435,8 @@
     const shiftEndTime = shiftEnd.getTime();
 
     PRIMATEK_LINES.forEach(lineNum => {
-      // Ищем самую свежую запись вообще
       const latestAny = rawReports.find(r => Number(r.line_number) === lineNum);
 
-      // Проверяем: относится ли этот замер к ТЕКУЩЕЙ активной смене?
       let isCurrentShift = false;
       if (latestAny && latestAny.created_at) {
         const recordTime = new Date(latestAny.created_at).getTime();
@@ -86,7 +511,6 @@
           <div class="output-time">${prevTimeStr}</div>
         `;
       } else {
-        // В базе вообще никогда не было данных
         centralOutputHtml = `
           <div class="output-label">Состояние линии</div>
           <div class="output-val" style="font-size:20px; color:#64748b;">НЕТ ДАННЫХ</div>
@@ -120,3 +544,108 @@
       grid.appendChild(card);
     });
   }
+
+  function filterShiftsTable() {
+    const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+    const lineVal = document.getElementById('filterLine').value;
+    const dateVal = document.getElementById('filterDate').value;
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const filtered = closedShiftsList.filter(r => {
+      const op = (r.operator_name || '').toLowerCase();
+      const batch = (r.batch_number || '').toLowerCase();
+      const ral = (r.ral_color || '').toLowerCase();
+      const matchSearch = !searchVal || op.includes(searchVal) || batch.includes(searchVal) || ral.includes(searchVal);
+      const matchLine = (lineVal === 'all') || (String(r.line_number) === String(lineVal));
+
+      let matchDate = true;
+      if (dateVal === 'today' && r.created_at) {
+        matchDate = r.created_at.slice(0, 10) === todayStr;
+      }
+      return matchSearch && matchLine && matchDate;
+    });
+
+    renderShiftsTable(filtered);
+  }
+
+  function renderShiftsTable(reports) {
+    const tbody = document.getElementById('shiftsTableBody');
+    if (!reports.length) {
+      tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; color: #64748b; padding: 25px;">Смен по выбранным критериям не найдено</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = reports.map(r => {
+      const dt = new Date(r.created_at);
+      const timeStr = dt.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'}) + ' ' + dt.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
+
+      const status = r.line_status || 'В РАБОТЕ';
+      let statusBadge = `<span class="status-badge st-work"><span class="status-dot"></span>В РАБОТЕ</span>`;
+      if (status === 'ЧИСТКА') statusBadge = `<span class="status-badge st-clean"><span class="status-dot"></span>ЧИСТКА</span>`;
+      if (status === 'ПРОБЫ') statusBadge = `<span class="status-badge st-sample"><span class="status-dot"></span>ПРОБЫ</span>`;
+      if (status === 'РЕМОНТ') statusBadge = `<span class="status-badge st-repair"><span class="status-dot"></span>РЕМОНТ</span>`;
+
+      const box = getBoxRange(r);
+      const boxHtml = (box.text !== '—') ? `<span class="tag-range">${box.text}</span>` : `<span style="color:#64748b;">—</span>`;
+
+      return `
+        <tr>
+          <td style="color: #94a3b8; font-family: monospace;">${timeStr}</td>
+          <td><b>№${r.line_number}</b></td>
+          <td>${r.shift_type || '—'}</td>
+          <td><b>${r.operator_name || '—'}</b></td>
+          <td>${r.batch_number || '—'}</td>
+          <td><span class="ral-tag">${r.ral_color || '—'}</span></td>
+          <td>${statusBadge}</td>
+          <td>${boxHtml}</td>
+          <td><b style="color: #34d399; font-size:14px;">${r.total_good_kg || 0} кг</b></td>
+          <td style="color: #fbbf24; font-weight:700;">${r.chips_kg || 0} кг</td>
+          <td style="color: #f87171;">${r.defect_kg || 0} кг</td>
+          <td style="color: #94a3b8;">${Number(r.dust_kg || 0).toFixed(1)} кг</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function exportToExcel() {
+    if (!closedShiftsList.length) {
+      alert("Нет смен для выгрузки");
+      return;
+    }
+
+    const currentBoss = document.getElementById('shiftBossSelect').value;
+
+    const excelData = closedShiftsList.map(r => {
+      const box = getBoxRange(r);
+      return {
+        "Дата и время": new Date(r.created_at).toLocaleString('ru-RU'),
+        "Начальник смены": currentBoss,
+        "Линия": "№" + r.line_number,
+        "Смена": r.shift_type || "",
+        "Оператор": r.operator_name || "",
+        "Партия": r.batch_number || "",
+        "Цвет RAL": r.ral_color || "",
+        "Состояние линии": r.line_status || "В РАБОТЕ",
+        "Диапазон": box.text,
+        "Коробок/Мешков": box.count || 0,
+        "Краска (кг)": r.total_good_kg || 0,
+        "Чипсы / П-ф (кг)": r.chips_kg || 0,
+        "Брак (кг)": r.defect_kg || 0,
+        "Пыль отход (кг)": r.dust_kg || 0
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Смены PRIMATEK");
+
+    const fileName = `PRIMATEK_Смены_${currentBoss}_${new Date().toISOString().slice(0,10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  }
+
+  loadDashboardData();
+  setInterval(loadDashboardData, 30000);
+</script>
+
+</body>
+</html>
