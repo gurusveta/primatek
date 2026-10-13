@@ -137,12 +137,7 @@
     .plan-progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #0072ce, #38bdf8); transition: width 0.4s ease; border-radius: 8px; }
     .plan-progress-bar.gold { background: linear-gradient(90deg, #f59e0b, #fbbf24); box-shadow: 0 0 8px rgba(251, 191, 36, 0.6); }
 
-    .plan-progress-text { font-size: 12px; font-weight: 800; color: #cbd5e1; text-align: right; margin-top: 4px; margin-bottom: 8px; }
-
-    .plan-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .plan-metric { background: #080d1a; border: 1px solid #1e293b; border-radius: 7px; padding: 6px 8px; display: flex; justify-content: space-between; align-items: center; }
-    .plan-metric-label { font-size: 10px; color: #8fa0c2; font-weight: 700; }
-    .plan-metric-value { font-size: 11px; font-weight: 800; color: #cbd5e1; }
+    .plan-progress-text { font-size: 12px; font-weight: 800; color: #cbd5e1; text-align: right; margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -260,34 +255,10 @@
       <div class="plan-progress-bar" id="planProgressBar"></div>
     </div>
     <div class="plan-progress-text" id="planProgressText">0%</div>
-
-    <div class="plan-metrics">
-      <div class="plan-metric">
-        <span class="plan-metric-label">Прогноз:</span>
-        <span class="plan-metric-value" id="planForecast">—</span>
-      </div>
-      <div class="plan-metric">
-        <span class="plan-metric-label">Скорость:</span>
-        <span class="plan-metric-value" id="planSpeed">— кг/ч</span>
-      </div>
-      <div class="plan-metric">
-        <span class="plan-metric-label">Рекорд:</span>
-        <span class="plan-metric-value" id="planRecord">— кг</span>
-      </div>
-      <div class="plan-metric">
-        <span class="plan-metric-label">До рекорда:</span>
-        <span class="plan-metric-value" id="planRecordDiff">— кг</span>
-      </div>
-    </div>
   </div>
 
   <!-- 4. Выпуск готовой краски -->
   <div class="card" id="outputCard">
-    <div class="label-title">
-      <span>Готовая краска (коробки / мешки)</span>
-      <span style="color: #38bdf8; font-size: 13px;" id="totalKgHeader">0 кг</span>
-    </div>
-
     <div class="tabs">
       <button class="tab active" onclick="switchTab('boxes', this)">Коробки</button>
       <button class="tab" onclick="switchTab('bags', this)">Мешки</button>
@@ -295,35 +266,29 @@
 
     <!-- Коробки -->
     <div id="tab-boxes">
-      <div class="row-2" style="margin-bottom: 8px;">
+      <div class="row-2">
         <div>
           <div style="font-size: 11px; color: #8fa0c2; margin-bottom: 4px;">С коробки № (принято)</div>
-          <input type="number" id="boxStart" placeholder="1" oninput="calcBoxes()">
+          <input type="number" id="boxStart" placeholder="" oninput="calcBoxes()">
         </div>
         <div>
           <div style="font-size: 11px; color: #8fa0c2; margin-bottom: 4px;">По коробку № (текущая)</div>
-          <input type="number" id="boxEnd" placeholder="70" oninput="calcBoxes()">
+          <input type="number" id="boxEnd" placeholder="" oninput="calcBoxes()">
         </div>
-      </div>
-      <div style="font-size: 12px; color: #8fa0c2; text-align: right;">
-        Изготовлено краски: <b id="boxesCountText" style="color:#fff;">0 шт</b> (<b id="boxesKgText" style="color:#38bdf8;">0 кг</b>)
       </div>
     </div>
 
     <!-- Мешки -->
     <div id="tab-bags" style="display: none;">
-      <div class="row-2" style="margin-bottom: 8px;">
+      <div class="row-2">
         <div>
           <div style="font-size: 11px; color: #8fa0c2; margin-bottom: 4px;">С мешка № (принято)</div>
-          <input type="number" id="bagStart" placeholder="1" oninput="calcBags()">
+          <input type="number" id="bagStart" placeholder="" oninput="calcBags()">
         </div>
         <div>
           <div style="font-size: 11px; color: #8fa0c2; margin-bottom: 4px;">По мешок № (текущий)</div>
-          <input type="number" id="bagEnd" placeholder="15" oninput="calcBags()">
+          <input type="number" id="bagEnd" placeholder="" oninput="calcBags()">
         </div>
-      </div>
-      <div style="font-size: 12px; color: #8fa0c2; text-align: right;">
-        Изготовлено краски: <b id="bagsCountText" style="color:#fff;">0 шт</b> (<b id="bagsKgText" style="color:#38bdf8;">0 кг</b>)
       </div>
     </div>
 
@@ -499,16 +464,15 @@
   let lastSubmissionTime = 0;
 
   // ===== ПРИЁМ СМЕНЫ =====
-  let handoverStatus = null;         // статус, выбранный в блоке приёмки
-  let shiftAcceptedAt = null;        // время приёмки смены
-  let shiftAcceptedStatus = null;    // статус, с которым смена была принята
+  let handoverStatus = null;
+  let shiftAcceptedAt = null;
+  let shiftAcceptedStatus = null;
 
-  // ===== ПЛАН СМЕНЫ, ПРОГНОЗ, РЕКОРД =====
+  // ===== ТЕКУЩЕЕ СОСТОЯНИЕ СМЕНЫ =====
   let workTimeMs = 0;
   let lastStatusChangeTime = Date.now();
   let currentStatus = 'В РАБОТЕ';
   let planKg = 0;
-  let personalRecordKg = 0;
 
   // Лог статусов для будущего OEM
   let statusLog = [];
@@ -517,7 +481,6 @@
   const savedOp = localStorage.getItem('primatek_operator_name');
   if (savedOp) {
     document.getElementById('operatorName').value = savedOp;
-    // Если ФИО уже сохранено — обновляем доступность кнопки приёмки
     setTimeout(() => updateHandoverButtonState(), 100);
   }
 
@@ -525,7 +488,6 @@
     const val = document.getElementById('operatorName').value.trim();
     localStorage.setItem('primatek_operator_name', val);
     updateHandoverButtonState();
-    loadPersonalRecord();
   }
 
   const lineBox = document.getElementById('lineButtons');
@@ -537,11 +499,9 @@
       document.querySelectorAll('.btn-line').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state.selectedLine = num;
-      // Сбрасываем приёмку смены при смене линии
       resetHandover();
       checkLineHandover(num);
       loadPlanFromDashboard();
-      loadPersonalRecord();
     };
     lineBox.appendChild(btn);
   });
@@ -564,13 +524,11 @@
     shiftAcceptedAt = null;
     shiftAcceptedStatus = null;
 
-    // Показываем выбор статуса и кнопку
     document.getElementById('handoverStatusGrid').style.display = 'grid';
     document.getElementById('btnHandoverAccept').style.display = 'block';
     document.getElementById('handoverAccepted').style.display = 'none';
     document.getElementById('handoverCard').classList.remove('ready-state');
 
-    // Сбрасываем выделение кнопок статуса в приёмке
     document.querySelectorAll('.btn-handover-status').forEach(b => b.className = 'btn-handover-status');
     updateHandoverButtonState();
   }
@@ -611,44 +569,52 @@
     btnAccept.disabled = true;
     btnAccept.innerText = 'Принимаем...';
 
-    // Синхронизируем статус в блоке «Состояние линии прямо сейчас»
     syncStatusButtons(handoverStatus);
 
     const shiftName = getShiftName();
     const now = new Date();
     const timeStr = now.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'});
 
-    // Определяем, с какой коробки начинаем (только если статус В РАБОТЕ)
-    let startUnit = 1;
-    if (handoverStatus === 'В РАБОТЕ' && lastShiftData) {
-      const isBag = (lastShiftData.package_type === 'bag');
-      const lastUnit = Number(lastShiftData.unit_to || (isBag ? lastShiftData.good_bags : lastShiftData.good_boxes) || 0);
-      startUnit = lastUnit > 0 ? (lastUnit + 1) : 1;
+    // Автоподстановка номера коробки — только если статус В РАБОТЕ
+    let startUnit = null;
+    if (handoverStatus === 'В РАБОТЕ') {
+      if (lastShiftData) {
+        const isBag = (lastShiftData.package_type === 'bag');
+        const lastUnit = Number(lastShiftData.unit_to || (isBag ? lastShiftData.good_bags : lastShiftData.good_boxes) || 0);
+        startUnit = lastUnit > 0 ? (lastUnit + 1) : 1;
 
-      // Подставляем номер коробки/мешка в соответствующий блок
-      if (isBag) {
-        switchTab('bags', document.querySelectorAll('.tabs .tab')[1]);
-        document.getElementById('bagStart').value = startUnit;
-        document.getElementById('bagEnd').value = '';
-        calcBags();
+        if (isBag) {
+          switchTab('bags', document.querySelectorAll('.tabs .tab')[1]);
+          document.getElementById('bagStart').value = startUnit;
+          document.getElementById('bagEnd').value = '';
+          calcBags();
+        } else {
+          switchTab('boxes', document.querySelectorAll('.tabs .tab')[0]);
+          document.getElementById('boxStart').value = startUnit;
+          document.getElementById('boxEnd').value = '';
+          calcBoxes();
+        }
       } else {
-        switchTab('boxes', document.querySelectorAll('.tabs .tab')[0]);
-        document.getElementById('boxStart').value = startUnit;
-        document.getElementById('boxEnd').value = '';
-        calcBoxes();
+        // Нет данных о прошлой смене — начинаем с 1
+        startUnit = 1;
+        if (state.packageType === 'bag') {
+          document.getElementById('bagStart').value = 1;
+          document.getElementById('bagEnd').value = '';
+          calcBags();
+        } else {
+          document.getElementById('boxStart').value = 1;
+          document.getElementById('boxEnd').value = '';
+          calcBoxes();
+        }
       }
-    } else if (handoverStatus === 'В РАБОТЕ') {
-      // Нет данных о прошлой смене — начинаем с 1
-      const isBag = (state.packageType === 'bag');
-      if (isBag) {
-        document.getElementById('bagStart').value = 1;
-        document.getElementById('bagEnd').value = '';
-        calcBags();
-      } else {
-        document.getElementById('boxStart').value = 1;
-        document.getElementById('boxEnd').value = '';
-        calcBoxes();
-      }
+    } else {
+      // Не В РАБОТЕ — поля пустые
+      document.getElementById('boxStart').value = '';
+      document.getElementById('boxEnd').value = '';
+      document.getElementById('bagStart').value = '';
+      document.getElementById('bagEnd').value = '';
+      calcBoxes();
+      calcBags();
     }
 
     const batch = document.getElementById('batchNumber').value.trim() || '—';
@@ -670,8 +636,8 @@
       defect_kg: 0,
       dust_kg: 0,
       package_type: state.packageType,
-      unit_from: startUnit,
-      unit_to: startUnit
+      unit_from: startUnit || 0,
+      unit_to: startUnit || 0
     };
 
     try {
@@ -689,18 +655,15 @@
       console.warn("Сбой фоновой отправки приёмки:", e);
     }
 
-    // Фиксируем приёмку
     shiftAcceptedAt = timeStr;
     shiftAcceptedStatus = handoverStatus;
 
-    // Сбрасываем таймеры на начало смены
     workTimeMs = 0;
     lastStatusChangeTime = Date.now();
     currentStatusStart = Date.now();
     statusLog = [];
     currentStatus = handoverStatus;
 
-    // Сворачиваем блок в плашку
     document.getElementById('handoverStatusGrid').style.display = 'none';
     document.getElementById('btnHandoverAccept').style.display = 'none';
     document.getElementById('handoverCard').classList.add('ready-state');
@@ -711,11 +674,9 @@
       `Смена принята • ${timeStr} • ${handoverStatus}`;
 
     loadPlanFromDashboard();
-    loadPersonalRecord();
     renderPlanBlock();
   }
 
-  // Синхронизация кнопок в блоке «Состояние линии прямо сейчас»
   function syncStatusButtons(status) {
     const map = {
       'В РАБОТЕ': { el: 'stBtnWork', cls: 'active-work', color: '#34d399' },
@@ -779,7 +740,6 @@
     state.packageType = (tab === 'boxes') ? 'box' : 'bag';
     document.getElementById('tab-boxes').style.display = tab === 'boxes' ? 'block' : 'none';
     document.getElementById('tab-bags').style.display = tab === 'bags' ? 'block' : 'none';
-    updateTotalHeader();
   }
 
   function getBoxesCount() {
@@ -790,10 +750,6 @@
   }
 
   function calcBoxes() {
-    const count = getBoxesCount();
-    document.getElementById('boxesCountText').innerText = count + ' шт';
-    document.getElementById('boxesKgText').innerText = (count * 20) + ' кг';
-    updateTotalHeader();
     renderPlanBlock();
   }
 
@@ -805,10 +761,6 @@
   }
 
   function calcBags() {
-    const count = getBagsCount();
-    document.getElementById('bagsCountText').innerText = count + ' шт';
-    document.getElementById('bagsKgText').innerText = (count * 20) + ' кг';
-    updateTotalHeader();
     renderPlanBlock();
   }
 
@@ -825,7 +777,6 @@
       state.chips.push({ type: state.chipType, weight: weight });
       input.value = '';
       renderChips();
-      updateTotalHeader();
       renderPlanBlock();
     }
   }
@@ -846,7 +797,6 @@
       document.getElementById('defectStart').value = '';
       document.getElementById('defectEnd').value = '';
       renderDefects();
-      updateTotalHeader();
       renderPlanBlock();
     } else {
       alert('Укажите корректный диапазон коробок брака');
@@ -878,19 +828,7 @@
     list.innerHTML = state.dust.map((d, i) => `<span class="tag-chip">#${i+1}: ${d} кг</span>`).join('');
   }
 
-  function updateTotalHeader() {
-    const boxKg = getBoxesCount() * 20;
-    const bagKg = getBagsCount() * 20;
-    const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
-    const goodPaintKg = Math.max(0, (boxKg + bagKg) - defectKg);
-    const chipsKg = state.chips.reduce((s, c) => s + c.weight, 0);
-
-    let txt = `${goodPaintKg} кг краски`;
-    if (chipsKg > 0) txt += ` | ${chipsKg} кг чипсов`;
-    document.getElementById('totalKgHeader').innerText = txt;
-  }
-
-  // ===== ПЛАН, ПРОГНОЗ, РЕКОРД =====
+  // ===== ПЛАН СМЕНЫ =====
 
   function loadPlanFromDashboard() {
     try {
@@ -910,15 +848,6 @@
     lastStatusChangeTime = now;
   }
 
-  function getWorkHours() {
-    let ms = workTimeMs;
-    if (currentStatus === 'В РАБОТЕ') {
-      ms += (Date.now() - lastStatusChangeTime);
-    }
-    const hours = ms / (1000 * 60 * 60);
-    return Math.min(hours, 12);
-  }
-
   function getCurrentGoodPaintKg() {
     const boxCount = getBoxesCount();
     const bagCount = getBagsCount();
@@ -927,51 +856,15 @@
     return Math.max(0, rawPaintKg - defectKg);
   }
 
-  function getSpeedKgPerHour() {
-    const hours = getWorkHours();
-    if (hours < 0.05) return 0;
-    return getCurrentGoodPaintKg() / hours;
-  }
-
-  function getForecastKg() {
-    const speed = getSpeedKgPerHour();
-    const hours = getWorkHours();
-    const remainingHours = Math.max(0, 12 - hours);
-    return Math.round(getCurrentGoodPaintKg() + (speed * remainingHours));
-  }
-
   function getPlanPercent() {
     if (planKg <= 0) return 0;
     return Math.min(999, Math.round((getCurrentGoodPaintKg() / planKg) * 100));
-  }
-
-  async function loadPersonalRecord() {
-    const op = document.getElementById('operatorName').value.trim();
-    if (!op) {
-      personalRecordKg = 0;
-      renderPlanBlock();
-      return;
-    }
-    try {
-      const res = await fetch(`${SUPABASE_BASE}/shift_reports?operator_name=ilike.*${encodeURIComponent(op)}*&shift_type=not.ilike.*ТЕКУЩИЙ*&order=total_good_kg.desc&limit=1`, {
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        personalRecordKg = (data && data.length > 0) ? (Number(data[0].total_good_kg) || 0) : 0;
-      }
-    } catch (e) {
-      personalRecordKg = 0;
-    }
-    renderPlanBlock();
   }
 
   function renderPlanBlock() {
     const doneKg = getCurrentGoodPaintKg();
     const percent = getPlanPercent();
     const leftKg = planKg > 0 ? Math.max(0, planKg - doneKg) : 0;
-    const speed = getSpeedKgPerHour();
-    const forecast = getForecastKg();
 
     document.getElementById('planKgValue').innerText = planKg > 0 ? planKg + ' кг' : '— кг';
     document.getElementById('planDoneValue').innerText = doneKg + ' кг';
@@ -1004,23 +897,9 @@
       badge.innerText = '—';
       badge.style.color = '#8fa0c2';
     }
-
-    if (planKg > 0 && doneKg > 0) {
-      const forecastPercent = Math.round((forecast / planKg) * 100);
-      document.getElementById('planForecast').innerText = forecast + ' кг (' + forecastPercent + '%)';
-    } else {
-      document.getElementById('planForecast').innerText = '—';
-    }
-
-    document.getElementById('planSpeed').innerText = speed > 0 ? speed.toFixed(1) + ' кг/ч' : '— кг/ч';
-    document.getElementById('planRecord').innerText = personalRecordKg > 0 ? personalRecordKg + ' кг' : '— кг';
-    const diff = personalRecordKg > 0 ? Math.max(0, personalRecordKg - doneKg) : 0;
-    document.getElementById('planRecordDiff').innerText = personalRecordKg > 0 ? diff + ' кг' : '— кг';
   }
 
-  setInterval(() => { renderPlanBlock(); }, 30000);
-
-  // ===== ЗАГРУЗКА ДАННЫХ ПРОШЛОЙ СМЕНЫ (для автоподстановки номера) =====
+  // ===== ЗАГРУЗКА ДАННЫХ ПРОШЛОЙ СМЕНЫ =====
 
   async function checkLineHandover(lineNum) {
     try {
@@ -1037,9 +916,6 @@
       }
 
       lastShiftData = data[0];
-
-      // Если статус в прошлой смене был не "В РАБОТЕ" — начинаем с 1
-      // (это учтётся при приёмке)
     } catch (e) {
       lastShiftData = null;
     }
@@ -1117,9 +993,7 @@
       unit_to: uEnd,
       plan_kg: planKg > 0 ? planKg : null,
       plan_percent: planKg > 0 ? getPlanPercent() : null,
-      plan_completed: planKg > 0 ? (getCurrentGoodPaintKg() >= planKg) : null,
-      forecast_kg: getForecastKg(),
-      speed_kg_per_hour: Math.round(getSpeedKgPerHour() * 10) / 10
+      plan_completed: planKg > 0 ? (getCurrentGoodPaintKg() >= planKg) : null
     };
 
     try {
@@ -1286,17 +1160,19 @@
         renderChips();
         renderDefects();
         renderDust();
-        updateTotalHeader();
+
+        document.getElementById('boxStart').value = '';
+        document.getElementById('boxEnd').value = '';
+        document.getElementById('bagStart').value = '';
+        document.getElementById('bagEnd').value = '';
 
         workTimeMs = 0;
         lastStatusChangeTime = Date.now();
         currentStatusStart = Date.now();
         statusLog = [];
 
-        // Сбрасываем блок приёмки — смена сдана
         resetHandover();
         checkLineHandover(state.selectedLine);
-        loadPersonalRecord();
         renderPlanBlock();
       } else {
         const err = await response.text();
@@ -1501,7 +1377,6 @@
     resetHandover();
     checkLineHandover(state.selectedLine);
     loadPlanFromDashboard();
-    loadPersonalRecord();
     renderPlanBlock();
   });
 </script>
