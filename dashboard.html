@@ -32,8 +32,9 @@
     .sync-time { font-size: 11px; color: #64748b; }
 
     /* Блок ПЛАН / ФАКТ смены */
-    .summary-grid { display: grid; grid-template-columns: 1.4fr 1.4fr 1.6fr 1fr 1fr; gap: 12px; }
-    @media (max-width: 1100px) { .summary-grid { grid-template-columns: 1fr 1fr; } }
+    .summary-grid { display: grid; grid-template-columns: 1.4fr 1.4fr 1.6fr 1fr 1fr 1.4fr; gap: 12px; }
+    @media (max-width: 1200px) { .summary-grid { grid-template-columns: 1fr 1fr 1fr; } }
+    @media (max-width: 700px) { .summary-grid { grid-template-columns: 1fr 1fr; } }
     
     .summary-card { background: #0f172a; border-radius: 12px; padding: 14px 18px; border: 1px solid #1e293b; display: flex; flex-direction: column; justify-content: space-between; border-left: 4px solid #334155; }
     .card-title { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
@@ -86,6 +87,29 @@
     .output-sub { font-size: 12px; color: #94a3b8; font-weight: 700; }
     .output-time { font-size: 11px; color: #475569; margin-top: 2px; }
 
+    /* Блок плана в карточке */
+    .line-plan-block { background: #070c18; border: 1px solid #1e293b; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+    .line-plan-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+    .line-plan-label { color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 10px; }
+    .line-plan-input { width: 90px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 4px 8px; color: #38bdf8; font-weight: 900; font-size: 14px; text-align: right; outline: none; }
+    .line-plan-input:focus { border-color: #0072ce; }
+    .line-plan-fact { color: #34d399; font-weight: 900; font-size: 14px; }
+    .line-plan-percent { color: #38bdf8; font-weight: 800; font-size: 12px; }
+    .line-progress-bg { width: 100%; height: 6px; background: #1e293b; border-radius: 3px; overflow: hidden; }
+    .line-progress-fill { height: 100%; background: #10b981; width: 0%; transition: width 0.4s; }
+    .line-progress-fill.gold { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+
+    /* OEM-заглушка */
+    .line-oem-block { background: #0a0f1e; border: 1px dashed #334155; border-radius: 10px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; }
+    .line-oem-label { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    .line-oem-value { font-size: 12px; font-weight: 700; color: #475569; font-style: italic; }
+
+    /* Карточка OEM по цеху */
+    .oem-total-card { background: #0f172a; border-radius: 12px; padding: 14px 18px; border: 1px solid #1e293b; border-left: 4px solid #6366f1; display: flex; flex-direction: column; justify-content: space-between; }
+    .oem-total-title { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .oem-total-value { font-size: 18px; font-weight: 900; color: #475569; font-style: italic; }
+    .oem-total-sub { font-size: 11px; color: #64748b; margin-top: 4px; }
+
     /* Таблица истории */
     .table-card { background: #0f172a; border-radius: 14px; padding: 20px; border: 1px solid #1e293b; }
     .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
@@ -114,6 +138,9 @@
         <circle cx="26" cy="11" r="3.2" fill="#0072ce"/>
         <circle cx="6" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.6"/>
         <circle cx="16" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.9"/>
+        <circle cx="26" cy="22" r="3.2" fill="#0072ce"/>
+        <circle cx="6" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.4"/>
+        <circle cx="16" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.7"/>
         <circle cx="26" cy="33" r="3.2" fill="#0072ce"/>
         <text x="36" y="34" font-family="'Arial Black', 'Impact', sans-serif" font-weight="900" font-size="31" fill="#0072ce" letter-spacing="1">PRIMATEK</text>
         <text x="38" y="47" font-family="Arial, sans-serif" font-weight="600" font-size="8" fill="#94a3b8" letter-spacing="0.8">ИННОВАЦИИ В ПОКРЫТИЯХ</text>
@@ -145,7 +172,7 @@
     </div>
   </div>
 
-  <!-- 2. Блок ПЛАН / ФАКТ смены -->
+  <!-- 2. Блок ПЛАН / ФАКТ смены + OEM по цеху -->
   <div class="summary-grid">
     <div class="summary-card" style="border-left-color: #6366f1;">
       <div class="card-title">ПЛАН НА СМЕНУ</div>
@@ -183,6 +210,13 @@
       <div class="card-title">ЧИПСЫ / П-Ф ЗА СМЕНУ</div>
       <div class="card-val" id="sumChipsKg" style="color: #fbbf24;">0 кг</div>
       <div class="card-sub" id="sumDustKg">Пыль: 0 кг</div>
+    </div>
+
+    <!-- OEM по цеху (заглушка) -->
+    <div class="oem-total-card">
+      <div class="oem-total-title">OEM ПО ЦЕХУ</div>
+      <div class="oem-total-value">в разработке</div>
+      <div class="oem-total-sub">(расчёт показателя уточняется)</div>
     </div>
   </div>
 
@@ -241,10 +275,13 @@
             <th>Чипсы / П-ф</th>
             <th>Брак</th>
             <th>Пыль</th>
+            <th>План (кг)</th>
+            <th>Вып. плана (%)</th>
+            <th>OEM</th>
           </tr>
         </thead>
         <tbody id="shiftsTableBody">
-          <tr><td colspan="12" style="text-align: center; color: #64748b; padding: 25px;">Загрузка истории смен...</td></tr>
+          <tr><td colspan="15" style="text-align: center; color: #64748b; padding: 25px;">Загрузка истории смен...</td></tr>
         </tbody>
       </table>
     </div>
@@ -334,92 +371,33 @@
     return { text: '—', count: 0 };
   }
 
-  renderLiveLineCards();
+  // ========== ПЛАН ПО ЛИНИЯМ (localStorage) ==========
+  function getPlanStorageKey() {
+    const { isDay } = getCurrentShiftWindow();
+    const today = new Date().toISOString().slice(0, 10);
+    return `primatek_plans_${today}_${isDay ? 'day' : 'night'}`;
+  }
 
-  async function loadDashboardData() {
-    const btn = document.getElementById('btnRefresh');
-    btn.classList.add('spinning');
-
+  function getLinePlans() {
     try {
-      const url = `${SUPABASE_BASE}/shift_reports?select=*&order=created_at.desc&limit=250`;
-      const res = await fetch(url, {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        },
-        cache: 'no-store'
-      });
-
-      if (res.ok) {
-        rawReports = await res.json();
-        document.getElementById('lastSyncTime').innerText = 'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
-
-        closedShiftsList = rawReports.filter(r => !isCheckpoint(r));
-
-        renderTopSummary();
-        renderLiveLineCards();
-        filterShiftsTable();
-      } else {
-        document.getElementById('lastSyncTime').innerText = 'Ошибка связи: ' + res.status;
-      }
+      return JSON.parse(localStorage.getItem(getPlanStorageKey()) || '{}');
     } catch (e) {
-      document.getElementById('lastSyncTime').innerText = 'Сетевая ошибка';
-    } finally {
-      setTimeout(() => btn.classList.remove('spinning'), 500);
+      return {};
     }
   }
 
-  function renderTopSummary() {
-    const { start: shiftStart, end: shiftEnd } = getCurrentShiftWindow();
-
-    const shiftReports = rawReports.filter(r => {
-      if (!r.created_at) return false;
-      const t = new Date(r.created_at).getTime();
-      return t >= shiftStart.getTime() && t <= shiftEnd.getTime();
-    });
-
-    let totalLiveKg = 0;
-    let totalLivePcs = 0;
-    let shiftDefectKg = 0;
-    let shiftDefectBoxes = 0;
-    let shiftChipsKg = 0;
-    let shiftDustKg = 0;
-
-    PRIMATEK_LINES.forEach(lineNum => {
-      const lineReports = shiftReports.filter(r => Number(r.line_number) === lineNum);
-      if (lineReports.length > 0) {
-        const latest = lineReports[0];
-        totalLiveKg += Number(latest.total_good_kg) || 0;
-        totalLivePcs += Number(latest.good_boxes || latest.good_bags) || 0;
-      }
-    });
-
-    shiftReports.forEach(r => {
-      shiftDefectKg += Number(r.defect_kg) || 0;
-      shiftDefectBoxes += Number(r.defect_boxes) || 0;
-      shiftChipsKg += Number(r.chips_kg) || 0;
-      shiftDustKg += Number(r.dust_kg) || 0;
-    });
-
-    document.getElementById('sumLiveKg').innerText = totalLiveKg.toLocaleString('ru-RU') + ' кг';
-    document.getElementById('sumLivePcs').innerText = `${totalLivePcs} кор./меш. краски`;
-
-    const plan = currentShiftPlanKg > 0 ? currentShiftPlanKg : 20000;
-    const percent = Math.min(100, Math.round((totalLiveKg / plan) * 100));
-    document.getElementById('sumPlanPercent').innerText = `${percent}%`;
-    document.getElementById('sumProgressBar').style.width = `${percent}%`;
-
-    const remaining = Math.max(0, plan - totalLiveKg);
-    document.getElementById('planRemainingSub').innerText = `Осталось краски: ${remaining.toLocaleString('ru-RU')} кг`;
-
-    document.getElementById('sumDefectKg').innerText = `${shiftDefectKg.toLocaleString('ru-RU')} кг`;
-    document.getElementById('sumDefectBoxes').innerText = `${shiftDefectBoxes} коробок`;
-    document.getElementById('sumChipsKg').innerText = `${shiftChipsKg.toLocaleString('ru-RU')} кг`;
-    document.getElementById('sumDustKg').innerText = `Пыль: ${shiftDustKg.toFixed(1)} кг`;
+  function saveLinePlan(lineNum, value) {
+    const plans = getLinePlans();
+    plans[lineNum] = Number(value) || 0;
+    localStorage.setItem(getPlanStorageKey(), JSON.stringify(plans));
   }
 
+  function getLinePlan(lineNum) {
+    const plans = getLinePlans();
+    return Number(plans[lineNum]) || 0;
+  }
+
+  // ========== ОТРИСОВКА КАРТОЧЕК ЛИНИЙ ==========
   function renderLiveLineCards() {
     const grid = document.getElementById('linesGrid');
     grid.innerHTML = '';
@@ -511,6 +489,12 @@
         `;
       }
 
+      // План по линии
+      const linePlan = getLinePlan(lineNum);
+      const planPercent = linePlan > 0 ? Math.min(999, Math.round((currentKg / linePlan) * 100)) : 0;
+      const isOverPlan = linePlan > 0 && currentKg > linePlan;
+      const progressClass = isOverPlan ? 'line-progress-fill gold' : 'line-progress-fill';
+
       const card = document.createElement('div');
       card.className = 'line-card';
       if (!isCurrentShift && latestAny) {
@@ -532,9 +516,121 @@
         <div class="line-output-box">
           ${centralOutputHtml}
         </div>
+
+        <div class="line-plan-block">
+          <div class="line-plan-row">
+            <span class="line-plan-label">План:</span>
+            <input type="number" class="line-plan-input" value="${linePlan || ''}" placeholder="0" 
+              onchange="onLinePlanChange(${lineNum}, this.value)" />
+          </div>
+          <div class="line-plan-row">
+            <span class="line-plan-label">Факт:</span>
+            <span class="line-plan-fact">${currentKg.toLocaleString('ru-RU')} кг <span class="line-plan-percent">(${planPercent}%)</span></span>
+          </div>
+          <div class="line-progress-bg">
+            <div class="${progressClass}" style="width: ${Math.min(100, planPercent)}%"></div>
+          </div>
+        </div>
+
+        <div class="line-oem-block">
+          <span class="line-oem-label">OEM</span>
+          <span class="line-oem-value">в разработке</span>
+        </div>
       `;
       grid.appendChild(card);
     });
+  }
+
+  function onLinePlanChange(lineNum, value) {
+    saveLinePlan(lineNum, value);
+    renderLiveLineCards();
+  }
+
+  // ========== ЗАГРУЗКА ДАННЫХ ==========
+  renderLiveLineCards();
+
+  async function loadDashboardData() {
+    const btn = document.getElementById('btnRefresh');
+    btn.classList.add('spinning');
+
+    try {
+      const url = `${SUPABASE_BASE}/shift_reports?select=*&order=created_at.desc&limit=250`;
+      const res = await fetch(url, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        },
+        cache: 'no-store'
+      });
+
+      if (res.ok) {
+        rawReports = await res.json();
+        document.getElementById('lastSyncTime').innerText = 'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
+
+        closedShiftsList = rawReports.filter(r => !isCheckpoint(r));
+
+        renderTopSummary();
+        renderLiveLineCards();
+        filterShiftsTable();
+      } else {
+        document.getElementById('lastSyncTime').innerText = 'Ошибка связи: ' + res.status;
+      }
+    } catch (e) {
+      document.getElementById('lastSyncTime').innerText = 'Сетевая ошибка';
+    } finally {
+      setTimeout(() => btn.classList.remove('spinning'), 500);
+    }
+  }
+
+  function renderTopSummary() {
+    const { start: shiftStart, end: shiftEnd } = getCurrentShiftWindow();
+
+    const shiftReports = rawReports.filter(r => {
+      if (!r.created_at) return false;
+      const t = new Date(r.created_at).getTime();
+      return t >= shiftStart.getTime() && t <= shiftEnd.getTime();
+    });
+
+    let totalLiveKg = 0;
+    let totalLivePcs = 0;
+    let shiftDefectKg = 0;
+    let shiftDefectBoxes = 0;
+    let shiftChipsKg = 0;
+    let shiftDustKg = 0;
+
+    PRIMATEK_LINES.forEach(lineNum => {
+      const lineReports = shiftReports.filter(r => Number(r.line_number) === lineNum);
+      if (lineReports.length > 0) {
+        const latest = lineReports[0];
+        totalLiveKg += Number(latest.total_good_kg) || 0;
+        totalLivePcs += Number(latest.good_boxes || latest.good_bags) || 0;
+      }
+    });
+
+    shiftReports.forEach(r => {
+      shiftDefectKg += Number(r.defect_kg) || 0;
+      shiftDefectBoxes += Number(r.defect_boxes) || 0;
+      shiftChipsKg += Number(r.chips_kg) || 0;
+      shiftDustKg += Number(r.dust_kg) || 0;
+    });
+
+    document.getElementById('sumLiveKg').innerText = totalLiveKg.toLocaleString('ru-RU') + ' кг';
+    document.getElementById('sumLivePcs').innerText = `${totalLivePcs} кор./меш. краски`;
+
+    const plan = currentShiftPlanKg > 0 ? currentShiftPlanKg : 20000;
+    const percent = Math.min(100, Math.round((totalLiveKg / plan) * 100));
+    document.getElementById('sumPlanPercent').innerText = `${percent}%`;
+    document.getElementById('sumProgressBar').style.width = `${percent}%`;
+
+    const remaining = Math.max(0, plan - totalLiveKg);
+    document.getElementById('planRemainingSub').innerText = `Осталось краски: ${remaining.toLocaleString('ru-RU')} кг`;
+
+    document.getElementById('sumDefectKg').innerText = `${shiftDefectKg.toLocaleString('ru-RU')} кг`;
+    document.getElementById('sumDefectBoxes').innerText = `${shiftDefectBoxes} коробок`;
+    document.getElementById('sumChipsKg').innerText = `${shiftChipsKg.toLocaleString('ru-RU')} кг`;
+    document.getElementById('sumDustKg').innerText = `Пыль: ${shiftDustKg.toFixed(1)} кг`;
   }
 
   function filterShiftsTable() {
@@ -563,7 +659,7 @@
   function renderShiftsTable(reports) {
     const tbody = document.getElementById('shiftsTableBody');
     if (!reports.length) {
-      tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; color: #64748b; padding: 25px;">Смен по выбранным критериям не найдено</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; color: #64748b; padding: 25px;">Смен по выбранным критериям не найдено</td></tr>`;
       return;
     }
 
@@ -580,6 +676,12 @@
       const box = getBoxRange(r);
       const boxHtml = (box.text !== '—') ? `<span class="tag-range">${box.text}</span>` : `<span style="color:#64748b;">—</span>`;
 
+      // План из полей записи (если есть) или из localStorage по дате
+      const planKg = Number(r.plan_kg) || 0;
+      const planPercent = Number(r.plan_percent) || (planKg > 0 ? Math.round((Number(r.total_good_kg || 0) / planKg) * 100) : 0);
+      const planHtml = planKg > 0 ? `${planKg} кг` : '—';
+      const planPercentHtml = planKg > 0 ? `${planPercent}%` : '—';
+
       return `
         <tr>
           <td style="color: #94a3b8; font-family: monospace;">${timeStr}</td>
@@ -594,6 +696,9 @@
           <td style="color: #fbbf24; font-weight:700;">${r.chips_kg || 0} кг</td>
           <td style="color: #f87171;">${r.defect_kg || 0} кг</td>
           <td style="color: #94a3b8;">${Number(r.dust_kg || 0).toFixed(1)} кг</td>
+          <td style="color: #38bdf8; font-weight:700;">${planHtml}</td>
+          <td style="color: #10b981; font-weight:700;">${planPercentHtml}</td>
+          <td style="color: #64748b; font-style:italic;">в разработке</td>
         </tr>
       `;
     }).join('');
@@ -609,6 +714,9 @@
 
     const excelData = closedShiftsList.map(r => {
       const box = getBoxRange(r);
+      const planKg = Number(r.plan_kg) || 0;
+      const planPercent = Number(r.plan_percent) || (planKg > 0 ? Math.round((Number(r.total_good_kg || 0) / planKg) * 100) : 0);
+
       return {
         "Дата и время": new Date(r.created_at).toLocaleString('ru-RU'),
         "Начальник смены": currentBoss,
@@ -623,7 +731,10 @@
         "Краска (кг)": r.total_good_kg || 0,
         "Чипсы / П-ф (кг)": r.chips_kg || 0,
         "Брак (кг)": r.defect_kg || 0,
-        "Пыль (кг)": r.dust_kg || 0
+        "Пыль (кг)": r.dust_kg || 0,
+        "План (кг)": planKg || "",
+        "Выполнение плана (%)": planPercent || "",
+        "OEM": "в разработке"
       };
     });
 
