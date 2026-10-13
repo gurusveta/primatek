@@ -98,6 +98,23 @@
     .shift-row-card { background: #080d1a; border: 1px solid #1e293b; border-radius: 8px; padding: 8px 10px; font-size: 12px; }
     .shift-row-top { display: flex; justify-content: space-between; font-weight: 700; color: #cbd5e1; margin-bottom: 4px; }
     .shift-row-bottom { display: flex; justify-content: space-between; color: #94a3b8; font-size: 11px; }
+
+    /* План смены */
+    .plan-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .plan-box { background: #080d1a; border: 1px solid #233152; border-radius: 9px; padding: 8px; text-align: center; }
+    .plan-box-title { font-size: 9px; font-weight: 800; color: #8fa0c2; text-transform: uppercase; margin-bottom: 3px; }
+    .plan-box-value { font-size: 14px; font-weight: 900; color: #fff; }
+
+    .plan-progress-wrap { background: #080d1a; border-radius: 8px; height: 14px; overflow: hidden; border: 1px solid #233152; }
+    .plan-progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #0072ce, #38bdf8); transition: width 0.4s ease; border-radius: 8px; }
+    .plan-progress-bar.gold { background: linear-gradient(90deg, #f59e0b, #fbbf24); box-shadow: 0 0 8px rgba(251, 191, 36, 0.6); }
+
+    .plan-progress-text { font-size: 12px; font-weight: 800; color: #cbd5e1; text-align: right; margin-top: 4px; margin-bottom: 8px; }
+
+    .plan-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .plan-metric { background: #080d1a; border: 1px solid #1e293b; border-radius: 7px; padding: 6px 8px; display: flex; justify-content: space-between; align-items: center; }
+    .plan-metric-label { font-size: 10px; color: #8fa0c2; font-weight: 700; }
+    .plan-metric-value { font-size: 11px; font-weight: 800; color: #cbd5e1; }
   </style>
 </head>
 <body>
@@ -175,6 +192,53 @@
       <button id="stBtnClean" class="btn-status" onclick="setStatus('ЧИСТКА', this)">🟡 ЧИСТКА</button>
       <button id="stBtnSample" class="btn-status" onclick="setStatus('ПРОБЫ', this)">🔵 ПРОБЫ</button>
       <button id="stBtnRepair" class="btn-status" onclick="setStatus('РЕМОНТ', this)">🔴 РЕМОНТ</button>
+    </div>
+  </div>
+
+  <!-- 3.1. План смены -->
+  <div class="card" id="planCard">
+    <div class="label-title">
+      <span>План смены</span>
+      <span id="planStatusBadge" style="color: #8fa0c2; font-weight: 800;">—</span>
+    </div>
+
+    <div class="plan-grid">
+      <div class="plan-box">
+        <div class="plan-box-title">ПЛАН</div>
+        <div class="plan-box-value" id="planKgValue">— кг</div>
+      </div>
+      <div class="plan-box">
+        <div class="plan-box-title">СДЕЛАНО</div>
+        <div class="plan-box-value" style="color:#34d399;" id="planDoneValue">0 кг</div>
+      </div>
+      <div class="plan-box">
+        <div class="plan-box-title">ОСТАЛОСЬ</div>
+        <div class="plan-box-value" style="color:#fbbf24;" id="planLeftValue">— кг</div>
+      </div>
+    </div>
+
+    <div class="plan-progress-wrap">
+      <div class="plan-progress-bar" id="planProgressBar"></div>
+    </div>
+    <div class="plan-progress-text" id="planProgressText">0%</div>
+
+    <div class="plan-metrics">
+      <div class="plan-metric">
+        <span class="plan-metric-label">Прогноз:</span>
+        <span class="plan-metric-value" id="planForecast">—</span>
+      </div>
+      <div class="plan-metric">
+        <span class="plan-metric-label">Скорость:</span>
+        <span class="plan-metric-value" id="planSpeed">— кг/ч</span>
+      </div>
+      <div class="plan-metric">
+        <span class="plan-metric-label">Рекорд:</span>
+        <span class="plan-metric-value" id="planRecord">— кг</span>
+      </div>
+      <div class="plan-metric">
+        <span class="plan-metric-label">До рекорда:</span>
+        <span class="plan-metric-value" id="planRecordDiff">— кг</span>
+      </div>
     </div>
   </div>
 
@@ -293,6 +357,7 @@
     <div class="modal-line"><span>Чипсы / П-ф:</span><span class="modal-val" id="mChips" style="color: #fbbf24;">0 кг</span></div>
     <div class="modal-line"><span>Брак:</span><span class="modal-val" id="mDefect" style="color: #f87171;">0 кг</span></div>
     <div class="modal-line"><span>Пыль:</span><span class="modal-val" id="mDust" style="color: #94a3b8;">0 кг</span></div>
+    <div class="modal-line"><span>План / Выполнение:</span><span class="modal-val" id="mPlan" style="color: #fbbf24;">—</span></div>
 
     <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 16px;">
       <button id="btnSubmitDb" class="btn-action" style="background:#0072ce; padding: 13px;" onclick="submitData()">
@@ -346,6 +411,24 @@
         <div class="stats-box-value" style="color: #fbbf24;" id="stChipsKg">0 кг</div>
         <div class="stats-box-sub" id="stChipsCount">0 смен с чипсами</div>
       </div>
+
+      <div class="stats-box" style="border-left: 3px solid #a855f7;">
+        <div class="stats-box-title">ПЛАНОВ ВЫПОЛНЕНО</div>
+        <div class="stats-box-value" style="color: #c084fc;" id="stPlansDone">0</div>
+        <div class="stats-box-sub" id="stPlansOver">Перевыполнено: 0</div>
+      </div>
+
+      <div class="stats-box" style="border-left: 3px solid #fbbf24;">
+        <div class="stats-box-title">ЛУЧШИЙ РЕЗУЛЬТАТ</div>
+        <div class="stats-box-value" style="color: #fbbf24;" id="stBestResult">0 кг</div>
+        <div class="stats-box-sub" id="stBestShift">—</div>
+      </div>
+
+      <div class="stats-box" style="grid-column: span 2; border-left: 3px solid #38bdf8;">
+        <div class="stats-box-title">СЕРИЯ ВЫПОЛНЕННЫХ ПЛАНОВ</div>
+        <div class="stats-box-value" style="color: #38bdf8;" id="stStreak">0</div>
+        <div class="stats-box-sub">подряд смен с выполненным планом</div>
+      </div>
     </div>
 
     <div style="font-size: 12px; font-weight: 800; color: #cbd5e1; margin-bottom: 8px;">Список смен за период:</div>
@@ -376,6 +459,17 @@
   let lastSubmissionHash = null;
   let lastSubmissionTime = 0;
 
+  // ===== ПЛАН СМЕНЫ, ПРОГНОЗ, РЕКОРД =====
+  let workTimeMs = 0;
+  let lastStatusChangeTime = Date.now();
+  let currentStatus = 'В РАБОТЕ';
+  let planKg = 0;
+  let personalRecordKg = 0;
+
+  // Лог статусов для будущего OEM
+  let statusLog = [];
+  let currentStatusStart = Date.now();
+
   const savedOp = localStorage.getItem('primatek_operator_name');
   if (savedOp) {
     document.getElementById('operatorName').value = savedOp;
@@ -384,6 +478,7 @@
   function saveOperatorName() {
     const val = document.getElementById('operatorName').value.trim();
     localStorage.setItem('primatek_operator_name', val);
+    loadPersonalRecord();
   }
 
   const lineBox = document.getElementById('lineButtons');
@@ -396,6 +491,8 @@
       btn.classList.add('active');
       state.selectedLine = num;
       checkLineHandover(num);
+      loadPlanFromDashboard();
+      loadPersonalRecord();
     };
     lineBox.appendChild(btn);
   });
@@ -412,6 +509,22 @@
   setInterval(updateTime, 60000);
 
   function setStatus(name, btn) {
+    // Фиксируем время предыдущего статуса в лог
+    const now = Date.now();
+    if (statusLog.length > 0 || currentStatus !== name) {
+      statusLog.push({
+        status: currentStatus,
+        start: currentStatusStart,
+        end: now
+      });
+    }
+    currentStatusStart = now;
+
+    // Обновляем время в работе
+    updateWorkTime();
+    currentStatus = name;
+    lastStatusChangeTime = now;
+
     document.querySelectorAll('.btn-status').forEach(b => b.className = 'btn-status');
     state.status = name;
     document.getElementById('currentStatusBadge').innerText = name;
@@ -429,6 +542,7 @@
       btn.classList.add('active-repair');
       document.getElementById('currentStatusBadge').style.color = '#f87171';
     }
+    renderPlanBlock();
   }
 
   function switchTab(tab, btn) {
@@ -452,6 +566,7 @@
     document.getElementById('boxesCountText').innerText = count + ' шт';
     document.getElementById('boxesKgText').innerText = (count * 20) + ' кг';
     updateTotalHeader();
+    renderPlanBlock();
   }
 
   function getBagsCount() {
@@ -466,6 +581,7 @@
     document.getElementById('bagsCountText').innerText = count + ' шт';
     document.getElementById('bagsKgText').innerText = (count * 20) + ' кг';
     updateTotalHeader();
+    renderPlanBlock();
   }
 
   function setChipType(type, btn) {
@@ -482,6 +598,7 @@
       input.value = '';
       renderChips();
       updateTotalHeader();
+      renderPlanBlock();
     }
   }
 
@@ -502,6 +619,7 @@
       document.getElementById('defectEnd').value = '';
       renderDefects();
       updateTotalHeader();
+      renderPlanBlock();
     } else {
       alert('Укажите корректный диапазон коробок брака');
     }
@@ -543,6 +661,138 @@
     if (chipsKg > 0) txt += ` | ${chipsKg} кг чипсов`;
     document.getElementById('totalKgHeader').innerText = txt;
   }
+
+  // ===== ПЛАН, ПРОГНОЗ, РЕКОРД =====
+
+  function loadPlanFromDashboard() {
+    try {
+      const stored = localStorage.getItem('primatek_plan_line_' + state.selectedLine);
+      planKg = stored ? (parseFloat(stored) || 0) : 0;
+    } catch (e) {
+      planKg = 0;
+    }
+    renderPlanBlock();
+  }
+
+  function updateWorkTime() {
+    const now = Date.now();
+    if (currentStatus === 'В РАБОТЕ') {
+      workTimeMs += (now - lastStatusChangeTime);
+    }
+    lastStatusChangeTime = now;
+  }
+
+  function getWorkHours() {
+    let ms = workTimeMs;
+    if (currentStatus === 'В РАБОТЕ') {
+      ms += (Date.now() - lastStatusChangeTime);
+    }
+    const hours = ms / (1000 * 60 * 60);
+    return Math.min(hours, 12);
+  }
+
+  function getCurrentGoodPaintKg() {
+    const boxCount = getBoxesCount();
+    const bagCount = getBagsCount();
+    const rawPaintKg = (boxCount * 20) + (bagCount * 20);
+    const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
+    return Math.max(0, rawPaintKg - defectKg);
+  }
+
+  function getSpeedKgPerHour() {
+    const hours = getWorkHours();
+    if (hours < 0.05) return 0;
+    return getCurrentGoodPaintKg() / hours;
+  }
+
+  function getForecastKg() {
+    const speed = getSpeedKgPerHour();
+    const hours = getWorkHours();
+    const remainingHours = Math.max(0, 12 - hours);
+    return Math.round(getCurrentGoodPaintKg() + (speed * remainingHours));
+  }
+
+  function getPlanPercent() {
+    if (planKg <= 0) return 0;
+    return Math.min(999, Math.round((getCurrentGoodPaintKg() / planKg) * 100));
+  }
+
+  async function loadPersonalRecord() {
+    const op = document.getElementById('operatorName').value.trim();
+    if (!op) {
+      personalRecordKg = 0;
+      renderPlanBlock();
+      return;
+    }
+    try {
+      const res = await fetch(`${SUPABASE_BASE}/shift_reports?operator_name=ilike.*${encodeURIComponent(op)}*&shift_type=not.ilike.*ТЕКУЩИЙ*&order=total_good_kg.desc&limit=1`, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        personalRecordKg = (data && data.length > 0) ? (Number(data[0].total_good_kg) || 0) : 0;
+      }
+    } catch (e) {
+      personalRecordKg = 0;
+    }
+    renderPlanBlock();
+  }
+
+  function renderPlanBlock() {
+    const doneKg = getCurrentGoodPaintKg();
+    const percent = getPlanPercent();
+    const leftKg = planKg > 0 ? Math.max(0, planKg - doneKg) : 0;
+    const speed = getSpeedKgPerHour();
+    const forecast = getForecastKg();
+
+    document.getElementById('planKgValue').innerText = planKg > 0 ? planKg + ' кг' : '— кг';
+    document.getElementById('planDoneValue').innerText = doneKg + ' кг';
+    document.getElementById('planLeftValue').innerText = planKg > 0 ? leftKg + ' кг' : '— кг';
+
+    const bar = document.getElementById('planProgressBar');
+    const percentText = document.getElementById('planProgressText');
+    const badge = document.getElementById('planStatusBadge');
+
+    if (planKg > 0) {
+      bar.style.width = Math.min(100, percent) + '%';
+      if (percent >= 100) {
+        bar.classList.add('gold');
+        percentText.innerText = 'ПЛАН ВЫПОЛНЕН (' + percent + '%)';
+        percentText.style.color = '#fbbf24';
+        badge.innerText = '✅ ВЫПОЛНЕН';
+        badge.style.color = '#fbbf24';
+      } else {
+        bar.classList.remove('gold');
+        percentText.innerText = percent + '%';
+        percentText.style.color = '#cbd5e1';
+        badge.innerText = 'ВЫПОЛНЕНИЕ';
+        badge.style.color = '#38bdf8';
+      }
+    } else {
+      bar.style.width = '0%';
+      bar.classList.remove('gold');
+      percentText.innerText = 'План не задан';
+      percentText.style.color = '#64748b';
+      badge.innerText = '—';
+      badge.style.color = '#8fa0c2';
+    }
+
+    if (planKg > 0 && doneKg > 0) {
+      const forecastPercent = Math.round((forecast / planKg) * 100);
+      document.getElementById('planForecast').innerText = forecast + ' кг (' + forecastPercent + '%)';
+    } else {
+      document.getElementById('planForecast').innerText = '—';
+    }
+
+    document.getElementById('planSpeed').innerText = speed > 0 ? speed.toFixed(1) + ' кг/ч' : '— кг/ч';
+    document.getElementById('planRecord').innerText = personalRecordKg > 0 ? personalRecordKg + ' кг' : '— кг';
+    const diff = personalRecordKg > 0 ? Math.max(0, personalRecordKg - doneKg) : 0;
+    document.getElementById('planRecordDiff').innerText = personalRecordKg > 0 ? diff + ' кг' : '— кг';
+  }
+
+  setInterval(() => { renderPlanBlock(); }, 30000);
+
+  // ===== ПРИЁМ СМЕНЫ =====
 
   async function checkLineHandover(lineNum) {
     const card = document.getElementById('handoverCard');
@@ -682,8 +932,22 @@
     btnAccept.disabled = false;
     btnAccept.innerText = 'СМЕНА ПРИНЯТА';
     document.getElementById('handoverCard').classList.add('ready-state');
+
+    // Сброс таймеров на начало смены
+    workTimeMs = 0;
+    lastStatusChangeTime = Date.now();
+    currentStatusStart = Date.now();
+    statusLog = [];
+    currentStatus = state.status;
+
+    loadPlanFromDashboard();
+    loadPersonalRecord();
+    renderPlanBlock();
+
     alert(`✅ Смена на Линии №${state.selectedLine} успешно принята!\nОператор: ${op}\nСтатус: ${state.status}\nИнформация передана на дашборд начальника.`);
   }
+
+  // ===== CHECKPOINT =====
 
   async function recordCheckpoint() {
     const op = document.getElementById('operatorName').value.trim();
@@ -752,7 +1016,12 @@
       dust_kg: state.dust.reduce((s, d) => s + d, 0),
       package_type: state.packageType,
       unit_from: uStart,
-      unit_to: uEnd
+      unit_to: uEnd,
+      plan_kg: planKg > 0 ? planKg : null,
+      plan_percent: planKg > 0 ? getPlanPercent() : null,
+      plan_completed: planKg > 0 ? (getCurrentGoodPaintKg() >= planKg) : null,
+      forecast_kg: getForecastKg(),
+      speed_kg_per_hour: Math.round(getSpeedKgPerHour() * 10) / 10
     };
 
     try {
@@ -790,6 +1059,8 @@
     }
   }
 
+  // ===== СДАЧА СМЕНЫ =====
+
   let finalPayload = {};
 
   function openSummary() {
@@ -824,11 +1095,23 @@
     document.getElementById('mStatus').innerText = state.status;
     document.getElementById('mBatchRal').innerText = `${batch} / ${ralClean}`;
     document.getElementById('mRange').innerText = (uFrom && uTo) ? `№${uFrom} — №${uTo}` : '—';
-    
     document.getElementById('mGood').innerText = `${goodPaintKg} кг (${(boxCount + bagCount)} шт)`;
     document.getElementById('mChips').innerText = `${chipsKg} кг (в т.ч. полуфабрикат)`;
     document.getElementById('mDefect').innerText = `${defectKg} кг (${defectPcs} шт)`;
     document.getElementById('mDust').innerText = `${dustKg.toFixed(1)} кг`;
+
+    const planPercent = getPlanPercent();
+    document.getElementById('mPlan').innerText = planKg > 0
+      ? `${planKg} кг / ${planPercent}% ${planPercent >= 100 ? '✅' : ''}`
+      : '—';
+
+    // Закрываем лог статусов
+    const now = Date.now();
+    statusLog.push({
+      status: currentStatus,
+      start: currentStatusStart,
+      end: now
+    });
 
     finalPayload = {
       line_number: state.selectedLine,
@@ -849,7 +1132,13 @@
       total_good_kg: goodPaintKg,
       package_type: state.packageType,
       unit_from: uFrom,
-      unit_to: uTo
+      unit_to: uTo,
+      // Новые поля
+      plan_kg: planKg > 0 ? planKg : null,
+      plan_percent: planKg > 0 ? planPercent : null,
+      plan_completed: planKg > 0 ? (goodPaintKg >= planKg) : null,
+      status_log: statusLog,
+      availability_percent: null // заглушка для будущего OEM
     };
 
     document.getElementById('summaryModal').style.display = 'flex';
@@ -857,11 +1146,15 @@
 
   function closeSummary() {
     document.getElementById('summaryModal').style.display = 'none';
+    // Откатываем последний push, если пользователь вернулся назад
+    if (statusLog.length > 0 && statusLog[statusLog.length - 1].end) {
+      statusLog.pop();
+    }
   }
 
   async function submitData() {
     const btn = document.getElementById('btnSubmitDb');
-    
+
     const submissionHash = `${finalPayload.line_number}_${finalPayload.operator_name}_${finalPayload.unit_from}_${finalPayload.unit_to}_${finalPayload.total_good_kg}_${finalPayload.chips_kg}`;
     const now = Date.now();
     if (submissionHash === lastSubmissionHash && (now - lastSubmissionTime < 300000)) {
@@ -898,8 +1191,17 @@
         renderChips();
         renderDefects();
         renderDust();
+        updateTotalHeader();
+
+        // Сброс таймеров и лога
+        workTimeMs = 0;
+        lastStatusChangeTime = Date.now();
+        currentStatusStart = Date.now();
+        statusLog = [];
 
         checkLineHandover(state.selectedLine);
+        loadPersonalRecord();
+        renderPlanBlock();
       } else {
         const err = await response.text();
         alert("Ошибка от базы: " + err);
@@ -911,6 +1213,8 @@
       btn.disabled = false;
     }
   }
+
+  // ===== ЛИЧНЫЙ КАБИНЕТ =====
 
   let currentStatsPeriod = 'this_month';
   let cachedOperatorReports = [];
@@ -977,6 +1281,11 @@
       document.getElementById('stPaintKg').innerText = '0 кг';
       document.getElementById('stChipsKg').innerText = '0 кг';
       document.getElementById('stChipsCount').innerText = '0 смен с чипсами';
+      document.getElementById('stPlansDone').innerText = '0';
+      document.getElementById('stPlansOver').innerText = 'Перевыполнено: 0';
+      document.getElementById('stBestResult').innerText = '0 кг';
+      document.getElementById('stBestShift').innerText = '—';
+      document.getElementById('stStreak').innerText = '0';
       list.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px;">Нет смен по оператору</div>`;
       return;
     }
@@ -1005,22 +1314,55 @@
     let totalPaintKg = 0;
     let totalChipsKg = 0;
     let shiftsWithChips = 0;
+    let plansDone = 0;
+    let plansOver = 0;
+    let bestResult = 0;
+    let bestShiftStr = '—';
+    let streak = 0;
+    let maxStreak = 0;
 
-    filtered.forEach(r => {
+    // Сортируем по дате (сначала новые) для подсчёта серии
+    const sorted = [...filtered].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    sorted.forEach(r => {
       const isDay = (r.shift_type || '').toUpperCase().includes('ДЕНЬ');
       if (isDay) dayShifts++; else nightShifts++;
 
-      totalPaintKg += Number(r.total_good_kg) || 0;
+      const paintKg = Number(r.total_good_kg) || 0;
+      totalPaintKg += paintKg;
       const chips = Number(r.chips_kg) || 0;
       totalChipsKg += chips;
       if (chips > 0) shiftsWithChips++;
+
+      if (paintKg > bestResult) {
+        bestResult = paintKg;
+        const dt = new Date(r.created_at);
+        bestShiftStr = `${dt.toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit'})} • Линия №${r.line_number}`;
+      }
+
+      if (r.plan_completed === true) {
+        plansDone++;
+        if (r.plan_percent && Number(r.plan_percent) >= 100) plansOver++;
+        streak++;
+        if (streak > maxStreak) maxStreak = streak;
+      } else if (r.plan_kg && Number(r.plan_kg) > 0) {
+        streak = 0;
+      }
     });
+
+    // plansOver — перевыполнено (строго > 100%)
+    plansOver = sorted.filter(r => r.plan_percent && Number(r.plan_percent) > 100).length;
 
     document.getElementById('stTotalShifts').innerText = totalShifts;
     document.getElementById('stShiftTypes').innerText = `День: ${dayShifts} / Ночь: ${nightShifts}`;
     document.getElementById('stPaintKg').innerText = totalPaintKg.toLocaleString('ru-RU') + ' кг';
     document.getElementById('stChipsKg').innerText = totalChipsKg.toLocaleString('ru-RU') + ' кг';
     document.getElementById('stChipsCount').innerText = `${shiftsWithChips} смен с чипсами`;
+    document.getElementById('stPlansDone').innerText = plansDone;
+    document.getElementById('stPlansOver').innerText = `Перевыполнено: ${plansOver}`;
+    document.getElementById('stBestResult').innerText = bestResult + ' кг';
+    document.getElementById('stBestShift').innerText = bestShiftStr;
+    document.getElementById('stStreak').innerText = maxStreak;
 
     if (!filtered.length) {
       list.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px;">За выбранный период смен не найдено</div>`;
@@ -1034,6 +1376,16 @@
       const shiftName = isDay ? 'День' : 'Ночь';
       const paintKg = Number(r.total_good_kg) || 0;
       const chipsKg = Number(r.chips_kg) || 0;
+      const planKgR = Number(r.plan_kg) || 0;
+      const planPct = r.plan_percent ? Number(r.plan_percent) : null;
+
+      let planBadge = '';
+      if (planKgR > 0 && planPct !== null) {
+        const color = planPct >= 100 ? '#fbbf24' : '#38bdf8';
+        planBadge = `<span style="color:${color}; font-weight:800;">План: ${planPct}%</span>`;
+      } else {
+        planBadge = `<span style="color:#64748b;">Без плана</span>`;
+      }
 
       return `
         <div class="shift-row-card">
@@ -1043,15 +1395,21 @@
           </div>
           <div class="shift-row-bottom">
             <span>${r.batch_number || '—'} (${r.ral_color || '—'})</span>
-            <span>Чипсы/П-ф: <b style="color: #fbbf24;">${chipsKg} кг</b></span>
+            <span>Чипсы: <b style="color: #fbbf24;">${chipsKg} кг</b></span>
           </div>
+          <div style="margin-top:4px; text-align:right; font-size:11px;">${planBadge}</div>
         </div>
       `;
     }).join('');
   }
 
+  // ===== ИНИЦИАЛИЗАЦИЯ =====
+
   window.addEventListener('DOMContentLoaded', () => {
     checkLineHandover(state.selectedLine);
+    loadPlanFromDashboard();
+    loadPersonalRecord();
+    renderPlanBlock();
   });
 </script>
 </body>
