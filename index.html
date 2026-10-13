@@ -20,7 +20,6 @@
     }
 
     // ===== ВРЕМЕННО: ДЕМО-ПЛАНЫ ДЛЯ СКРИНШОТОВ БУКЛЕТА =====
-    // Удалить перед продакшеном!
     (function seedDemoPlans() {
       const demoPlans = {
         'primatek_plan_line_1':  '3800',
@@ -73,6 +72,22 @@
     .btn-status.active-sample { background: rgba(2, 132, 199, 0.2); border-color: #38bdf8; color: #38bdf8; }
     .btn-status.active-repair { background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #f87171; }
 
+    /* Приём смены */
+    .handover-card { background: #162238; border: 2px solid #2d4470; border-radius: 12px; padding: 14px; margin-top: 12px; }
+    .handover-card.ready-state { border-color: #10b981; background: #0f2a20; }
+    .handover-title { font-size: 13px; font-weight: 800; color: #38bdf8; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .handover-card.ready-state .handover-title { display: none; }
+    .handover-status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .btn-handover-status { font-size: 12px; font-weight: 800; padding: 12px 6px; border-radius: 9px; border: 2px solid #233152; cursor: pointer; background: #1c2742; color: #8fa0c2; transition: 0.15s; }
+    .btn-handover-status.active-work { background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #34d399; }
+    .btn-handover-status.active-clean { background: rgba(245, 158, 11, 0.2); border-color: #f59e0b; color: #fbbf24; }
+    .btn-handover-status.active-sample { background: rgba(2, 132, 199, 0.2); border-color: #38bdf8; color: #38bdf8; }
+    .btn-handover-status.active-repair { background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #f87171; }
+    .btn-handover-accept { background: #10b981; color: #fff; border: none; border-radius: 9px; padding: 13px; font-size: 14px; font-weight: 800; cursor: pointer; width: 100%; }
+    .btn-handover-accept:disabled { opacity: 0.4; cursor: not-allowed; }
+    .handover-accepted-badge { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; color: #34d399; }
+    .handover-accepted-badge .badge-dot { width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.8); flex-shrink: 0; }
+
     .tabs { display: flex; background: #080d1a; padding: 3px; border-radius: 9px; gap: 4px; margin-bottom: 12px; }
     .tab { flex: 1; padding: 9px 0; font-size: 12px; font-weight: 700; border: none; background: transparent; color: #8fa0c2; border-radius: 7px; cursor: pointer; }
     .tab.active { background: #0072ce; color: #fff; }
@@ -92,14 +107,6 @@
 
     .btn-submit { background: linear-gradient(135deg, #0072ce, #0284c7); color: #fff; border: none; border-radius: 13px; padding: 16px; font-size: 16px; font-weight: 900; cursor: pointer; width: 100%; box-shadow: 0 4px 15px rgba(0, 114, 206, 0.4); }
     .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .handover-card { background: #162238; border: 2px solid #2d4470; border-radius: 12px; padding: 14px; margin-top: 10px; }
-    .handover-card.ready-state { border-color: #10b981; }
-    .handover-title { font-size: 13px; font-weight: 800; color: #38bdf8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .handover-info { font-size: 13px; line-height: 1.6; color: #cbd5e1; margin-bottom: 12px; }
-    .handover-info b { color: #fff; }
-    .btn-handover-accept { background: #10b981; color: #fff; border: none; border-radius: 9px; padding: 13px; font-size: 14px; font-weight: 800; cursor: pointer; width: 100%; }
-    .btn-handover-accept:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(5,9,20,0.88); z-index: 99; justify-content: center; align-items: center; padding: 16px; backdrop-filter: blur(2px); }
     .modal { background: #131c31; border-radius: 16px; padding: 20px; width: 100%; max-width: 420px; border: 1px solid #2d3e66; max-height: 90vh; overflow-y: auto; }
@@ -179,9 +186,20 @@
 
     <!-- Блок приема смены -->
     <div id="handoverCard" class="handover-card">
-      <div id="handoverTitle" class="handover-title">ПРИЕМ СМЕНЫ</div>
-      <div id="handoverInfo" class="handover-info">Загрузка данных прошлой смены...</div>
-      <button id="btnHandoverAccept" class="btn-handover-accept" onclick="acceptHandover()">ПРИНЯТЬ СМЕНУ</button>
+      <div class="handover-title">ПРИЁМ СМЕНЫ</div>
+      <div id="handoverStatusGrid" class="handover-status-grid">
+        <button class="btn-handover-status" data-status="В РАБОТЕ" onclick="selectHandoverStatus('В РАБОТЕ', this)">🟢 В РАБОТЕ</button>
+        <button class="btn-handover-status" data-status="ЧИСТКА" onclick="selectHandoverStatus('ЧИСТКА', this)">🟡 ЧИСТКА</button>
+        <button class="btn-handover-status" data-status="ПРОБЫ" onclick="selectHandoverStatus('ПРОБЫ', this)">🔵 ПРОБЫ</button>
+        <button class="btn-handover-status" data-status="РЕМОНТ" onclick="selectHandoverStatus('РЕМОНТ', this)">🔴 РЕМОНТ</button>
+      </div>
+      <button id="btnHandoverAccept" class="btn-handover-accept" onclick="acceptHandover()" disabled>ПРИНЯТЬ СМЕНУ</button>
+      <div id="handoverAccepted" style="display:none;">
+        <div class="handover-accepted-badge">
+          <span class="badge-dot"></span>
+          <span id="handoverAcceptedText">Смена принята</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -480,6 +498,11 @@
   let lastSubmissionHash = null;
   let lastSubmissionTime = 0;
 
+  // ===== ПРИЁМ СМЕНЫ =====
+  let handoverStatus = null;         // статус, выбранный в блоке приёмки
+  let shiftAcceptedAt = null;        // время приёмки смены
+  let shiftAcceptedStatus = null;    // статус, с которым смена была принята
+
   // ===== ПЛАН СМЕНЫ, ПРОГНОЗ, РЕКОРД =====
   let workTimeMs = 0;
   let lastStatusChangeTime = Date.now();
@@ -494,11 +517,14 @@
   const savedOp = localStorage.getItem('primatek_operator_name');
   if (savedOp) {
     document.getElementById('operatorName').value = savedOp;
+    // Если ФИО уже сохранено — обновляем доступность кнопки приёмки
+    setTimeout(() => updateHandoverButtonState(), 100);
   }
 
   function saveOperatorName() {
     const val = document.getElementById('operatorName').value.trim();
     localStorage.setItem('primatek_operator_name', val);
+    updateHandoverButtonState();
     loadPersonalRecord();
   }
 
@@ -511,6 +537,8 @@
       document.querySelectorAll('.btn-line').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state.selectedLine = num;
+      // Сбрасываем приёмку смены при смене линии
+      resetHandover();
       checkLineHandover(num);
       loadPlanFromDashboard();
       loadPersonalRecord();
@@ -528,6 +556,187 @@
   }
   updateTime();
   setInterval(updateTime, 60000);
+
+  // ===== ПРИЁМ СМЕНЫ: логика =====
+
+  function resetHandover() {
+    handoverStatus = null;
+    shiftAcceptedAt = null;
+    shiftAcceptedStatus = null;
+
+    // Показываем выбор статуса и кнопку
+    document.getElementById('handoverStatusGrid').style.display = 'grid';
+    document.getElementById('btnHandoverAccept').style.display = 'block';
+    document.getElementById('handoverAccepted').style.display = 'none';
+    document.getElementById('handoverCard').classList.remove('ready-state');
+
+    // Сбрасываем выделение кнопок статуса в приёмке
+    document.querySelectorAll('.btn-handover-status').forEach(b => b.className = 'btn-handover-status');
+    updateHandoverButtonState();
+  }
+
+  function selectHandoverStatus(status, btn) {
+    handoverStatus = status;
+    document.querySelectorAll('.btn-handover-status').forEach(b => b.className = 'btn-handover-status');
+
+    if (status === 'В РАБОТЕ') btn.classList.add('active-work');
+    else if (status === 'ЧИСТКА') btn.classList.add('active-clean');
+    else if (status === 'ПРОБЫ') btn.classList.add('active-sample');
+    else if (status === 'РЕМОНТ') btn.classList.add('active-repair');
+
+    updateHandoverButtonState();
+  }
+
+  function updateHandoverButtonState() {
+    const op = document.getElementById('operatorName').value.trim();
+    const btn = document.getElementById('btnHandoverAccept');
+    btn.disabled = !(op && handoverStatus);
+  }
+
+  async function acceptHandover() {
+    const op = document.getElementById('operatorName').value.trim();
+    if (!op) {
+      alert('⚠️ Введите вашу фамилию в поле ФИО Оператора!');
+      document.getElementById('operatorName').focus();
+      return;
+    }
+    if (!handoverStatus) {
+      alert('⚠️ Выберите состояние линии при приёмке!');
+      return;
+    }
+
+    saveOperatorName();
+
+    const btnAccept = document.getElementById('btnHandoverAccept');
+    btnAccept.disabled = true;
+    btnAccept.innerText = 'Принимаем...';
+
+    // Синхронизируем статус в блоке «Состояние линии прямо сейчас»
+    syncStatusButtons(handoverStatus);
+
+    const shiftName = getShiftName();
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'});
+
+    // Определяем, с какой коробки начинаем (только если статус В РАБОТЕ)
+    let startUnit = 1;
+    if (handoverStatus === 'В РАБОТЕ' && lastShiftData) {
+      const isBag = (lastShiftData.package_type === 'bag');
+      const lastUnit = Number(lastShiftData.unit_to || (isBag ? lastShiftData.good_bags : lastShiftData.good_boxes) || 0);
+      startUnit = lastUnit > 0 ? (lastUnit + 1) : 1;
+
+      // Подставляем номер коробки/мешка в соответствующий блок
+      if (isBag) {
+        switchTab('bags', document.querySelectorAll('.tabs .tab')[1]);
+        document.getElementById('bagStart').value = startUnit;
+        document.getElementById('bagEnd').value = '';
+        calcBags();
+      } else {
+        switchTab('boxes', document.querySelectorAll('.tabs .tab')[0]);
+        document.getElementById('boxStart').value = startUnit;
+        document.getElementById('boxEnd').value = '';
+        calcBoxes();
+      }
+    } else if (handoverStatus === 'В РАБОТЕ') {
+      // Нет данных о прошлой смене — начинаем с 1
+      const isBag = (state.packageType === 'bag');
+      if (isBag) {
+        document.getElementById('bagStart').value = 1;
+        document.getElementById('bagEnd').value = '';
+        calcBags();
+      } else {
+        document.getElementById('boxStart').value = 1;
+        document.getElementById('boxEnd').value = '';
+        calcBoxes();
+      }
+    }
+
+    const batch = document.getElementById('batchNumber').value.trim() || '—';
+    const ral = document.getElementById('ralColor').value.trim();
+    const ralClean = ral ? ('RAL ' + ral) : '—';
+
+    const acceptancePayload = {
+      line_number: state.selectedLine,
+      shift_type: `ТЕКУЩИЙ (${shiftName})`,
+      operator_name: op,
+      batch_number: batch,
+      ral_color: ralClean,
+      line_status: handoverStatus,
+      good_boxes: 0,
+      good_bags: 0,
+      total_good_kg: 0,
+      chips_kg: 0,
+      defect_boxes: 0,
+      defect_kg: 0,
+      dust_kg: 0,
+      package_type: state.packageType,
+      unit_from: startUnit,
+      unit_to: startUnit
+    };
+
+    try {
+      await fetch(`${SUPABASE_BASE}/shift_reports`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(acceptancePayload)
+      });
+    } catch (e) {
+      console.warn("Сбой фоновой отправки приёмки:", e);
+    }
+
+    // Фиксируем приёмку
+    shiftAcceptedAt = timeStr;
+    shiftAcceptedStatus = handoverStatus;
+
+    // Сбрасываем таймеры на начало смены
+    workTimeMs = 0;
+    lastStatusChangeTime = Date.now();
+    currentStatusStart = Date.now();
+    statusLog = [];
+    currentStatus = handoverStatus;
+
+    // Сворачиваем блок в плашку
+    document.getElementById('handoverStatusGrid').style.display = 'none';
+    document.getElementById('btnHandoverAccept').style.display = 'none';
+    document.getElementById('handoverCard').classList.add('ready-state');
+
+    const acceptedBox = document.getElementById('handoverAccepted');
+    acceptedBox.style.display = 'block';
+    document.getElementById('handoverAcceptedText').innerText =
+      `Смена принята • ${timeStr} • ${handoverStatus}`;
+
+    loadPlanFromDashboard();
+    loadPersonalRecord();
+    renderPlanBlock();
+  }
+
+  // Синхронизация кнопок в блоке «Состояние линии прямо сейчас»
+  function syncStatusButtons(status) {
+    const map = {
+      'В РАБОТЕ': { el: 'stBtnWork', cls: 'active-work', color: '#34d399' },
+      'ЧИСТКА':  { el: 'stBtnClean', cls: 'active-clean', color: '#fbbf24' },
+      'ПРОБЫ':   { el: 'stBtnSample', cls: 'active-sample', color: '#38bdf8' },
+      'РЕМОНТ':  { el: 'stBtnRepair', cls: 'active-repair', color: '#f87171' }
+    };
+
+    document.querySelectorAll('.btn-status').forEach(b => b.className = 'btn-status');
+    const m = map[status];
+    if (m) {
+      const btn = document.getElementById(m.el);
+      if (btn) btn.classList.add(m.cls);
+      const badge = document.getElementById('currentStatusBadge');
+      badge.innerText = status;
+      badge.style.color = m.color;
+    }
+    state.status = status;
+  }
+
+  // ===== СМЕНА СТАТУСА ПО ХОДУ СМЕНЫ =====
 
   function setStatus(name, btn) {
     const now = Date.now();
@@ -811,20 +1020,9 @@
 
   setInterval(() => { renderPlanBlock(); }, 30000);
 
-  // ===== ПРИЁМ СМЕНЫ =====
+  // ===== ЗАГРУЗКА ДАННЫХ ПРОШЛОЙ СМЕНЫ (для автоподстановки номера) =====
 
   async function checkLineHandover(lineNum) {
-    const card = document.getElementById('handoverCard');
-    const title = document.getElementById('handoverTitle');
-    const info = document.getElementById('handoverInfo');
-    const btnAccept = document.getElementById('btnHandoverAccept');
-
-    card.style.display = 'block';
-    card.classList.remove('ready-state');
-    title.innerText = `Линия №${lineNum}`;
-    info.innerText = `Запрос последней сдачи смены...`;
-    btnAccept.disabled = true;
-
     try {
       const res = await fetch(`${SUPABASE_BASE}/shift_reports?line_number=eq.${lineNum}&shift_type=not.ilike.*ТЕКУЩИЙ*&order=created_at.desc&limit=1`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
@@ -835,134 +1033,16 @@
 
       if (!data || data.length === 0) {
         lastShiftData = null;
-        title.innerText = `Линия №${lineNum} — Начало работы`;
-        info.innerHTML = `В базе еще нет сданных смен по этой линии.<br>Выберите текущий статус ниже и нажмите «Принять смену».`;
-        btnAccept.innerText = `ПРИНЯТЬ СМЕНУ (СТАРТ)`;
-        btnAccept.disabled = false;
         return;
       }
 
-      const last = data[0];
-      lastShiftData = last;
+      lastShiftData = data[0];
 
-      const prevStatus = last.line_status || 'В РАБОТЕ';
-      const isBag = (last.package_type === 'bag');
-      const lastUnit = Number(last.unit_to || (isBag ? last.good_bags : last.good_boxes) || 0);
-      const nextUnit = lastUnit > 0 ? (lastUnit + 1) : 1;
-
-      info.innerHTML = `
-        Сдал: <b>${last.operator_name || 'Не указан'}</b> (${last.shift_type || '—'})<br>
-        Состояние: <b>${prevStatus}</b> | Партия: <b>${last.batch_number || '—'}</b> | <b>${last.ral_color || '—'}</b><br>
-        Последний выпуск: <b>№${lastUnit}</b> ${isBag ? 'мешок' : 'коробка'}<br>
-        <span style="color:#38bdf8; font-weight:700;">Проверьте ваш текущий статус ниже и подтвердите приёмку:</span>
-      `;
-
-      btnAccept.innerText = `ПРИНЯТЬ СМЕНУ И ЗАФИКСИРОВАТЬ СТАТУС`;
-      btnAccept.disabled = false;
-
+      // Если статус в прошлой смене был не "В РАБОТЕ" — начинаем с 1
+      // (это учтётся при приёмке)
     } catch (e) {
-      title.innerText = `Линия №${lineNum} — Ошибка связи`;
-      info.innerText = `Не удалось связаться с базой. Проверьте интернет.`;
-      btnAccept.disabled = false;
-      btnAccept.innerText = `ПРИНЯТЬ СМЕНУ (ОФФЛАЙН)`;
+      lastShiftData = null;
     }
-  }
-
-  async function acceptHandover() {
-    const op = document.getElementById('operatorName').value.trim();
-    if (!op) {
-      alert('⚠️ Пожалуйста, введите вашу фамилию в поле ФИО Оператора перед приемкой!');
-      document.getElementById('operatorName').focus();
-      return;
-    }
-    saveOperatorName();
-
-    const btnAccept = document.getElementById('btnHandoverAccept');
-    btnAccept.disabled = true;
-    btnAccept.innerText = 'Фиксируем приёмку на дашборде...';
-
-    if (lastShiftData) {
-      if (lastShiftData.batch_number && lastShiftData.batch_number !== '—') {
-        document.getElementById('batchNumber').value = lastShiftData.batch_number;
-      }
-      if (lastShiftData.ral_color && lastShiftData.ral_color !== '—') {
-        document.getElementById('ralColor').value = lastShiftData.ral_color.replace(/^RAL\s*/i, '');
-      }
-
-      const isBag = (lastShiftData.package_type === 'bag');
-      const lastUnit = Number(lastShiftData.unit_to || (isBag ? lastShiftData.good_bags : lastShiftData.good_boxes) || 0);
-      const nextUnit = lastUnit > 0 ? (lastUnit + 1) : 1;
-
-      if (state.status === 'В РАБОТЕ') {
-        if (isBag) {
-          switchTab('bags', document.querySelectorAll('.tabs .tab')[1]);
-          document.getElementById('bagStart').value = nextUnit;
-          document.getElementById('bagEnd').value = '';
-          calcBags();
-        } else {
-          switchTab('boxes', document.querySelectorAll('.tabs .tab')[0]);
-          document.getElementById('boxStart').value = nextUnit;
-          document.getElementById('boxEnd').value = '';
-          calcBoxes();
-        }
-      }
-    }
-
-    const shiftName = getShiftName();
-    const batch = document.getElementById('batchNumber').value.trim() || '—';
-    const ral = document.getElementById('ralColor').value.trim();
-    const ralClean = ral ? ('RAL ' + ral) : '—';
-    const startUnit = (state.packageType === 'box') ? (parseInt(document.getElementById('boxStart').value) || 1) : (parseInt(document.getElementById('bagStart').value) || 1);
-
-    const acceptancePayload = {
-      line_number: state.selectedLine,
-      shift_type: `ТЕКУЩИЙ (${shiftName})`,
-      operator_name: op,
-      batch_number: batch,
-      ral_color: ralClean,
-      line_status: state.status,
-      good_boxes: 0,
-      good_bags: 0,
-      total_good_kg: 0,
-      chips_kg: 0,
-      defect_boxes: 0,
-      defect_kg: 0,
-      dust_kg: 0,
-      package_type: state.packageType,
-      unit_from: startUnit,
-      unit_to: startUnit
-    };
-
-    try {
-      await fetch(`${SUPABASE_BASE}/shift_reports`, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify(acceptancePayload)
-      });
-    } catch (e) {
-      console.warn("Сбой фоновой отправки приёмки:", e);
-    }
-
-    btnAccept.disabled = false;
-    btnAccept.innerText = 'СМЕНА ПРИНЯТА';
-    document.getElementById('handoverCard').classList.add('ready-state');
-
-    workTimeMs = 0;
-    lastStatusChangeTime = Date.now();
-    currentStatusStart = Date.now();
-    statusLog = [];
-    currentStatus = state.status;
-
-    loadPlanFromDashboard();
-    loadPersonalRecord();
-    renderPlanBlock();
-
-    alert(`✅ Смена на Линии №${state.selectedLine} успешно принята!\nОператор: ${op}\nСтатус: ${state.status}\nИнформация передана на дашборд начальника.`);
   }
 
   // ===== CHECKPOINT =====
@@ -1213,6 +1293,8 @@
         currentStatusStart = Date.now();
         statusLog = [];
 
+        // Сбрасываем блок приёмки — смена сдана
+        resetHandover();
         checkLineHandover(state.selectedLine);
         loadPersonalRecord();
         renderPlanBlock();
@@ -1416,6 +1498,7 @@
   // ===== ИНИЦИАЛИЗАЦИЯ =====
 
   window.addEventListener('DOMContentLoaded', () => {
+    resetHandover();
     checkLineHandover(state.selectedLine);
     loadPlanFromDashboard();
     loadPersonalRecord();
