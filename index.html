@@ -12,10 +12,20 @@
     .btn-press:active { transform: scale(0.97); }
     .tab-active { background:#0072ce; color:#fff; }
     .tab-idle { color:#8fa0c2; }
-    .st-active-work { background: rgba(16,185,129,.2); border-color:#10b981; color:#34d399; }
-    .st-active-clean { background: rgba(245,158,11,.2); border-color:#f59e0b; color:#fbbf24; }
-    .st-active-sample { background: rgba(2,132,199,.2); border-color:#38bdf8; color:#38bdf8; }
-    .st-active-repair { background: rgba(239,68,68,.2); border-color:#ef4444; color:#f87171; }
+    
+    /* Цветные кнопки статуса (по умолчанию приглушенные, активные - яркие) */
+    .st-base-work { border-color: #10b981; color: #34d399; background: rgba(16,185,129,.05); }
+    .st-active-work { background: rgba(16,185,129,.2); border-color:#10b981; color:#34d399; box-shadow: 0 0 10px rgba(16,185,129,0.2); }
+    
+    .st-base-clean { border-color: #f59e0b; color: #fbbf24; background: rgba(245,158,11,.05); }
+    .st-active-clean { background: rgba(245,158,11,.2); border-color:#f59e0b; color:#fbbf24; box-shadow: 0 0 10px rgba(245,158,11,0.2); }
+    
+    .st-base-sample { border-color: #38bdf8; color: #38bdf8; background: rgba(2,132,199,.05); }
+    .st-active-sample { background: rgba(2,132,199,.2); border-color:#38bdf8; color:#38bdf8; box-shadow: 0 0 10px rgba(2,132,199,0.2); }
+    
+    .st-base-repair { border-color: #ef4444; color: #f87171; background: rgba(239,68,68,.05); }
+    .st-active-repair { background: rgba(239,68,68,.2); border-color:#ef4444; color:#f87171; box-shadow: 0 0 10px rgba(239,68,68,0.2); }
+
     .modal-overlay { display:none; position:fixed; inset:0; background:rgba(5,9,20,.9); z-index:50; justify-content:center; align-items:center; padding:16px; backdrop-filter: blur(2px); }
     .modal-overlay.open { display:flex; }
     .period-btn-active { background:#0072ce; color:#fff; }
@@ -24,7 +34,6 @@
 </head>
 <body class="min-h-screen pb-24 select-none">
 
-  <!-- ШАПКА -->
   <header class="bg-[#0f172a] border-b border-[#1e293b] px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-md">
     <div class="flex items-center space-x-2">
       <svg width="120" height="26" viewBox="0 0 230 50" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -48,7 +57,6 @@
 
   <main class="p-3 max-w-md mx-auto space-y-3">
 
-    <!-- 1. ПРИЁМ СМЕНЫ -->
     <div id="handoverSection" class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-3">
       <h2 class="text-xs font-extrabold text-[#38bdf8] uppercase tracking-wider">Приём смены и выбор линии</h2>
       <div class="grid grid-cols-4 gap-1.5" id="lineButtons"></div>
@@ -59,25 +67,24 @@
       <div>
         <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Состояние линии при приёмке</label>
         <div class="grid grid-cols-2 gap-1.5" id="handoverStatusGrid">
-          <button onclick="selectHandoverStatus('В РАБОТЕ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border border-[#233152] bg-[#1c2742] text-[#8fa0c2]">В РАБОТЕ</button>
-          <button onclick="selectHandoverStatus('ЧИСТКА', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border border-[#233152] bg-[#1c2742] text-[#8fa0c2]">ЧИСТКА</button>
-          <button onclick="selectHandoverStatus('ПРОБЫ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border border-[#233152] bg-[#1c2742] text-[#8fa0c2]">ПРОБЫ</button>
-          <button onclick="selectHandoverStatus('РЕМОНТ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border border-[#233152] bg-[#1c2742] text-[#8fa0c2]">РЕМОНТ</button>
+          <button onclick="selectHandoverStatus('В РАБОТЕ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-base-work">В РАБОТЕ</button>
+          <button onclick="selectHandoverStatus('ЧИСТКА', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-base-clean">ЧИСТКА</button>
+          <button onclick="selectHandoverStatus('ПРОБЫ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-base-sample">ПРОБЫ</button>
+          <button onclick="selectHandoverStatus('РЕМОНТ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-base-repair">РЕМОНТ</button>
         </div>
       </div>
       <button id="btnAcceptHandover" onclick="acceptHandover()" disabled class="w-full py-3 bg-[#10b981] disabled:opacity-40 font-black rounded-xl text-white text-xs uppercase tracking-wider btn-press">ПРИНЯТЬ СМЕНУ</button>
     </div>
 
-    <!-- Свёрнутый вид -->
-    <div id="handoverCompact" class="hidden bg-[#131c31] border border-[#10b981] rounded-xl p-3 flex items-center justify-between shadow">
+    <!-- Свёрнутый вид (меняет цвет и текст) -->
+    <div id="handoverCompact" class="hidden bg-[#131c31] border rounded-xl p-3 flex items-center justify-between shadow">
       <div class="flex items-center space-x-2">
-        <span class="w-2.5 h-2.5 rounded-full bg-[#10b981] animate-pulse"></span>
-        <span id="compactInfo" class="text-xs font-bold text-white">Линия №1 • Иванов И.И. • В РАБОТЕ</span>
+        <span id="compactDot" class="w-2.5 h-2.5 rounded-full bg-[#10b981] animate-pulse"></span>
+        <span id="compactInfo" class="text-xs font-bold text-white">—</span>
       </div>
       <button onclick="reopenHandover()" class="text-[11px] font-bold text-[#38bdf8] underline btn-press">Изменить ✎</button>
     </div>
 
-    <!-- 2. ГЕЙМИФИКАЦИЯ -->
     <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-2">
       <div class="flex justify-between items-end">
         <div>
@@ -97,32 +104,28 @@
       </div>
     </div>
 
-    <!-- 3. СТАТУС ЛИНИИ -->
     <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-3 shadow-lg space-y-2">
       <div class="flex justify-between items-center px-1">
         <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider">Состояние линии</span>
         <span id="statusTimer" class="text-[11px] font-bold text-[#34d399]">В РАБОТЕ</span>
       </div>
       <div class="grid grid-cols-2 gap-2" id="lineStatusGrid">
-        <button onclick="setLineStatus('В РАБОТЕ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border border-[#233152] bg-[#1c2742] text-[#8fa0c2]">В РАБОТЕ</button>
-        <button onclick="setLineStatus('ЧИСТКА', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border border-[#233152] bg-[#1c2742] text-[#8fa0c2]">ЧИСТКА</button>
-        <button onclick="setLineStatus('ПРОБЫ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border border-[#233152] bg-[#1c2742] text-[#8fa0c2]">ПРОБЫ</button>
-        <button onclick="setLineStatus('РЕМОНТ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border border-[#233152] bg-[#1c2742] text-[#8fa0c2]">РЕМОНТ</button>
+        <button onclick="setLineStatus('В РАБОТЕ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-base-work">В РАБОТЕ</button>
+        <button onclick="setLineStatus('ЧИСТКА', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-base-clean">ЧИСТКА</button>
+        <button onclick="setLineStatus('ПРОБЫ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-base-sample">ПРОБЫ</button>
+        <button onclick="setLineStatus('РЕМОНТ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-base-repair">РЕМОНТ</button>
       </div>
       <div class="text-[10px] text-center text-[#64748b]">Смена статуса автоматически уходит на дашборд</div>
     </div>
 
-    <!-- 4. ПАРТИЯ И ВЫПУСК -->
     <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-3">
       
-      <!-- Кнопка открытия партии (скрыта, если партия уже открыта) -->
       <div id="openBatchSection">
         <button onclick="openModal('modalOpenBatch')" class="w-full py-4 border-2 border-dashed border-[#38bdf8] rounded-xl bg-[#1a2744] text-[#38bdf8] font-black text-sm uppercase tracking-wider btn-press">
           + Открыть новую партию
         </button>
       </div>
 
-      <!-- Рабочая зона партии (скрыта, если партии нет) -->
       <div id="activeBatchSection" class="hidden space-y-3">
         <div class="flex bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
           <button onclick="switchPackage('box', this)" class="pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-active">Коробки</button>
@@ -133,10 +136,9 @@
         <div class="flex justify-between items-center bg-[#080d1a] border border-[#233152] p-2.5 rounded-xl text-xs">
           <div>Партия: <b id="displayBatchNum" class="text-white">—</b></div>
           <div>RAL: <b id="displayRal" class="text-white">—</b></div>
-          <button onclick="closeModal('activeBatchSection')" class="hidden"></button>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 hidden"> <!-- Скрытые поля для хранения данных партии -->
+        <div class="grid grid-cols-2 gap-2 hidden">
           <input type="hidden" id="batchNumber">
           <input type="hidden" id="ralColor">
         </div>
@@ -165,7 +167,6 @@
 
     </div>
 
-    <!-- 5. ПАНЕЛЬ БЫСТРОГО ВЫЗОВА -->
     <div class="grid grid-cols-3 gap-2">
       <button onclick="openModal('modalDefect')" class="bg-[#131c31] border border-[#55222b] p-3 rounded-2xl text-center btn-press space-y-1">
         <div class="text-[11px] font-black text-[#f87171] uppercase">Брак</div>
@@ -182,7 +183,6 @@
       </button>
     </div>
 
-    <!-- 6. СДАТЬ СМЕНУ -->
     <button id="btnSubmitShift" onclick="openModal('modalSummary')" disabled class="w-full py-4 bg-gradient-to-r from-[#0072ce] to-[#0284c7] font-black rounded-2xl text-white text-sm uppercase tracking-wider shadow-xl btn-press opacity-40 cursor-not-allowed">
       СДАТЬ СМЕНУ И ОТПРАВИТЬ ОТЧЁТ
     </button>
@@ -317,19 +317,12 @@
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let state = {
-      line: 6,
-      operator: localStorage.getItem('primatek_operator_name') || '',
-      handoverStatus: null,
-      lineStatus: 'В РАБОТЕ',
-      packageType: 'box',
-      chipSubtype: 'Обычные',
-      startUnit: 1,
-      closedBatchesKg: 0,
-      defects: [],
-      dust: [],
-      planKg: 0,
-      isBatchOpen: false,
-      newBatchPack: 'box'
+      line: 6, operator: localStorage.getItem('primatek_operator_name') || '',
+      handoverStatus: null, lineStatus: 'В РАБОТЕ',
+      packageType: 'box', chipSubtype: 'Обычные',
+      startUnit: 1, closedBatchesKg: 0,
+      defects: [], dust: [], planKg: 0,
+      isBatchOpen: false, newBatchPack: 'box'
     };
 
     let active5sTaskId = null;
@@ -377,17 +370,13 @@
           .select('*')
           .eq('line_number', state.line)
           .eq('event_type', 'SHIFT_CLOSE')
-          .order('created_at', { ascending: false })
-          .limit(1);
+          .order('created_at', { ascending: false }).limit(1);
 
         if (data && data.length > 0) {
           const last = data[0];
           state.startUnit = (Number(last.unit_to) || 0) + 1;
-          
-          // Если прошлая смена закрыла партию, значит партия пустая
-          // Но нам нужно понять, была ли партия закрыта или просто смена сдана
-          // Для простоты: если есть batch_number, значит партия продолжается
-          if (last.batch_number && last.event_type === 'SHIFT_CLOSE') {
+          // Если партия не была закрыта перед сдачей смены
+          if (last.batch_number) {
             state.isBatchOpen = true;
             document.getElementById('batchNumber').value = last.batch_number;
             document.getElementById('ralColor').value = last.ral_color ? last.ral_color.replace('RAL ', '') : '';
@@ -416,22 +405,17 @@
       if (state.isBatchOpen) {
         openSec.classList.add('hidden');
         activeSec.classList.remove('hidden');
-        
-        // Обновляем табы
         document.querySelectorAll('.pkg-tab').forEach(t => t.className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle");
         const activeTabIdx = state.packageType === 'box' ? 0 : (state.packageType === 'bag' ? 1 : 2);
         document.querySelectorAll('.pkg-tab')[activeTabIdx].className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-active";
         
-        // Обновляем отображение партии
         document.getElementById('displayBatchNum').innerText = document.getElementById('batchNumber').value || '—';
         document.getElementById('displayRal').innerText = document.getElementById('ralColor').value ? 'RAL ' + document.getElementById('ralColor').value : '—';
         
-        // Меняем подпись поля
         const unitLabel = document.getElementById('unitLabel');
         if (state.packageType === 'box') unitLabel.innerText = 'Номер последней выпущенной коробки';
         else if (state.packageType === 'bag') unitLabel.innerText = 'Номер последнего выпущенного мешка';
         else unitLabel.innerText = 'Номер последней единицы чипсов';
-        
       } else {
         openSec.classList.remove('hidden');
         activeSec.classList.add('hidden');
@@ -441,13 +425,17 @@
     function selectHandoverStatus(status, btn) {
       state.handoverStatus = status;
       document.querySelectorAll('.hand-btn').forEach(b => {
-        b.className = "hand-btn py-2.5 text-xs font-extrabold rounded-xl border border-[#233152] bg-[#1c2742] text-[#8fa0c2]";
+        b.className = `hand-btn py-2.5 text-xs font-extrabold rounded-xl border ${b.dataset.base || 'border-[#233152] bg-[#1c2742] text-[#8fa0c2]'}`;
       });
-      if (status === 'В РАБОТЕ') btn.className = "hand-btn py-2.5 text-xs font-extrabold rounded-xl border border-[#10b981] bg-[#10b981]/20 text-[#34d399]";
-      if (status === 'ЧИСТКА') btn.className = "hand-btn py-2.5 text-xs font-extrabold rounded-xl border border-[#f59e0b] bg-[#f59e0b]/20 text-[#fbbf24]";
-      if (status === 'ПРОБЫ') btn.className = "hand-btn py-2.5 text-xs font-extrabold rounded-xl border border-[#38bdf8] bg-[#38bdf8]/20 text-[#38bdf8]";
-      if (status === 'РЕМОНТ') btn.className = "hand-btn py-2.5 text-xs font-extrabold rounded-xl border border-[#ef4444] bg-[#ef4444]/20 text-[#f87171]";
+      updateHandoverBtnColor(btn, status);
       checkHandoverReady();
+    }
+
+    function updateHandoverBtnColor(btn, status) {
+      if (status === 'В РАБОТЕ') btn.className = "hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-active-work";
+      if (status === 'ЧИСТКА') btn.className = "hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-active-clean";
+      if (status === 'ПРОБЫ') btn.className = "hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-active-sample";
+      if (status === 'РЕМОНТ') btn.className = "hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-active-repair";
     }
 
     function checkHandoverReady() {
@@ -457,8 +445,6 @@
     async function acceptHandover() {
       document.getElementById('handoverSection').classList.add('hidden');
       document.getElementById('handoverCompact').classList.remove('hidden');
-      document.getElementById('compactInfo').innerText = `Линия №${state.line} • ${state.operator} • ${state.handoverStatus}`;
-      
       setLineStatus(state.handoverStatus, null, true);
       await sendToSupabase('STATUS_CHANGE', { line_status: state.handoverStatus });
     }
@@ -470,44 +456,54 @@
 
     async function setLineStatus(status, btn, silent = false) {
       state.lineStatus = status;
+      
+      // Обновляем компактную плашку
+      const compact = document.getElementById('handoverCompact');
+      const compactDot = document.getElementById('compactDot');
+      const compactInfo = document.getElementById('compactInfo');
+      
+      if (status === 'В РАБОТЕ') {
+        compact.className = "bg-[#131c31] border border-[#10b981] rounded-xl p-3 flex items-center justify-between shadow";
+        compactDot.className = "w-2.5 h-2.5 rounded-full bg-[#10b981] animate-pulse";
+      } else if (status === 'ЧИСТКА') {
+        compact.className = "bg-[#131c31] border border-[#f59e0b] rounded-xl p-3 flex items-center justify-between shadow";
+        compactDot.className = "w-2.5 h-2.5 rounded-full bg-[#f59e0b] animate-pulse";
+      } else if (status === 'ПРОБЫ') {
+        compact.className = "bg-[#131c31] border border-[#38bdf8] rounded-xl p-3 flex items-center justify-between shadow";
+        compactDot.className = "w-2.5 h-2.5 rounded-full bg-[#38bdf8] animate-pulse";
+      } else if (status === 'РЕМОНТ') {
+        compact.className = "bg-[#131c31] border border-[#ef4444] rounded-xl p-3 flex items-center justify-between shadow";
+        compactDot.className = "w-2.5 h-2.5 rounded-full bg-[#ef4444] animate-pulse";
+      }
+      if (compactInfo) compactInfo.innerText = `Линия №${state.line} • ${state.operator} • ${status}`;
+
+      // Обновляем кнопки
       document.querySelectorAll('.st-btn').forEach(b => {
-        b.className = "st-btn py-3 text-xs font-extrabold rounded-xl border border-[#233152] bg-[#1c2742] text-[#8fa0c2]";
+        b.className = `st-btn py-3 text-xs font-extrabold rounded-xl border ${b.dataset.base || 'border-[#233152] bg-[#1c2742] text-[#8fa0c2]'}`;
       });
+      if (btn) updateHandoverBtnColor(btn, status); // Переиспользуем функцию цвета
       
       const statusMap = { 'В РАБОТЕ': '#34d399', 'ЧИСТКА': '#fbbf24', 'ПРОБЫ': '#38bdf8', 'РЕМОНТ': '#f87171' };
       document.getElementById('statusTimer').innerText = status;
       document.getElementById('statusTimer').style.color = statusMap[status] || '#34d399';
-
-      if (btn) {
-        if (status === 'В РАБОТЕ') btn.className = "st-btn py-3 text-xs font-extrabold rounded-xl border border-[#10b981] bg-[#10b981]/20 text-[#34d399]";
-        if (status === 'ЧИСТКА') btn.className = "st-btn py-3 text-xs font-extrabold rounded-xl border border-[#f59e0b] bg-[#f59e0b]/20 text-[#fbbf24]";
-        if (status === 'ПРОБЫ') btn.className = "st-btn py-3 text-xs font-extrabold rounded-xl border border-[#38bdf8] bg-[#38bdf8]/20 text-[#38bdf8]";
-        if (status === 'РЕМОНТ') btn.className = "st-btn py-3 text-xs font-extrabold rounded-xl border border-[#ef4444] bg-[#ef4444]/20 text-[#f87171]";
-      }
 
       if (!silent) await sendToSupabase('STATUS_CHANGE', { line_status: status });
     }
 
     function setNewBatchPack(type, btn) {
       state.newBatchPack = type;
-      document.querySelectorAll('.new-pack-btn').forEach(t => {
-        t.className = "new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle";
-      });
+      document.querySelectorAll('.new-pack-btn').forEach(t => t.className = "new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle");
       btn.className = "new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active";
     }
 
     function confirmOpenBatch() {
       const bNum = document.getElementById('newBatchNum').value.trim();
       const ral = document.getElementById('newRal').value.trim();
-      
-      if (!bNum || !ral) {
-        alert("Пожалуйста, заполните № Партии и RAL!");
-        return;
-      }
+      if (!bNum || !ral) { alert("Заполните № Партии и RAL!"); return; }
       
       state.packageType = state.newBatchPack;
       state.isBatchOpen = true;
-      state.startUnit = 1; // Новая партия всегда с 1
+      state.startUnit = 1;
       
       document.getElementById('batchNumber').value = bNum;
       document.getElementById('ralColor').value = ral;
@@ -520,9 +516,7 @@
     function switchPackage(type, btn) {
       if (!state.isBatchOpen) return;
       state.packageType = type;
-      document.querySelectorAll('.pkg-tab').forEach(t => {
-        t.className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle";
-      });
+      document.querySelectorAll('.pkg-tab').forEach(t => t.className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle");
       btn.className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-active";
       document.getElementById('chipSubtypeWrap').classList.toggle('hidden', type !== 'chip');
       
@@ -536,31 +530,21 @@
 
     function selectChipSub(sub, btn) {
       state.chipSubtype = sub;
-      document.querySelectorAll('.chip-sub-btn').forEach(b => {
-        b.className = "chip-sub-btn py-1.5 text-[11px] font-bold rounded-lg bg-[#1c2742] text-[#8fa0c2]";
-      });
+      document.querySelectorAll('.chip-sub-btn').forEach(b => b.className = "chip-sub-btn py-1.5 text-[11px] font-bold rounded-lg bg-[#1c2742] text-[#8fa0c2]");
       btn.className = "chip-sub-btn py-1.5 text-[11px] font-bold rounded-lg bg-[#0072ce] text-white";
     }
 
     function calculateProduction() {
       const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
-      let count = 0;
-      
-      // Исправлено: если ввели 1 и старт 1, считаем 1
-      if (endVal > 0 && endVal >= state.startUnit) {
-        count = (endVal - state.startUnit + 1);
-      }
+      let count = (endVal > 0 && endVal >= state.startUnit) ? (endVal - state.startUnit + 1) : 0;
       
       const rawKg = count * UNIT_WEIGHT;
       const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
       const goodKg = Math.max(0, rawKg - defectKg) + state.closedBatchesKg;
 
-      let earned = 0;
-      if (state.planKg > 0 && goodKg >= state.planKg) {
-        earned = (state.planKg * EARNING_RATES.base) + EARNING_RATES.bonus + ((goodKg - state.planKg) * EARNING_RATES.overPlan);
-      } else {
-        earned = goodKg * EARNING_RATES.base;
-      }
+      let earned = (state.planKg > 0 && goodKg >= state.planKg)
+        ? (state.planKg * EARNING_RATES.base) + EARNING_RATES.bonus + ((goodKg - state.planKg) * EARNING_RATES.overPlan)
+        : goodKg * EARNING_RATES.base;
 
       document.getElementById('statMoney').innerText = Math.round(earned) + ' ₽';
       document.getElementById('statDonePlan').innerText = `${goodKg} / ${state.planKg > 0 ? state.planKg + ' кг' : '—'}`;
@@ -568,13 +552,9 @@
       if (state.planKg > 0) {
         const pct = Math.min(100, Math.round((goodKg / state.planKg) * 100));
         document.getElementById('progressBar').style.width = pct + '%';
-        if (pct >= 100) {
-          document.getElementById('premiumLeftText').innerHTML = `🔥 <span class="text-[#fbbf24]">ПЛАН ВЫПОЛНЕН (+500 ₽)!</span> Сверхплан идет по двойному тарифу!`;
-        } else {
-          const left = state.planKg - goodKg;
-          const unitStr = state.packageType === 'bag' ? 'меш.' : (state.packageType === 'box' ? 'кор.' : 'ед.');
-          document.getElementById('premiumLeftText').innerText = `До премии осталось: ${left} кг (${Math.ceil(left/UNIT_WEIGHT)} ${unitStr})`;
-        }
+        document.getElementById('premiumLeftText').innerHTML = pct >= 100 
+          ? `🔥 <span class="text-[#fbbf24]">ПЛАН ВЫПОЛНЕН (+500 ₽)!</span> Сверхплан идет по двойному тарифу!`
+          : `До премии осталось: ${state.planKg - goodKg} кг (${Math.ceil((state.planKg - goodKg)/UNIT_WEIGHT)} ${state.packageType === 'bag' ? 'меш.' : (state.packageType === 'box' ? 'кор.' : 'ед.')})`;
       } else {
         document.getElementById('premiumLeftText').innerText = `⏳ Ожидание плана от начальника смены`;
       }
@@ -585,13 +565,9 @@
       const warning = document.getElementById('submitWarning');
       
       if (hasUnit && hasDust) {
-        btnSubmit.disabled = false;
-        btnSubmit.classList.remove('opacity-40', 'cursor-not-allowed');
-        warning.style.display = 'none';
+        btnSubmit.disabled = false; btnSubmit.classList.remove('opacity-40', 'cursor-not-allowed'); warning.style.display = 'none';
       } else {
-        btnSubmit.disabled = true;
-        btnSubmit.classList.add('opacity-40', 'cursor-not-allowed');
-        warning.style.display = 'block';
+        btnSubmit.disabled = true; btnSubmit.classList.add('opacity-40', 'cursor-not-allowed'); warning.style.display = 'block';
         let missing = [];
         if (!hasUnit) missing.push('номер коробки');
         if (!hasDust) missing.push('данные по пыли');
@@ -601,33 +577,22 @@
 
     async function closeBatch() {
       const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
-      if (endVal < state.startUnit || endVal === 0) {
-        alert("Укажите корректный номер коробки/мешка!"); return;
-      }
+      if (endVal < state.startUnit || endVal === 0) { alert("Укажите корректный номер!"); return; }
+      if (state.dust.length === 0) { alert("Для закрытия партии обязательно укажите данные по пыли!"); return; }
 
       const count = (endVal - state.startUnit + 1);
       const kg = count * UNIT_WEIGHT;
-      
       const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
       const chipsKg = state.packageType === 'chip' ? kg : 0;
       
       const payload = {
-        line_number: state.line,
-        operator_name: state.operator,
-        event_type: 'PARTY_CLOSE',
-        line_status: state.lineStatus,
-        batch_number: document.getElementById('batchNumber').value,
-        ral_color: 'RAL ' + document.getElementById('ralColor').value,
-        package_type: state.packageType,
-        total_good_kg: Math.max(0, kg - defectKg),
-        good_boxes: state.packageType === 'box' ? count : 0,
-        good_bags: state.packageType === 'bag' ? count : 0,
-        chips_kg: chipsKg,
-        defect_kg: defectKg,
-        defect_boxes: state.defects.reduce((s, d) => s + d.count, 0),
-        dust_kg: state.dust.reduce((s, d) => s + d, 0),
-        unit_from: state.startUnit,
-        unit_to: endVal,
+        line_number: state.line, operator_name: state.operator, event_type: 'PARTY_CLOSE',
+        line_status: state.lineStatus, batch_number: document.getElementById('batchNumber').value,
+        ral_color: 'RAL ' + document.getElementById('ralColor').value, package_type: state.packageType,
+        total_good_kg: Math.max(0, kg - defectKg), good_boxes: state.packageType === 'box' ? count : 0,
+        good_bags: state.packageType === 'bag' ? count : 0, chips_kg: chipsKg,
+        defect_kg: defectKg, defect_boxes: state.defects.reduce((s, d) => s + d.count, 0),
+        dust_kg: state.dust.reduce((s, d) => s + d, 0), unit_from: state.startUnit, unit_to: endVal,
         plan_kg: state.planKg > 0 ? state.planKg : null
       };
 
@@ -637,28 +602,17 @@
       alert(`Партия закрыта! Засчитано: ${Math.max(0, kg - defectKg)} кг.`);
       state.closedBatchesKg += Math.max(0, kg - defectKg);
       
-      // Сброс
-      state.isBatchOpen = false;
-      state.startUnit = 1;
-      state.defects = [];
-      state.dust = [];
-      document.getElementById('currentUnitInput').value = '';
-      document.getElementById('batchNumber').value = '';
-      document.getElementById('ralColor').value = '';
+      state.isBatchOpen = false; state.startUnit = 1; state.defects = []; state.dust = [];
+      document.getElementById('currentUnitInput').value = ''; document.getElementById('batchNumber').value = ''; document.getElementById('ralColor').value = '';
       
-      renderDefects();
-      renderDust();
-      updateBatchUI();
-      calculateProduction();
+      renderDefects(); renderDust(); updateBatchUI(); calculateProduction();
     }
 
     async function loadPlanFromCloud() {
       try {
         const today = new Date().toISOString().slice(0, 10);
         const shiftName = (new Date().getHours() >= 8 && new Date().getHours() < 20) ? 'ДЕНЬ' : 'НОЧЬ';
-        const { data } = await client.from('shift_plans')
-          .select('plan_kg')
-          .eq('plan_date', today).eq('shift', shiftName).eq('line_number', state.line).limit(1);
+        const { data } = await client.from('shift_plans').select('plan_kg').eq('plan_date', today).eq('shift', shiftName).eq('line_number', state.line).limit(1);
         state.planKg = (data && data.length > 0 && data[0].plan_kg) ? Number(data[0].plan_kg) : 0;
         calculateProduction();
       } catch (e) {}
@@ -680,12 +634,10 @@
         payload.good_boxes = state.packageType === 'box' ? count : 0;
         payload.good_bags = state.packageType === 'bag' ? count : 0;
         payload.total_good_kg = Math.max(0, (count * UNIT_WEIGHT) - defectKg) + state.closedBatchesKg;
-        payload.chips_kg = chipsKg;
-        payload.defect_kg = defectKg;
+        payload.chips_kg = chipsKg; payload.defect_kg = defectKg;
         payload.defect_boxes = state.defects.reduce((s, d) => s + d.count, 0);
         payload.dust_kg = state.dust.reduce((s, d) => s + d, 0);
-        payload.unit_from = state.startUnit;
-        payload.unit_to = endVal;
+        payload.unit_from = state.startUnit; payload.unit_to = endVal;
         payload.plan_kg = state.planKg > 0 ? state.planKg : null;
         if (state.isBatchOpen) {
           payload.batch_number = document.getElementById('batchNumber').value;
@@ -699,15 +651,11 @@
         
         if (eventType === 'PRODUCTION') {
           const notice = document.getElementById('lastSyncNotice');
-          notice.style.display = 'block';
-          notice.innerText = `Последняя отправка: ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}`;
+          notice.style.display = 'block'; notice.innerText = `Отправлено в ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}`;
           setTimeout(() => { notice.style.display = 'none'; }, 5000);
         }
         return true;
-      } catch (err) {
-        alert('Ошибка отправки: ' + err.message);
-        return false;
-      }
+      } catch (err) { alert('Ошибка: ' + err.message); return false; }
     }
 
     async function sendCheckpoint() {
@@ -716,15 +664,11 @@
     }
 
     function addDefect() {
-      const s = parseInt(document.getElementById('defStart').value);
-      const e = parseInt(document.getElementById('defEnd').value);
+      const s = parseInt(document.getElementById('defStart').value), e = parseInt(document.getElementById('defEnd').value);
       if (s && e && e >= s) {
-        const count = (e - s + 1);
-        state.defects.push({ from: s, to: e, count: count, kg: count * UNIT_WEIGHT });
-        document.getElementById('defStart').value = '';
-        document.getElementById('defEnd').value = '';
-        renderDefects();
-        calculateProduction();
+        state.defects.push({ from: s, to: e, count: (e - s + 1), kg: (e - s + 1) * UNIT_WEIGHT });
+        document.getElementById('defStart').value = ''; document.getElementById('defEnd').value = '';
+        renderDefects(); calculateProduction();
       } else alert('Укажите корректный диапазон');
     }
 
@@ -736,10 +680,8 @@
     function addDust() {
       const val = parseFloat(document.getElementById('dustInput').value);
       if (val && val > 0) {
-        state.dust.push(val);
-        document.getElementById('dustInput').value = '';
-        renderDust();
-        calculateProduction();
+        state.dust.push(val); document.getElementById('dustInput').value = '';
+        renderDust(); calculateProduction();
       }
     }
 
@@ -780,10 +722,7 @@
       } catch (e) {}
     }
 
-    function startResolve5s(taskId) {
-      active5sTaskId = taskId;
-      document.getElementById('camera5sInput').click();
-    }
+    function startResolve5s(taskId) { active5sTaskId = taskId; document.getElementById('camera5sInput').click(); }
 
     async function onCapture5sAfter(input) {
       if (!input.files || !input.files[0] || !active5sTaskId) return;
@@ -792,11 +731,10 @@
       reader.onload = async (e) => {
         try {
           await fetch(`${SUPABASE_5S_URL}/rest/v1/tasks?id=eq.${active5sTaskId}`, {
-            method: 'PATCH',
-            headers: { 'apikey': SUPABASE_5S_KEY, 'Authorization': `Bearer ${SUPABASE_5S_KEY}`, 'Content-Type': 'application/json' },
+            method: 'PATCH', headers: { 'apikey': SUPABASE_5S_KEY, 'Authorization': `Bearer ${SUPABASE_5S_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ operator: state.operator, photo_after: e.target.result, status: 'PENDING_REVIEW' })
           });
-          alert("Фото устранения отправлено контролёру!"); load5sTasks();
+          alert("Фото отправлено контролёру!"); load5sTasks();
         } catch (err) { alert("Ошибка 5S: " + err.message); }
       };
       input.value = '';
@@ -812,7 +750,8 @@
       const count = (endVal > 0 && endVal >= state.startUnit) ? (endVal - state.startUnit + 1) : 0;
       const kg = Math.max(0, (count * UNIT_WEIGHT) - state.defects.reduce((s, d) => s + d.kg, 0)) + state.closedBatchesKg;
       document.getElementById('sumPaintKg').innerText = kg + ' кг';
-      let earned = state.planKg > 0 && kg >= state.planKg 
+      
+      let earned = (state.planKg > 0 && kg >= state.planKg)
         ? (state.planKg * EARNING_RATES.base) + EARNING_RATES.bonus + ((kg - state.planKg) * EARNING_RATES.overPlan)
         : kg * EARNING_RATES.base;
       document.getElementById('sumEarnedRub').innerText = Math.round(earned) + ' ₽';
@@ -836,7 +775,7 @@
     }
 
     async function loadStats() {
-      if (!state.operator) { alert("Введите вашу фамилию для просмотра статистики!"); return; }
+      if (!state.operator) { alert("Введите вашу фамилию!"); return; }
       const now = new Date(); let startStr, endStr;
       if (currentStatsPeriod === 'month') {
         startStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
@@ -852,14 +791,22 @@
       }
 
       try {
+        // Берем и SHIFT_CLOSE, и PARTY_CLOSE
         const { data } = await client.from('shift_reports').select('*')
-          .eq('operator_name', state.operator).eq('event_type', 'SHIFT_CLOSE')
+          .eq('operator_name', state.operator).in('event_type', ['SHIFT_CLOSE', 'PARTY_CLOSE'])
           .gte('created_at', startStr).lte('created_at', endStr + 'T23:59:59Z');
         
-        let totalShifts = data.length, dayShifts = 0, nightShifts = 0, totalKg = 0, totalEarned = 0;
-        data.forEach(r => {
+        // Считаем смены только по SHIFT_CLOSE
+        const shifts = data.filter(r => r.event_type === 'SHIFT_CLOSE');
+        let totalShifts = shifts.length, dayShifts = 0, nightShifts = 0;
+        shifts.forEach(r => {
           const isDay = (new Date(r.created_at).getHours() >= 8 && new Date(r.created_at).getHours() < 20);
           if (isDay) dayShifts++; else nightShifts++;
+        });
+
+        // Считаем килограммы и деньги по всем записям
+        let totalKg = 0, totalEarned = 0;
+        data.forEach(r => {
           const kg = Number(r.total_good_kg) || 0; totalKg += kg;
           const plan = Number(r.plan_kg) || 0;
           totalEarned += (plan > 0 && kg >= plan) ? (plan * EARNING_RATES.base) + EARNING_RATES.bonus + ((kg - plan) * EARNING_RATES.overPlan) : kg * EARNING_RATES.base;
