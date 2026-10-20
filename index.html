@@ -51,14 +51,11 @@
     <!-- 1. ПРИЁМ СМЕНЫ -->
     <div id="handoverSection" class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-3">
       <h2 class="text-xs font-extrabold text-[#38bdf8] uppercase tracking-wider">Приём смены и выбор линии</h2>
-
       <div class="grid grid-cols-4 gap-1.5" id="lineButtons"></div>
-
       <div>
         <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">ФИО Оператора</label>
         <input type="text" id="operatorName" placeholder="Иванов И.И." oninput="saveOperatorName()" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-[#0072ce]">
       </div>
-
       <div>
         <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Состояние линии при приёмке</label>
         <div class="grid grid-cols-2 gap-1.5" id="handoverStatusGrid">
@@ -68,7 +65,6 @@
           <button onclick="selectHandoverStatus('РЕМОНТ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border border-[#233152] bg-[#1c2742] text-[#8fa0c2]">РЕМОНТ</button>
         </div>
       </div>
-
       <button id="btnAcceptHandover" onclick="acceptHandover()" disabled class="w-full py-3 bg-[#10b981] disabled:opacity-40 font-black rounded-xl text-white text-xs uppercase tracking-wider btn-press">ПРИНЯТЬ СМЕНУ</button>
     </div>
 
@@ -118,47 +114,55 @@
 
     <!-- 4. ПАРТИЯ И ВЫПУСК -->
     <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-3">
-      <div class="flex bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
-        <button onclick="switchPackage('box', this)" class="pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-active">Коробки</button>
-        <button onclick="switchPackage('bag', this)" class="pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle">Мешки</button>
-        <button onclick="switchPackage('chip', this)" class="pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle">Чипсы</button>
+      
+      <!-- Кнопка открытия партии (скрыта, если партия уже открыта) -->
+      <div id="openBatchSection">
+        <button onclick="openModal('modalOpenBatch')" class="w-full py-4 border-2 border-dashed border-[#38bdf8] rounded-xl bg-[#1a2744] text-[#38bdf8] font-black text-sm uppercase tracking-wider btn-press">
+          + Открыть новую партию
+        </button>
       </div>
 
-      <div class="grid grid-cols-2 gap-2">
-        <div>
-          <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">№ Партии</label>
-          <input type="text" id="batchNumber" placeholder="24-0419" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none focus:border-[#0072ce]">
+      <!-- Рабочая зона партии (скрыта, если партии нет) -->
+      <div id="activeBatchSection" class="hidden space-y-3">
+        <div class="flex bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
+          <button onclick="switchPackage('box', this)" class="pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-active">Коробки</button>
+          <button onclick="switchPackage('bag', this)" class="pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle">Мешки</button>
+          <button onclick="switchPackage('chip', this)" class="pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle">Чипсы</button>
         </div>
-        <div>
-          <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Цвет RAL</label>
-          <div class="flex bg-[#080d1a] border border-[#29385c] rounded-xl overflow-hidden">
-            <span class="bg-[#1c2742] text-[#38bdf8] font-black text-xs px-2.5 flex items-center border-r border-[#29385c]">RAL</span>
-            <input type="text" id="ralColor" placeholder="9005" class="w-full bg-transparent px-2 py-2 text-sm text-white font-bold outline-none">
+
+        <div class="flex justify-between items-center bg-[#080d1a] border border-[#233152] p-2.5 rounded-xl text-xs">
+          <div>Партия: <b id="displayBatchNum" class="text-white">—</b></div>
+          <div>RAL: <b id="displayRal" class="text-white">—</b></div>
+          <button onclick="closeModal('activeBatchSection')" class="hidden"></button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 hidden"> <!-- Скрытые поля для хранения данных партии -->
+          <input type="hidden" id="batchNumber">
+          <input type="hidden" id="ralColor">
+        </div>
+
+        <div id="chipSubtypeWrap" class="hidden space-y-1">
+          <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block">Вид полуфабриката</label>
+          <div class="grid grid-cols-3 gap-1">
+            <button onclick="selectChipSub('Обычные', this)" class="chip-sub-btn py-1.5 text-[11px] font-bold rounded-lg bg-[#0072ce] text-white">Обычные</button>
+            <button onclick="selectChipSub('I п-ф', this)" class="chip-sub-btn py-1.5 text-[11px] font-bold rounded-lg bg-[#1c2742] text-[#8fa0c2]">I п-ф</button>
+            <button onclick="selectChipSub('II п-ф', this)" class="chip-sub-btn py-1.5 text-[11px] font-bold rounded-lg bg-[#1c2742] text-[#8fa0c2]">II п-ф</button>
           </div>
         </div>
-      </div>
 
-      <!-- Подтип чипсов (скрыт, если не чипсы) -->
-      <div id="chipSubtypeWrap" class="hidden space-y-1">
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block">Вид полуфабриката</label>
-        <div class="grid grid-cols-3 gap-1">
-          <button onclick="selectChipSub('Обычные', this)" class="chip-sub-btn py-1.5 text-[11px] font-bold rounded-lg bg-[#0072ce] text-white">Обычные</button>
-          <button onclick="selectChipSub('I п-ф', this)" class="chip-sub-btn py-1.5 text-[11px] font-bold rounded-lg bg-[#1c2742] text-[#8fa0c2]">I п-ф</button>
-          <button onclick="selectChipSub('II п-ф', this)" class="chip-sub-btn py-1.5 text-[11px] font-bold rounded-lg bg-[#1c2742] text-[#8fa0c2]">II п-ф</button>
+        <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-center space-y-1">
+          <label id="unitLabel" class="text-[10px] font-extrabold text-[#8fa0c2] uppercase block">Номер последней выпущенной коробки</label>
+          <input type="number" id="currentUnitInput" placeholder="Введите номер" oninput="calculateProduction()" class="w-full bg-[#131c31] border-2 border-[#0072ce] rounded-xl py-3 text-center text-3xl font-black text-white outline-none">
         </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="sendCheckpoint()" class="py-3 bg-[#1e1b4b] border border-[#4338ca] hover:bg-[#312e81] font-extrabold rounded-xl text-[#a5b4fc] text-xs uppercase btn-press">Отправить на дашборд</button>
+          <button onclick="closeBatch()" class="py-3 bg-[#1c2742] border border-[#ef4444] text-[#fca5a5] hover:bg-[#7f1d1d]/30 font-extrabold rounded-xl text-xs uppercase btn-press">Закрыть партию</button>
+        </div>
+        
+        <div id="lastSyncNotice" class="text-[10px] text-[#64748b] text-center hidden"></div>
       </div>
 
-      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-center space-y-1">
-        <label id="unitLabel" class="text-[10px] font-extrabold text-[#8fa0c2] uppercase block">Номер последней выпущенной коробки</label>
-        <input type="number" id="currentUnitInput" placeholder="Введите номер" oninput="calculateProduction()" class="w-full bg-[#131c31] border-2 border-[#0072ce] rounded-xl py-3 text-center text-3xl font-black text-white outline-none">
-      </div>
-
-      <div class="grid grid-cols-2 gap-2">
-        <button onclick="sendCheckpoint()" class="py-3 bg-[#1e1b4b] border border-[#4338ca] hover:bg-[#312e81] font-extrabold rounded-xl text-[#a5b4fc] text-xs uppercase btn-press">Отправить на дашборд</button>
-        <button onclick="closeBatch()" class="py-3 bg-[#1c2742] border border-[#ef4444] text-[#fca5a5] hover:bg-[#7f1d1d]/30 font-extrabold rounded-xl text-xs uppercase btn-press">Закрыть партию</button>
-      </div>
-      
-      <div id="lastSyncNotice" class="text-[10px] text-[#64748b] text-center hidden"></div>
     </div>
 
     <!-- 5. ПАНЕЛЬ БЫСТРОГО ВЫЗОВА -->
@@ -167,12 +171,10 @@
         <div class="text-[11px] font-black text-[#f87171] uppercase">Брак</div>
         <div id="badgeDefect" class="text-[10px] text-[#94a3b8]">0 кг</div>
       </button>
-
       <button onclick="openModal('modalDust')" class="bg-[#131c31] border border-[#233152] p-3 rounded-2xl text-center btn-press space-y-1">
         <div class="text-[11px] font-black text-[#38bdf8] uppercase">Пыль</div>
         <div id="badgeDust" class="text-[10px] text-[#94a3b8]">0 кг</div>
       </button>
-
       <button onclick="openModal('modal5s')" class="bg-[#131c31] border border-[#233152] p-3 rounded-2xl text-center btn-press space-y-1 relative">
         <span id="badge5sDot" class="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#34d399]"></span>
         <div class="text-[11px] font-black text-[#34d399] uppercase" id="title5sBtn">Порядок 5S</div>
@@ -188,7 +190,35 @@
 
   </main>
 
-  <!-- МОДАЛКИ (Брак, Пыль, 5S, Сводка, Статистика) -->
+  <!-- МОДАЛКА: ОТКРЫТИЕ ПАРТИИ -->
+  <div id="modalOpenBatch" class="modal-overlay">
+    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
+      <h3 class="text-base font-black text-[#38bdf8]">Открытие новой партии</h3>
+      <div>
+        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">№ Партии (обязательно)</label>
+        <input type="text" id="newBatchNum" placeholder="24-0419" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none focus:border-[#0072ce]">
+      </div>
+      <div>
+        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Цвет RAL (обязательно)</label>
+        <div class="flex bg-[#080d1a] border border-[#29385c] rounded-xl overflow-hidden">
+          <span class="bg-[#1c2742] text-[#38bdf8] font-black text-xs px-2.5 flex items-center border-r border-[#29385c]">RAL</span>
+          <input type="text" id="newRal" placeholder="9005" class="w-full bg-transparent px-2 py-2 text-sm text-white font-bold outline-none">
+        </div>
+      </div>
+      <div>
+        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Тип тары</label>
+        <div class="grid grid-cols-3 gap-1 bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
+          <button onclick="setNewBatchPack('box', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active">Коробки</button>
+          <button onclick="setNewBatchPack('bag', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle">Мешки</button>
+          <button onclick="setNewBatchPack('chip', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle">Чипсы</button>
+        </div>
+      </div>
+      <button onclick="confirmOpenBatch()" class="w-full py-3 bg-[#10b981] text-white font-bold rounded-xl text-xs uppercase btn-press mt-2">Начать выпуск</button>
+      <button onclick="closeModal('modalOpenBatch')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Отмена</button>
+    </div>
+  </div>
+
+  <!-- ОСТАЛЬНЫЕ МОДАЛКИ (Брак, Пыль, 5S, Сводка, Статистика) -->
   <div id="modalDefect" class="modal-overlay">
     <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
       <h3 class="text-base font-black text-[#f87171]">Фиксация брака</h3>
@@ -230,7 +260,7 @@
     <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-3">
       <h3 class="text-base font-black text-[#38bdf8]">Сводка сдачи смены</h3>
       <div class="space-y-1.5 text-xs">
-        <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Линия / Смена:</span><span id="sumLineShift" class="font-bold">№6 (День)</span></div>
+        <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Линия / Смена:</span><span id="sumLineShift" class="font-bold">—</span></div>
         <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Оператор:</span><span id="sumOperator" class="font-bold">—</span></div>
         <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Готовая краска:</span><span id="sumPaintKg" class="font-bold text-[#34d399]">0 кг</span></div>
         <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Заработано:</span><span id="sumEarnedRub" class="font-bold text-[#38bdf8]">0 ₽</span></div>
@@ -276,16 +306,12 @@
   </div>
 
   <script>
-    // ===== КОНФИГУРАЦИЯ =====
     const SUPABASE_URL = "https://oqhrzruxubqthqyxmdcg.supabase.co";
     const SUPABASE_KEY = "sb_publishable_m5YmzYjW1BpotrbaRpCdgA__kYvilf3";
     const SUPABASE_5S_URL = "https://kphyddvstcfoxdqyrakp.supabase.co";
     const SUPABASE_5S_KEY = "sb_publishable_qRFyLNGwpxYUQQqkzvmONg_ZRrlhLy5";
     const PRIMATEK_LINES = [1, 5, 6, 7, 8, 13, 14, 15];
-    
-    // Формула заработка (утверждена)
     const EARNING_RATES = { base: 0.50, bonus: 500, overPlan: 1.00 };
-    // Вес коробки/мешка
     const UNIT_WEIGHT = 20;
 
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -301,7 +327,9 @@
       closedBatchesKg: 0,
       defects: [],
       dust: [],
-      planKg: 0
+      planKg: 0,
+      isBatchOpen: false,
+      newBatchPack: 'box'
     };
 
     let active5sTaskId = null;
@@ -312,16 +340,15 @@
       if (state.operator) document.getElementById('operatorName').value = state.operator;
       loadPreviousShiftData();
       loadPlanFromCloud();
-      setInterval(loadPlanFromCloud, 60000); // Обновление плана раз в минуту
+      setInterval(loadPlanFromCloud, 60000);
       load5sTasks();
-      setInterval(load5sTasks, 15000); // Обновление 5S раз в 15 сек
+      setInterval(load5sTasks, 15000);
       updateShiftBadge();
     };
 
     function updateShiftBadge() {
       const h = new Date().getHours();
-      const isDay = (h >= 8 && h < 20);
-      document.getElementById('shiftBadge').innerText = 'СМЕНА: ' + (isDay ? 'ДЕНЬ' : 'НОЧЬ');
+      document.getElementById('shiftBadge').innerText = 'СМЕНА: ' + ((h >= 8 && h < 20) ? 'ДЕНЬ' : 'НОЧЬ');
     }
 
     function saveOperatorName() {
@@ -331,8 +358,7 @@
     }
 
     function renderLines() {
-      const box = document.getElementById('lineButtons');
-      box.innerHTML = PRIMATEK_LINES.map(num => `
+      document.getElementById('lineButtons').innerHTML = PRIMATEK_LINES.map(num => `
         <button onclick="selectLine(${num})" class="line-sel-btn py-2 text-xs font-black rounded-xl border border-[#233152] ${num === state.line ? 'bg-[#0072ce] text-white border-[#38bdf8]' : 'bg-[#080d1a] text-[#cbd5e1]'}">${num}</button>
       `).join('');
     }
@@ -347,7 +373,7 @@
 
     async function loadPreviousShiftData() {
       try {
-        const { data, error } = await client.from('shift_reports')
+        const { data } = await client.from('shift_reports')
           .select('*')
           .eq('line_number', state.line)
           .eq('event_type', 'SHIFT_CLOSE')
@@ -357,13 +383,58 @@
         if (data && data.length > 0) {
           const last = data[0];
           state.startUnit = (Number(last.unit_to) || 0) + 1;
-          if (last.batch_number) document.getElementById('batchNumber').value = last.batch_number;
-          if (last.ral_color) document.getElementById('ralColor').value = last.ral_color.replace('RAL ', '');
+          
+          // Если прошлая смена закрыла партию, значит партия пустая
+          // Но нам нужно понять, была ли партия закрыта или просто смена сдана
+          // Для простоты: если есть batch_number, значит партия продолжается
+          if (last.batch_number && last.event_type === 'SHIFT_CLOSE') {
+            state.isBatchOpen = true;
+            document.getElementById('batchNumber').value = last.batch_number;
+            document.getElementById('ralColor').value = last.ral_color ? last.ral_color.replace('RAL ', '') : '';
+            state.packageType = last.package_type || 'box';
+            updateBatchUI();
+          } else {
+            state.isBatchOpen = false;
+            updateBatchUI();
+          }
         } else {
           state.startUnit = 1;
+          state.isBatchOpen = false;
+          updateBatchUI();
         }
       } catch (e) {
         state.startUnit = 1;
+        state.isBatchOpen = false;
+        updateBatchUI();
+      }
+    }
+
+    function updateBatchUI() {
+      const openSec = document.getElementById('openBatchSection');
+      const activeSec = document.getElementById('activeBatchSection');
+      
+      if (state.isBatchOpen) {
+        openSec.classList.add('hidden');
+        activeSec.classList.remove('hidden');
+        
+        // Обновляем табы
+        document.querySelectorAll('.pkg-tab').forEach(t => t.className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle");
+        const activeTabIdx = state.packageType === 'box' ? 0 : (state.packageType === 'bag' ? 1 : 2);
+        document.querySelectorAll('.pkg-tab')[activeTabIdx].className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-active";
+        
+        // Обновляем отображение партии
+        document.getElementById('displayBatchNum').innerText = document.getElementById('batchNumber').value || '—';
+        document.getElementById('displayRal').innerText = document.getElementById('ralColor').value ? 'RAL ' + document.getElementById('ralColor').value : '—';
+        
+        // Меняем подпись поля
+        const unitLabel = document.getElementById('unitLabel');
+        if (state.packageType === 'box') unitLabel.innerText = 'Номер последней выпущенной коробки';
+        else if (state.packageType === 'bag') unitLabel.innerText = 'Номер последнего выпущенного мешка';
+        else unitLabel.innerText = 'Номер последней единицы чипсов';
+        
+      } else {
+        openSec.classList.remove('hidden');
+        activeSec.classList.add('hidden');
       }
     }
 
@@ -380,8 +451,7 @@
     }
 
     function checkHandoverReady() {
-      const btn = document.getElementById('btnAcceptHandover');
-      btn.disabled = !(state.operator && state.handoverStatus);
+      document.getElementById('btnAcceptHandover').disabled = !(state.operator && state.handoverStatus);
     }
 
     async function acceptHandover() {
@@ -389,9 +459,7 @@
       document.getElementById('handoverCompact').classList.remove('hidden');
       document.getElementById('compactInfo').innerText = `Линия №${state.line} • ${state.operator} • ${state.handoverStatus}`;
       
-      setLineStatus(state.handoverStatus, null, true); // silent=true, чтобы не дублировать отправку
-      
-      // Отправляем статус приёмки
+      setLineStatus(state.handoverStatus, null, true);
       await sendToSupabase('STATUS_CHANGE', { line_status: state.handoverStatus });
     }
 
@@ -417,12 +485,40 @@
         if (status === 'РЕМОНТ') btn.className = "st-btn py-3 text-xs font-extrabold rounded-xl border border-[#ef4444] bg-[#ef4444]/20 text-[#f87171]";
       }
 
-      if (!silent) {
-        await sendToSupabase('STATUS_CHANGE', { line_status: status });
+      if (!silent) await sendToSupabase('STATUS_CHANGE', { line_status: status });
+    }
+
+    function setNewBatchPack(type, btn) {
+      state.newBatchPack = type;
+      document.querySelectorAll('.new-pack-btn').forEach(t => {
+        t.className = "new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle";
+      });
+      btn.className = "new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active";
+    }
+
+    function confirmOpenBatch() {
+      const bNum = document.getElementById('newBatchNum').value.trim();
+      const ral = document.getElementById('newRal').value.trim();
+      
+      if (!bNum || !ral) {
+        alert("Пожалуйста, заполните № Партии и RAL!");
+        return;
       }
+      
+      state.packageType = state.newBatchPack;
+      state.isBatchOpen = true;
+      state.startUnit = 1; // Новая партия всегда с 1
+      
+      document.getElementById('batchNumber').value = bNum;
+      document.getElementById('ralColor').value = ral;
+      
+      closeModal('modalOpenBatch');
+      updateBatchUI();
+      calculateProduction();
     }
 
     function switchPackage(type, btn) {
+      if (!state.isBatchOpen) return;
       state.packageType = type;
       document.querySelectorAll('.pkg-tab').forEach(t => {
         t.className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle";
@@ -433,7 +529,7 @@
       const unitLabel = document.getElementById('unitLabel');
       if (type === 'box') unitLabel.innerText = 'Номер последней выпущенной коробки';
       else if (type === 'bag') unitLabel.innerText = 'Номер последнего выпущенного мешка';
-      else unitLabel.innerText = 'Номер последней выпущенной единицы чипсов';
+      else unitLabel.innerText = 'Номер последней единицы чипсов';
 
       calculateProduction();
     }
@@ -449,9 +545,12 @@
     function calculateProduction() {
       const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
       let count = 0;
-      if (endVal >= state.startUnit) {
+      
+      // Исправлено: если ввели 1 и старт 1, считаем 1
+      if (endVal > 0 && endVal >= state.startUnit) {
         count = (endVal - state.startUnit + 1);
       }
+      
       const rawKg = count * UNIT_WEIGHT;
       const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
       const goodKg = Math.max(0, rawKg - defectKg) + state.closedBatchesKg;
@@ -480,8 +579,7 @@
         document.getElementById('premiumLeftText').innerText = `⏳ Ожидание плана от начальника смены`;
       }
       
-      // Блокировка кнопки сдачи смены
-      const hasUnit = endVal >= state.startUnit && endVal > 0;
+      const hasUnit = endVal > 0 && endVal >= state.startUnit;
       const hasDust = state.dust.length > 0;
       const btnSubmit = document.getElementById('btnSubmitShift');
       const warning = document.getElementById('submitWarning');
@@ -504,89 +602,80 @@
     async function closeBatch() {
       const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
       if (endVal < state.startUnit || endVal === 0) {
-        alert("Укажите корректный номер коробки/мешка!");
-        return;
-      }
-      
-      const batchNum = document.getElementById('batchNumber').value.trim();
-      const ral = document.getElementById('ralColor').value.trim();
-      if (!batchNum || !ral) {
-        alert("Для закрытия партии обязательно укажите № Партии и RAL!");
-        return;
+        alert("Укажите корректный номер коробки/мешка!"); return;
       }
 
       const count = (endVal - state.startUnit + 1);
       const kg = count * UNIT_WEIGHT;
-      state.closedBatchesKg += Math.max(0, kg - state.defects.reduce((s, d) => s + d.kg, 0));
       
-      const res = await sendToSupabase('PARTY_CLOSE', {
-        batch_number: batchNum,
-        ral_color: 'RAL ' + ral,
-        total_good_kg: Math.max(0, kg - state.defects.reduce((s, d) => s + d.kg, 0)),
+      const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
+      const chipsKg = state.packageType === 'chip' ? kg : 0;
+      
+      const payload = {
+        line_number: state.line,
+        operator_name: state.operator,
+        event_type: 'PARTY_CLOSE',
+        line_status: state.lineStatus,
+        batch_number: document.getElementById('batchNumber').value,
+        ral_color: 'RAL ' + document.getElementById('ralColor').value,
+        package_type: state.packageType,
+        total_good_kg: Math.max(0, kg - defectKg),
         good_boxes: state.packageType === 'box' ? count : 0,
         good_bags: state.packageType === 'bag' ? count : 0,
-        defect_kg: state.defects.reduce((s, d) => s + d.kg, 0),
+        chips_kg: chipsKg,
+        defect_kg: defectKg,
         defect_boxes: state.defects.reduce((s, d) => s + d.count, 0),
         dust_kg: state.dust.reduce((s, d) => s + d, 0),
         unit_from: state.startUnit,
-        unit_to: endVal
-      });
+        unit_to: endVal,
+        plan_kg: state.planKg > 0 ? state.planKg : null
+      };
 
-      if (res) {
-        alert(`Партия закрыта! Засчитано: ${Math.max(0, kg - state.defects.reduce((s, d) => s + d.kg, 0))} кг. Следующая партия начинается с №1.`);
-        state.startUnit = 1;
-        state.defects = [];
-        state.dust = [];
-        document.getElementById('currentUnitInput').value = '';
-        document.getElementById('batchNumber').value = '';
-        document.getElementById('ralColor').value = '';
-        renderDefects();
-        renderDust();
-        calculateProduction();
-      }
+      const { error } = await client.from('shift_reports').insert([payload]);
+      if (error) { alert("Ошибка: " + error.message); return; }
+      
+      alert(`Партия закрыта! Засчитано: ${Math.max(0, kg - defectKg)} кг.`);
+      state.closedBatchesKg += Math.max(0, kg - defectKg);
+      
+      // Сброс
+      state.isBatchOpen = false;
+      state.startUnit = 1;
+      state.defects = [];
+      state.dust = [];
+      document.getElementById('currentUnitInput').value = '';
+      document.getElementById('batchNumber').value = '';
+      document.getElementById('ralColor').value = '';
+      
+      renderDefects();
+      renderDust();
+      updateBatchUI();
+      calculateProduction();
     }
 
     async function loadPlanFromCloud() {
       try {
         const today = new Date().toISOString().slice(0, 10);
-        const h = new Date().getHours();
-        const shiftName = (h >= 8 && h < 20) ? 'ДЕНЬ' : 'НОЧЬ';
-
-        const { data, error } = await client.from('shift_plans')
+        const shiftName = (new Date().getHours() >= 8 && new Date().getHours() < 20) ? 'ДЕНЬ' : 'НОЧЬ';
+        const { data } = await client.from('shift_plans')
           .select('plan_kg')
-          .eq('plan_date', today)
-          .eq('shift', shiftName)
-          .eq('line_number', state.line)
-          .limit(1);
-
-        if (data && data.length > 0 && data[0].plan_kg) {
-          state.planKg = Number(data[0].plan_kg);
-        } else {
-          state.planKg = 0; // План не задан
-        }
+          .eq('plan_date', today).eq('shift', shiftName).eq('line_number', state.line).limit(1);
+        state.planKg = (data && data.length > 0 && data[0].plan_kg) ? Number(data[0].plan_kg) : 0;
         calculateProduction();
-      } catch (e) {
-        console.warn("Не удалось подтянуть план:", e);
-      }
+      } catch (e) {}
     }
 
     async function sendToSupabase(eventType, extraData = {}) {
       const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
-      let count = (endVal >= state.startUnit && endVal > 0) ? (endVal - state.startUnit + 1) : 0;
+      let count = (endVal > 0 && endVal >= state.startUnit) ? (endVal - state.startUnit + 1) : 0;
       
       const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
       const chipsKg = state.packageType === 'chip' ? (count * UNIT_WEIGHT) : 0;
       
       const payload = {
-        line_number: state.line,
-        operator_name: state.operator,
-        event_type: eventType,
-        line_status: state.lineStatus,
-        package_type: state.packageType,
-        ...extraData
+        line_number: state.line, operator_name: state.operator, event_type: eventType,
+        line_status: state.lineStatus, package_type: state.packageType, ...extraData
       };
 
-      // Для промежуточных и финальных отчётов добавляем факт
       if (eventType === 'PRODUCTION' || eventType === 'SHIFT_CLOSE') {
         payload.good_boxes = state.packageType === 'box' ? count : 0;
         payload.good_bags = state.packageType === 'bag' ? count : 0;
@@ -598,6 +687,10 @@
         payload.unit_from = state.startUnit;
         payload.unit_to = endVal;
         payload.plan_kg = state.planKg > 0 ? state.planKg : null;
+        if (state.isBatchOpen) {
+          payload.batch_number = document.getElementById('batchNumber').value;
+          payload.ral_color = 'RAL ' + document.getElementById('ralColor').value;
+        }
       }
 
       try {
@@ -618,8 +711,8 @@
     }
 
     async function sendCheckpoint() {
-      const success = await sendToSupabase('PRODUCTION');
-      if (success) alert('Текущий результат отправлен на дашборд!');
+      if (!state.isBatchOpen) { alert("Сначала откройте партию!"); return; }
+      if (await sendToSupabase('PRODUCTION')) alert('Результат отправлен на дашборд!');
     }
 
     function addDefect() {
@@ -632,16 +725,12 @@
         document.getElementById('defEnd').value = '';
         renderDefects();
         calculateProduction();
-      } else {
-        alert('Укажите корректный диапазон коробок брака');
-      }
+      } else alert('Укажите корректный диапазон');
     }
 
     function renderDefects() {
-      const totalKg = state.defects.reduce((s, d) => s + d.kg, 0);
-      document.getElementById('badgeDefect').innerText = totalKg + ' кг';
-      const list = document.getElementById('defectList');
-      list.innerHTML = state.defects.map(d => `<div class="text-[#fca5a5]">#${d.from}-#${d.to} (${d.count} шт = ${d.kg} кг)</div>`).join('');
+      document.getElementById('badgeDefect').innerText = state.defects.reduce((s, d) => s + d.kg, 0) + ' кг';
+      document.getElementById('defectList').innerHTML = state.defects.map(d => `<div class="text-[#fca5a5]">#${d.from}-#${d.to} (${d.count} шт = ${d.kg} кг)</div>`).join('');
     }
 
     function addDust() {
@@ -655,53 +744,40 @@
     }
 
     function renderDust() {
-      const sum = state.dust.reduce((s, d) => s + d, 0);
-      document.getElementById('badgeDust').innerText = sum.toFixed(1) + ' кг';
-      const list = document.getElementById('dustList');
-      list.innerHTML = state.dust.map((d, i) => `<div class="text-[#94a3b8]">Мешок #${i+1}: ${d} кг</div>`).join('');
+      document.getElementById('badgeDust').innerText = state.dust.reduce((s, d) => s + d, 0).toFixed(1) + ' кг';
+      document.getElementById('dustList').innerHTML = state.dust.map((d, i) => `<div class="text-[#94a3b8]">Мешок #${i+1}: ${d} кг</div>`).join('');
     }
 
-    // 5S МОДУЛЬ
     async function load5sTasks() {
       try {
         const res = await fetch(`${SUPABASE_5S_URL}/rest/v1/tasks?line=eq.${state.line}&status=in.(NEW,REWORK)&order=created_at.desc`, {
           headers: { 'apikey': SUPABASE_5S_KEY, 'Authorization': `Bearer ${SUPABASE_5S_KEY}` }
         });
         const tasks = await res.json();
-        
-        const dot = document.getElementById('badge5sDot');
-        const title = document.getElementById('title5sBtn');
-        const sub = document.getElementById('sub5sBtn');
+        const dot = document.getElementById('badge5sDot'), title = document.getElementById('title5sBtn'), sub = document.getElementById('sub5sBtn');
 
         if (tasks && tasks.length > 0) {
           dot.className = "absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-red-500 animate-ping";
-          title.innerText = `5S: (${tasks.length})`;
-          sub.innerText = "Устранить";
-          sub.className = "text-[10px] text-red-400 font-bold";
+          title.innerText = `5S: (${tasks.length})`; sub.innerText = "Устранить"; sub.className = "text-[10px] text-red-400 font-bold";
         } else {
           dot.className = "absolute top-2 right-2 w-2 h-2 rounded-full bg-[#34d399]";
-          title.innerText = "Порядок 5S";
-          sub.innerText = "Всё чисто";
-          sub.className = "text-[10px] text-[#94a3b8]";
+          title.innerText = "Порядок 5S"; sub.innerText = "Всё чисто"; sub.className = "text-[10px] text-[#94a3b8]";
         }
 
         const container = document.getElementById('tasks5sContainer');
         if (!tasks || tasks.length === 0) {
-          container.innerHTML = `<div class="text-center text-gray-500 text-xs py-6">Замечаний 5S нет 🎉</div>`;
-          return;
+          container.innerHTML = `<div class="text-center text-gray-500 text-xs py-6">Замечаний 5S нет 🎉</div>`; return;
         }
 
         container.innerHTML = tasks.map(t => `
           <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 space-y-2">
-            <div class="flex justify-between text-xs font-bold text-red-400">
-              <span>От ${t.inspector}</span><span>Линия ${t.line}</span>
-            </div>
+            <div class="flex justify-between text-xs font-bold text-red-400"><span>От ${t.inspector}</span><span>Линия ${t.line}</span></div>
             ${t.comment_before ? `<p class="text-xs text-gray-200">${t.comment_before}</p>` : ''}
             <img src="${t.photo_before}" class="w-full h-36 object-cover rounded-lg border border-gray-800">
             <button onclick="startResolve5s('${t.id}')" class="w-full py-2.5 bg-[#10b981] text-white font-bold rounded-xl text-xs uppercase btn-press">Сфотографировать устранение</button>
           </div>
         `).join('');
-      } catch (e) { console.warn('5S Error:', e); }
+      } catch (e) {}
     }
 
     function startResolve5s(taskId) {
@@ -711,35 +787,21 @@
 
     async function onCapture5sAfter(input) {
       if (!input.files || !input.files[0] || !active5sTaskId) return;
-      const file = input.files[0];
       const reader = new FileReader();
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(input.files[0]);
       reader.onload = async (e) => {
-        const base64Img = e.target.result;
         try {
           await fetch(`${SUPABASE_5S_URL}/rest/v1/tasks?id=eq.${active5sTaskId}`, {
             method: 'PATCH',
-            headers: {
-              'apikey': SUPABASE_5S_KEY,
-              'Authorization': `Bearer ${SUPABASE_5S_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              operator: state.operator,
-              photo_after: base64Img,
-              status: 'PENDING_REVIEW'
-            })
+            headers: { 'apikey': SUPABASE_5S_KEY, 'Authorization': `Bearer ${SUPABASE_5S_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ operator: state.operator, photo_after: e.target.result, status: 'PENDING_REVIEW' })
           });
-          alert("Фото устранения отправлено контролёру на проверку!");
-          load5sTasks();
-        } catch (err) {
-          alert("Ошибка 5S: " + err.message);
-        }
+          alert("Фото устранения отправлено контролёру!"); load5sTasks();
+        } catch (err) { alert("Ошибка 5S: " + err.message); }
       };
       input.value = '';
     }
 
-    // СДАЧА СМЕНЫ
     function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
@@ -747,55 +809,35 @@
       document.getElementById('sumLineShift').innerText = `Линия №${state.line} (${(new Date().getHours() >= 8 && new Date().getHours() < 20) ? 'День' : 'Ночь'})`;
       document.getElementById('sumOperator').innerText = state.operator;
       const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
-      const count = (endVal >= state.startUnit && endVal > 0) ? (endVal - state.startUnit + 1) : 0;
+      const count = (endVal > 0 && endVal >= state.startUnit) ? (endVal - state.startUnit + 1) : 0;
       const kg = Math.max(0, (count * UNIT_WEIGHT) - state.defects.reduce((s, d) => s + d.kg, 0)) + state.closedBatchesKg;
-      
       document.getElementById('sumPaintKg').innerText = kg + ' кг';
-      
       let earned = state.planKg > 0 && kg >= state.planKg 
         ? (state.planKg * EARNING_RATES.base) + EARNING_RATES.bonus + ((kg - state.planKg) * EARNING_RATES.overPlan)
         : kg * EARNING_RATES.base;
       document.getElementById('sumEarnedRub').innerText = Math.round(earned) + ' ₽';
-
       openModal('modalSummary');
     }
 
     async function submitFinalShift() {
-      const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
-      if (endVal < state.startUnit || endVal === 0) {
-        alert("Укажите номер последней коробки!"); return;
-      }
-      if (state.dust.length === 0) {
-        alert("Укажите данные по пыли!"); return;
-      }
-
-      const success = await sendToSupabase('SHIFT_CLOSE');
-      if (success) {
+      if (await sendToSupabase('SHIFT_CLOSE')) {
         alert("Смена успешно сдана в архив PRIMATEK!");
         closeModal('modalSummary');
         setTimeout(() => location.reload(), 1500);
       }
     }
 
-    // СТАТИСТИКА
     function setPeriod(period, btn) {
       currentStatsPeriod = period;
-      document.querySelectorAll('.period-btn').forEach(b => {
-        b.className = "period-btn period-btn-idle py-1.5 rounded-lg";
-      });
+      document.querySelectorAll('.period-btn').forEach(b => b.className = "period-btn period-btn-idle py-1.5 rounded-lg");
       btn.className = "period-btn period-btn-active py-1.5 rounded-lg";
       document.getElementById('customPeriodWrap').classList.toggle('hidden', period !== 'custom');
       if (period !== 'custom') loadStats();
     }
 
     async function loadStats() {
-      if (!state.operator) {
-        alert("Введите вашу фамилию для просмотра статистики!"); return;
-      }
-      
-      const now = new Date();
-      let startStr, endStr;
-      
+      if (!state.operator) { alert("Введите вашу фамилию для просмотра статистики!"); return; }
+      const now = new Date(); let startStr, endStr;
       if (currentStatsPeriod === 'month') {
         startStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
         endStr = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
@@ -803,52 +845,31 @@
         startStr = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
         endStr = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10);
       } else if (currentStatsPeriod === 'all') {
-        startStr = '2020-01-01';
-        endStr = now.toISOString().slice(0, 10);
+        startStr = '2020-01-01'; endStr = now.toISOString().slice(0, 10);
       } else {
-        startStr = document.getElementById('customDateFrom').value;
-        endStr = document.getElementById('customDateTo').value;
+        startStr = document.getElementById('customDateFrom').value; endStr = document.getElementById('customDateTo').value;
         if (!startStr || !endStr) return;
       }
 
       try {
-        const { data, error } = await client.from('shift_reports')
-          .select('*')
-          .eq('operator_name', state.operator)
-          .eq('event_type', 'SHIFT_CLOSE')
-          .gte('created_at', startStr)
-          .lte('created_at', endStr + 'T23:59:59Z');
-
-        if (error) throw error;
+        const { data } = await client.from('shift_reports').select('*')
+          .eq('operator_name', state.operator).eq('event_type', 'SHIFT_CLOSE')
+          .gte('created_at', startStr).lte('created_at', endStr + 'T23:59:59Z');
         
-        let totalShifts = data.length;
-        let dayShifts = 0, nightShifts = 0;
-        let totalKg = 0;
-        let totalEarned = 0;
-
+        let totalShifts = data.length, dayShifts = 0, nightShifts = 0, totalKg = 0, totalEarned = 0;
         data.forEach(r => {
           const isDay = (new Date(r.created_at).getHours() >= 8 && new Date(r.created_at).getHours() < 20);
           if (isDay) dayShifts++; else nightShifts++;
-          
-          const kg = Number(r.total_good_kg) || 0;
-          totalKg += kg;
-          
+          const kg = Number(r.total_good_kg) || 0; totalKg += kg;
           const plan = Number(r.plan_kg) || 0;
-          let earned = (plan > 0 && kg >= plan) 
-            ? (plan * EARNING_RATES.base) + EARNING_RATES.bonus + ((kg - plan) * EARNING_RATES.overPlan)
-            : kg * EARNING_RATES.base;
-          totalEarned += earned;
+          totalEarned += (plan > 0 && kg >= plan) ? (plan * EARNING_RATES.base) + EARNING_RATES.bonus + ((kg - plan) * EARNING_RATES.overPlan) : kg * EARNING_RATES.base;
         });
 
         document.getElementById('stTotalShifts').innerText = totalShifts;
         document.getElementById('stShiftTypes').innerText = `День: ${dayShifts} / Ночь: ${nightShifts}`;
         document.getElementById('stPaintKg').innerText = totalKg.toLocaleString('ru-RU') + ' кг';
         document.getElementById('stEarnedRub').innerText = Math.round(totalEarned).toLocaleString('ru-RU') + ' ₽';
-
-      } catch (err) {
-        console.error(err);
-        alert("Ошибка загрузки статистики");
-      }
+      } catch (err) { alert("Ошибка загрузки статистики"); }
     }
   </script>
 </body>
