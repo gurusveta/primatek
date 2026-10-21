@@ -4,801 +4,1498 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>PRIMATEK — Пульт оператора</title>
-  <meta name="theme-color" content="#0b132b">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { -webkit-tap-highlight-color: transparent; background-color: #070c18; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body {
+      background-color: #070c18;
+      color: #f8fafc;
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
     .btn-press:active { transform: scale(0.97); }
-    .tab-active { background:#0072ce; color:#fff; }
-    .tab-idle { color:#8fa0c2; }
-    
-    /* Цветные кнопки статуса */
-    .st-base-work { border-color: #10b981; color: #34d399; background: rgba(16,185,129,.05); }
-    .st-active-work { background: rgba(16,185,129,.2); border-color:#10b981; color:#34d399; box-shadow: 0 0 10px rgba(16,185,129,0.2); }
-    
-    .st-base-clean { border-color: #f59e0b; color: #fbbf24; background: rgba(245,158,11,.05); }
-    .st-active-clean { background: rgba(245,158,11,.2); border-color:#f59e0b; color:#fbbf24; box-shadow: 0 0 10px rgba(245,158,11,0.2); }
-    
-    .st-base-sample { border-color: #38bdf8; color: #38bdf8; background: rgba(2,132,199,.05); }
-    .st-active-sample { background: rgba(2,132,199,.2); border-color:#38bdf8; color:#38bdf8; box-shadow: 0 0 10px rgba(2,132,199,0.2); }
-    
-    .st-base-repair { border-color: #ef4444; color: #f87171; background: rgba(239,68,68,.05); }
-    .st-active-repair { background: rgba(239,68,68,.2); border-color:#ef4444; color:#f87171; box-shadow: 0 0 10px rgba(239,68,68,0.2); }
-
-    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(5,9,20,.9); z-index:50; justify-content:center; align-items:center; padding:16px; backdrop-filter: blur(2px); }
-    .modal-overlay.open { display:flex; }
-    .period-btn-active { background:#0072ce; color:#fff; }
-    .period-btn-idle { color:#8fa0c2; }
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
   </style>
 </head>
-<body class="min-h-screen pb-24 select-none">
+<body class="min-h-screen pb-28 select-none">
 
-  <header class="bg-[#0f172a] border-b border-[#1e293b] px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-md">
-    <div class="flex items-center space-x-2">
-      <svg width="120" height="26" viewBox="0 0 230 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="6" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.5"/>
-        <circle cx="16" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.8"/>
-        <circle cx="26" cy="11" r="3.2" fill="#0072ce"/>
-        <circle cx="6" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.6"/>
-        <circle cx="16" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.9"/>
-        <circle cx="26" cy="22" r="3.2" fill="#0072ce"/>
-        <circle cx="6" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.4"/>
-        <circle cx="16" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.7"/>
-        <circle cx="26" cy="33" r="3.2" fill="#0072ce"/>
-        <text x="36" y="34" font-family="'Arial Black', sans-serif" font-weight="900" font-size="31" fill="#0072ce">PRIMATEK</text>
-      </svg>
+  <!-- ШАПКА -->
+  <header class="bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3 sticky top-0 z-40 flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+      <div class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"></div>
+      <div>
+        <div class="text-base font-black tracking-wider text-sky-400 leading-none">PRIMATEK</div>
+        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5" id="headerShiftText">Пульт оператора</div>
+      </div>
     </div>
-    <div class="flex items-center space-x-2">
-      <div id="shiftBadge" class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-[#1a2744] text-[#38bdf8] border border-[#2c4270]">СМЕНА: ДЕНЬ</div>
-      <button onclick="openModal('statsModal')" class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-[#172554] text-[#38bdf8] border border-[#1e40af] btn-press">Выработка</button>
+
+    <div class="flex items-center gap-2">
+      <button onclick="openStatsModal()" class="btn-press bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-extrabold px-3 py-2 rounded-xl flex items-center gap-1.5 text-slate-200">
+        <span>📊</span>
+        <span>Кабинет</span>
+      </button>
     </div>
   </header>
 
-  <main class="p-3 max-w-md mx-auto space-y-3">
+  <main class="max-w-md mx-auto p-3.5 space-y-3.5">
 
-    <div id="handoverSection" class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-3">
-      <h2 class="text-xs font-extrabold text-[#38bdf8] uppercase tracking-wider">Приём смены и выбор линии</h2>
-      <div class="grid grid-cols-4 gap-1.5" id="lineButtons"></div>
-      <div>
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">ФИО Оператора</label>
-        <input type="text" id="operatorName" placeholder="Иванов И.И." oninput="saveOperatorName()" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-[#0072ce]">
-      </div>
-      <div>
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Состояние линии при приёмке</label>
-        <div class="grid grid-cols-2 gap-1.5" id="handoverStatusGrid">
-          <button onclick="selectHandoverStatus('В РАБОТЕ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-base-work">В РАБОТЕ</button>
-          <button onclick="selectHandoverStatus('ЧИСТКА', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-base-clean">ЧИСТКА</button>
-          <button onclick="selectHandoverStatus('ПРОБЫ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-base-sample">ПРОБЫ</button>
-          <button onclick="selectHandoverStatus('РЕМОНТ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-base-repair">РЕМОНТ</button>
+    <!-- 1. ГЕЙМИФИКАЦИЯ (СДЕЛАНО / ПЛАН И ЗАРАБОТАНО) -->
+    <section id="gamificationBlock" class="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 rounded-2xl p-4 border border-slate-800 shadow-lg space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3">
+          <div class="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">Сделано / План</div>
+          <div class="mt-1 flex items-baseline gap-1">
+            <span id="gameDoneKg" class="text-xl font-black text-white">0</span>
+            <span class="text-xs font-bold text-slate-500">/ <span id="gamePlanKg">0</span> кг</span>
+          </div>
+          <div class="text-[11px] font-bold text-sky-400 mt-0.5" id="gameDoneBoxes">0 коробок</div>
+        </div>
+
+        <div class="bg-slate-950/80 border border-emerald-900/50 rounded-xl p-3">
+          <div class="text-[10px] font-extrabold uppercase text-emerald-400 tracking-wider">Заработано за смену</div>
+          <div class="mt-1 text-2xl font-black text-emerald-400" id="gameEarnedRub">0 ₽</div>
+          <div class="text-[10px] font-semibold text-slate-400 mt-0.5">0.5 ₽/кг • сверх плана 1 ₽/кг</div>
         </div>
       </div>
-      <button id="btnAcceptHandover" onclick="acceptHandover()" disabled class="w-full py-3 bg-[#10b981] disabled:opacity-40 font-black rounded-xl text-white text-xs uppercase tracking-wider btn-press">ПРИНЯТЬ СМЕНУ</button>
-    </div>
 
-    <div id="handoverCompact" class="hidden bg-[#131c31] border rounded-xl p-3 flex items-center justify-between shadow">
-      <div class="flex items-center space-x-2">
-        <span id="compactDot" class="w-2.5 h-2.5 rounded-full bg-[#10b981] animate-pulse"></span>
-        <span id="compactInfo" class="text-xs font-bold text-white">—</span>
+      <!-- Прогресс-бар плана -->
+      <div class="space-y-1.5">
+        <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+          <div id="gameProgressBar" class="h-full bg-gradient-to-r from-sky-500 to-emerald-400 transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <div id="gameMotivationText" class="text-xs font-extrabold text-center text-amber-400 tracking-wide">
+          Примите смену для загрузки плана
+        </div>
       </div>
-      <button onclick="reopenHandover()" class="text-[11px] font-bold text-[#38bdf8] underline btn-press">Изменить ✎</button>
-    </div>
+    </section>
 
-    <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-2">
-      <div class="flex justify-between items-end">
+    <!-- 2. ПРИЕМ СМЕНЫ (РАЗВЕРНУТЫЙ БЛОК) -->
+    <section id="shiftAcceptCard" class="bg-slate-900 rounded-2xl p-4 border border-slate-800 shadow-lg space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <h2 class="text-sm font-black uppercase tracking-wider text-white">Прием смены</h2>
+        <span class="text-[11px] font-bold text-sky-400 bg-sky-950/70 border border-sky-800/60 px-2.5 py-0.5 rounded-lg" id="acceptShiftBadge">ДЕНЬ</span>
+      </div>
+
+      <!-- Выбор линии (динамически из JS-массива) -->
+      <div>
+        <label class="text-[11px] font-extrabold uppercase text-slate-400 block mb-2">1. Выберите линию</label>
+        <div id="acceptLineGrid" class="grid grid-cols-4 gap-2"></div>
+      </div>
+
+      <!-- Ввод ФИО -->
+      <div>
+        <label class="text-[11px] font-extrabold uppercase text-slate-400 block mb-1.5">2. ФИО оператора</label>
+        <input type="text" id="operatorNameInput" placeholder="Например: Иванов И.И."
+          class="w-full bg-slate-950 border border-slate-700 focus:border-sky-500 rounded-xl px-3.5 py-3 text-sm font-bold text-white placeholder-slate-600 outline-none">
+      </div>
+
+      <!-- Статус линии при приемке (динамически из JS-массива) -->
+      <div>
+        <label class="text-[11px] font-extrabold uppercase text-slate-400 block mb-2">3. Статус линии при приемке</label>
+        <div id="acceptStatusGrid" class="grid grid-cols-2 gap-2"></div>
+      </div>
+
+      <button onclick="acceptShift()" id="btnAcceptShift"
+        class="btn-press w-full py-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-sky-900/40">
+        ✓ Принять смену
+      </button>
+    </section>
+
+    <!-- 2-Б. СВЕРНУТАЯ ПЛАШКА ПРИНЯТОЙ СМЕНЫ -->
+    <section id="shiftCompactBar" class="hidden bg-slate-900 rounded-2xl px-4 py-3 border border-slate-800 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="bg-sky-600 text-white font-black text-sm px-3 py-1.5 rounded-xl" id="compactLineBadge">Л-1</div>
         <div>
-          <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">СДЕЛАНО / ПЛАН</span>
-          <div class="text-xl font-black text-white" id="statDonePlan">0 / — кг</div>
-        </div>
-        <div class="text-right">
-          <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">ЗАРАБОТАНО ₽</span>
-          <div class="text-xl font-black text-[#34d399]" id="statMoney">0 ₽</div>
+          <div class="text-sm font-extrabold text-white leading-tight" id="compactOperatorName">—</div>
+          <div class="text-[11px] font-bold text-slate-400" id="compactShiftStarted">Смена активна</div>
         </div>
       </div>
-      <div class="w-full bg-[#080d1a] h-3 rounded-full overflow-hidden border border-[#233152]">
-        <div id="progressBar" class="h-full bg-gradient-to-r from-[#0072ce] to-[#38bdf8] w-0 transition-all duration-500"></div>
-      </div>
-      <div class="text-[11px] font-bold text-[#cbd5e1] text-center" id="premiumLeftText">
-        ⏳ Ожидание плана от начальника смены...
-      </div>
-    </div>
+      <button onclick="unlockShiftEdit()" class="text-xs font-bold text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700">
+        Изменить
+      </button>
+    </section>
 
-    <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-3 shadow-lg space-y-2">
-      <div class="flex justify-between items-center px-1">
-        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider">Состояние линии</span>
-        <span id="statusTimer" class="text-[11px] font-bold text-[#34d399]">В РАБОТЕ</span>
-      </div>
-      <div class="grid grid-cols-2 gap-2" id="lineStatusGrid">
-        <button onclick="setLineStatus('В РАБОТЕ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-base-work">В РАБОТЕ</button>
-        <button onclick="setLineStatus('ЧИСТКА', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-base-clean">ЧИСТКА</button>
-        <button onclick="setLineStatus('ПРОБЫ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-base-sample">ПРОБЫ</button>
-        <button onclick="setLineStatus('РЕМОНТ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-base-repair">РЕМОНТ</button>
-      </div>
-      <div class="text-[10px] text-center text-[#64748b]">Смена статуса автоматически уходит на дашборд</div>
-    </div>
+    <!-- 3. РАБОЧАЯ ЗОНА ОПЕРАТОРА (ДОСТУПНА ПОСЛЕ ПРИЕМА СМЕНЫ) -->
+    <div id="workArea" class="hidden space-y-3.5">
 
-    <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-3">
-      <div id="openBatchSection">
-        <button onclick="openModal('modalOpenBatch')" class="w-full py-4 border-2 border-dashed border-[#38bdf8] rounded-xl bg-[#1a2744] text-[#38bdf8] font-black text-sm uppercase tracking-wider btn-press">
+      <!-- 3.6. СТАТУСЫ ЛИНИИ (ВСЕГДА ЦВЕТНЫЕ, МГНОВЕННАЯ ОТПРАВКА) -->
+      <section class="bg-slate-900 rounded-2xl p-3.5 border border-slate-800 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-extrabold uppercase text-slate-400 tracking-wider">Текущий статус линии</span>
+          <span id="liveStatusIndicator" class="text-[11px] font-black text-emerald-400">В РАБОТЕ</span>
+        </div>
+        <div id="liveStatusGrid" class="grid grid-cols-2 gap-2"></div>
+      </section>
+
+      <!-- 3.2. ПАРТИЯ: НЕТ АКТИВНОЙ ПАРТИИ -->
+      <section id="noPartyCard" class="bg-slate-900 rounded-2xl p-5 border border-dashed border-slate-700 text-center space-y-3">
+        <div class="text-xs font-bold text-slate-400">На линии сейчас нет открытой партии</div>
+        <button onclick="openNewPartyModal()"
+          class="btn-press w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-indigo-950/60">
           + Открыть новую партию
         </button>
-      </div>
+      </section>
 
-      <div id="activeBatchSection" class="hidden space-y-3">
-        <div class="flex bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
-          <button onclick="switchPackage('box', this)" class="pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-active">Коробки</button>
-          <button onclick="switchPackage('bag', this)" class="pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle">Мешки</button>
-          <button onclick="switchPackage('chip', this)" class="pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle">Чипсы</button>
-        </div>
-
-        <div class="flex justify-between items-center bg-[#080d1a] border border-[#233152] p-2.5 rounded-xl text-xs">
-          <div>Партия: <b id="displayBatchNum" class="text-white">—</b></div>
-          <div>RAL: <b id="displayRal" class="text-white">—</b></div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2 hidden">
-          <input type="hidden" id="batchNumber">
-          <input type="hidden" id="ralColor">
-        </div>
-
-        <div id="chipSubtypeWrap" class="hidden space-y-1">
-          <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block">Вид полуфабриката</label>
-          <div class="grid grid-cols-3 gap-1">
-            <button onclick="selectChipSub('Обычные', this)" class="chip-sub-btn py-1.5 text-[11px] font-bold rounded-lg bg-[#0072ce] text-white">Обычные</button>
-            <button onclick="selectChipSub('I п-ф', this)" class="chip-sub-btn py-1.5 text-[11px] font-bold rounded-lg bg-[#1c2742] text-[#8fa0c2]">I п-ф</button>
-            <button onclick="selectChipSub('II п-ф', this)" class="chip-sub-btn py-1.5 text-[11px] font-bold rounded-lg bg-[#1c2742] text-[#8fa0c2]">II п-ф</button>
+      <!-- 3.2 & 3.3. АКТИВНАЯ ПАРТИЯ И ВВОД ВЫПУСКА -->
+      <section id="activePartyCard" class="hidden bg-slate-900 rounded-2xl p-4 border border-slate-800 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <div class="text-[10px] font-extrabold uppercase text-slate-400">Активная партия</div>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span id="activeBatchNumber" class="text-lg font-black text-white">—</span>
+              <span id="activeRalBadge" class="text-xs font-black px-2 py-0.5 rounded-md bg-sky-950 text-sky-300 border border-sky-800">RAL —</span>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-[10px] font-extrabold uppercase text-slate-400">Старт №</div>
+            <div id="activeUnitFrom" class="text-base font-black text-amber-400">№ 1</div>
           </div>
         </div>
 
-        <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-center space-y-1">
-          <label id="unitLabel" class="text-[10px] font-extrabold text-[#8fa0c2] uppercase block">Номер последней выпущенной коробки</label>
-          <input type="number" id="currentUnitInput" placeholder="Введите номер" oninput="calculateProduction()" class="w-full bg-[#131c31] border-2 border-[#0072ce] rounded-xl py-3 text-center text-3xl font-black text-white outline-none">
+        <!-- Переключатель тары / режима ввода -->
+        <div>
+          <label class="text-[10px] font-extrabold uppercase text-slate-400 block mb-1.5">Тип тары / полуфабрикат</label>
+          <div id="packageTabsGrid" class="grid grid-cols-3 gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800"></div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2">
-          <button onclick="sendCheckpoint()" class="py-3 bg-[#1e1b4b] border border-[#4338ca] hover:bg-[#312e81] font-extrabold rounded-xl text-[#a5b4fc] text-xs uppercase btn-press">Отправить на дашборд</button>
-          <button onclick="closeBatch()" class="py-3 bg-[#1c2742] border border-[#ef4444] text-[#fca5a5] hover:bg-[#7f1d1d]/30 font-extrabold rounded-xl text-xs uppercase btn-press">Закрыть партию</button>
+        <!-- ТАБ 1: КОРОБКИ / МЕШКИ -->
+        <div id="unitInputSection" class="space-y-3">
+          <div class="bg-slate-950 rounded-xl p-3.5 border border-slate-800">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-extrabold uppercase text-sky-400" id="unitInputLabel">Номер последней сошедшей коробки</label>
+              <span class="text-[11px] font-bold text-slate-400">1 шт = 20 кг</span>
+            </div>
+            <input type="number" id="unitToInput" inputmode="numeric" placeholder="Введите №..." oninput="recalculateProduction()"
+              class="w-full bg-slate-900 border-2 border-slate-700 focus:border-sky-500 rounded-xl px-4 py-3 text-2xl font-black text-white text-center outline-none">
+            <div class="flex justify-between items-center text-xs font-bold text-slate-400 mt-2 pt-2 border-t border-slate-800/80">
+              <span>Диапазон: <b class="text-amber-400" id="calcRangeText">—</b></span>
+              <span>Кол-во: <b class="text-white" id="calcUnitsCount">0 шт</b></span>
+            </div>
+          </div>
         </div>
-        
-        <div id="lastSyncNotice" class="text-[10px] text-[#64748b] text-center hidden"></div>
-      </div>
+
+        <!-- ТАБ 2: ЧИПСЫ -->
+        <div id="chipsInputSection" class="hidden space-y-2">
+          <div class="bg-slate-950 rounded-xl p-3.5 border border-slate-800">
+            <label class="text-xs font-extrabold uppercase text-amber-400 block mb-1.5">Выпуск чипсов / п-ф за смену (кг)</label>
+            <input type="number" id="chipsKgInput" inputmode="decimal" placeholder="0" oninput="recalculateProduction()"
+              class="w-full bg-slate-900 border-2 border-slate-700 focus:border-amber-500 rounded-xl px-4 py-3 text-2xl font-black text-amber-300 text-center outline-none">
+          </div>
+        </div>
+
+        <!-- БРАК -->
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="bg-slate-950 rounded-xl p-3 border border-slate-800">
+            <label class="text-[10px] font-extrabold uppercase text-rose-400 block mb-1">Брак (кг)</label>
+            <input type="number" id="defectKgInput" inputmode="decimal" placeholder="0" oninput="onDefectKgChange()"
+              class="w-full bg-slate-900 border border-slate-700 focus:border-rose-500 rounded-lg px-3 py-2 text-base font-black text-rose-400 outline-none">
+          </div>
+          <div class="bg-slate-950 rounded-xl p-3 border border-slate-800">
+            <label class="text-[10px] font-extrabold uppercase text-rose-400 block mb-1">Брак (коробок)</label>
+            <input type="number" id="defectBoxesInput" inputmode="numeric" placeholder="0" oninput="onDefectBoxesChange()"
+              class="w-full bg-slate-900 border border-slate-700 focus:border-rose-500 rounded-lg px-3 py-2 text-base font-black text-rose-400 outline-none">
+          </div>
+        </div>
+
+        <!-- ИТОГОВЫЙ РАСЧЕТ ГОДНОЙ ПРОДУКЦИИ -->
+        <div class="bg-emerald-950/30 border border-emerald-800/60 rounded-xl p-3 flex items-center justify-between">
+          <div>
+            <div class="text-[10px] font-extrabold uppercase text-emerald-400">Годный выпуск (за вычетом брака)</div>
+            <div class="text-xs font-bold text-slate-400" id="goodFormulaHint">(0 шт × 20 кг) − 0 кг брака</div>
+          </div>
+          <div class="text-2xl font-black text-emerald-400" id="calcGoodKg">0 кг</div>
+        </div>
+
+        <!-- 3.4. КНОПКИ ПАРТИИ -->
+        <div class="grid grid-cols-1 gap-2.5 pt-1">
+          <button onclick="sendProductionToDashboard()" id="btnSendDashboard"
+            class="btn-press w-full py-3.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-black text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2">
+            <span>📡</span>
+            <span>Отправить на дашборд</span>
+          </button>
+
+          <button onclick="closeCurrentParty()" id="btnCloseParty"
+            class="btn-press w-full py-3 rounded-xl bg-amber-600/90 hover:bg-amber-500 text-white font-black text-xs uppercase tracking-wider shadow">
+            📦 Закрыть партию
+          </button>
+        </div>
+      </section>
+
+      <!-- УЧЕТ ПЫЛИ -->
+      <section class="bg-slate-900 rounded-2xl p-4 border border-slate-800 space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-xs font-black uppercase tracking-wider text-slate-200">Учет пыли (отходов)</h3>
+            <p class="text-[10px] text-slate-400">Обязательно перед закрытием партии или сдачей смены</p>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] font-bold text-slate-400 uppercase block">Всего пыли</span>
+            <span id="totalDustBadge" class="text-base font-black text-amber-400">0.0 кг</span>
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <input type="number" id="dustEntryInput" inputmode="decimal" step="0.1" placeholder="Вес пыли, кг (например 12.5)"
+            class="flex-1 bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm font-bold text-white outline-none">
+          <button onclick="addDustRecord()"
+            class="btn-press px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-black text-amber-400 uppercase">
+            + Добавить
+          </button>
+        </div>
+
+        <div id="dustRecordsList" class="space-y-1.5"></div>
+      </section>
+
+      <!-- 3.5. СДАЧА СМЕНЫ -->
+      <section class="bg-slate-900 rounded-2xl p-4 border border-slate-800 space-y-2.5">
+        <button onclick="submitShiftClose()" id="btnCloseShift" disabled
+          class="btn-press w-full py-4 rounded-xl bg-emerald-600 disabled:bg-slate-800 disabled:text-slate-500 disabled:border disabled:border-slate-700 text-white font-black text-sm uppercase tracking-wider shadow-lg transition">
+          🏁 Сдать смену
+        </button>
+        <p id="closeShiftHint" class="text-[11px] text-center font-semibold text-amber-400">
+          Для сдачи смены введите номер последней коробки и добавьте запись по пыли
+        </p>
+      </section>
+
     </div>
-
-    <div class="grid grid-cols-3 gap-2">
-      <button onclick="openModal('modalDefect')" class="bg-[#131c31] border border-[#55222b] p-3 rounded-2xl text-center btn-press space-y-1">
-        <div class="text-[11px] font-black text-[#f87171] uppercase">Брак</div>
-        <div id="badgeDefect" class="text-[10px] text-[#94a3b8]">0 кг</div>
-      </button>
-      <button onclick="openModal('modalDust')" class="bg-[#131c31] border border-[#233152] p-3 rounded-2xl text-center btn-press space-y-1">
-        <div class="text-[11px] font-black text-[#38bdf8] uppercase">Пыль</div>
-        <div id="badgeDust" class="text-[10px] text-[#94a3b8]">0 кг</div>
-      </button>
-      <button onclick="openModal('modal5s')" class="bg-[#131c31] border border-[#233152] p-3 rounded-2xl text-center btn-press space-y-1 relative">
-        <span id="badge5sDot" class="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#34d399]"></span>
-        <div class="text-[11px] font-black text-[#34d399] uppercase" id="title5sBtn">Порядок 5S</div>
-        <div class="text-[10px] text-[#94a3b8]" id="sub5sBtn">Всё чисто</div>
-      </button>
-    </div>
-
-    <button id="btnSubmitShift" onclick="openSummary()" disabled class="w-full py-4 bg-gradient-to-r from-[#0072ce] to-[#0284c7] font-black rounded-2xl text-white text-sm uppercase tracking-wider shadow-xl btn-press opacity-40 cursor-not-allowed">
-      СДАТЬ СМЕНУ И ОТПРАВИТЬ ОТЧЁТ
-    </button>
-    <div id="submitWarning" class="text-[10px] text-center text-[#fbbf24]">Для сдачи смены введите номер коробки и данные по пыли</div>
-
   </main>
 
-  <div id="modalOpenBatch" class="modal-overlay">
-    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
-      <h3 class="text-base font-black text-[#38bdf8]">Открытие новой партии</h3>
+  <!-- НИЖНЯЯ ПАНЕЛЬ (МОДУЛЬ 5S И КАБИНЕТ) -->
+  <nav class="fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur border-t border-slate-800 px-4 py-2.5 z-40">
+    <div class="max-w-md mx-auto grid grid-cols-2 gap-3">
+      <button onclick="open5SModal()" class="btn-press py-2.5 px-4 rounded-xl bg-red-950/70 border border-red-800/70 flex items-center justify-center gap-2 text-xs font-black text-red-300 uppercase">
+        <span>📸 Задачи 5S</span>
+        <span id="badge5SCount" class="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px]">0</span>
+      </button>
+
+      <button onclick="openStatsModal()" class="btn-press py-2.5 px-4 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center gap-2 text-xs font-black text-slate-200 uppercase">
+        <span>👤 Личный кабинет</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- МОДАЛКА: ОТКРЫТИЕ НОВОЙ ПАРТИИ -->
+  <div id="modalNewParty" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-black uppercase text-white">Открыть новую партию</h3>
+        <button onclick="closeNewPartyModal()" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="text-[11px] font-bold uppercase text-slate-400 block mb-1">Номер партии *</label>
+          <input type="text" id="modalBatchInput" placeholder="Например: 240512-1"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-bold text-white outline-none focus:border-indigo-500">
+        </div>
+
+        <div>
+          <label class="text-[11px] font-bold uppercase text-slate-400 block mb-1">Цвет RAL *</label>
+          <input type="text" id="modalRalInput" placeholder="Например: RAL 9016"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-bold text-white outline-none focus:border-indigo-500">
+        </div>
+
+        <div>
+          <label class="text-[11px] font-bold uppercase text-slate-400 block mb-1.5">Тип тары *</label>
+          <div id="modalPackageGrid" class="grid grid-cols-3 gap-2"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-2">
+        <button onclick="closeNewPartyModal()" class="py-3 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs uppercase">Отмена</button>
+        <button onclick="confirmOpenParty()" class="btn-press py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase">Открыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛКА 5: МОДУЛЬ 5S -->
+  <div id="modal5S" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex flex-col">
+    <div class="bg-slate-900 border-b border-slate-800 px-4 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+        <h3 class="text-sm font-black uppercase text-white">Замечания 5S — Линия №<span id="modal5SLineNum">—</span></h3>
+      </div>
+      <button onclick="close5SModal()" class="px-3 py-1 rounded-lg bg-slate-800 text-slate-300 text-xs font-bold">Закрыть ✕</button>
+    </div>
+
+    <div id="modal5SList" class="flex-1 overflow-y-auto p-4 max-w-md mx-auto w-full space-y-4"></div>
+  </div>
+
+  <!-- МОДАЛКА 6: ЛИЧНЫЙ КАБИНЕТ (СТАТИСТИКА ОПЕРАТОРА) -->
+  <div id="modalStats" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-sm font-black uppercase text-white">Личный кабинет оператора</h3>
+          <p class="text-xs font-bold text-sky-400" id="statsOperatorTitle">—</p>
+        </div>
+        <button onclick="closeStatsModal()" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
+      </div>
+
       <div>
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">№ Партии (обязательно)</label>
-        <input type="text" id="newBatchNum" placeholder="24-0419" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none focus:border-[#0072ce]">
+        <label class="text-[10px] font-bold uppercase text-slate-400 block mb-1">Оператор (ФИО)</label>
+        <input type="text" id="statsOperatorInput" onchange="loadOperatorCabinetStats()" placeholder="Введите ФИО..."
+          class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none">
       </div>
-      <div>
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Цвет RAL (обязательно)</label>
-        <div class="flex bg-[#080d1a] border border-[#29385c] rounded-xl overflow-hidden">
-          <span class="bg-[#1c2742] text-[#38bdf8] font-black text-xs px-2.5 flex items-center border-r border-[#29385c]">RAL</span>
-          <input type="text" id="newRal" placeholder="9005" class="w-full bg-transparent px-2 py-2 text-sm text-white font-bold outline-none">
+
+      <div id="statsPeriodButtons" class="grid grid-cols-2 gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800"></div>
+
+      <div id="customDateRangeBox" class="hidden grid grid-cols-2 gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+        <div>
+          <label class="text-[10px] text-slate-400 font-bold block mb-1">С даты:</label>
+          <input type="date" id="statsDateFrom" onchange="loadOperatorCabinetStats()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-400 font-bold block mb-1">По дату:</label>
+          <input type="date" id="statsDateTo" onchange="loadOperatorCabinetStats()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
         </div>
       </div>
-      <div>
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Тип тары</label>
-        <div class="grid grid-cols-3 gap-1 bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
-          <button onclick="setNewBatchPack('box', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active">Коробки</button>
-          <button onclick="setNewBatchPack('bag', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle">Мешки</button>
-          <button onclick="setNewBatchPack('chip', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle">Чипсы</button>
+
+      <div class="grid grid-cols-1 gap-2.5">
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
+          <div>
+            <div class="text-[10px] font-extrabold uppercase text-slate-400">Отработано смен</div>
+            <div class="text-xs font-bold text-slate-400 mt-0.5" id="statsShiftsBreakdown">☀️ День: 0 • 🌙 Ночь: 0</div>
+          </div>
+          <div class="text-2xl font-black text-white" id="statsTotalShifts">0</div>
+        </div>
+
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
+          <div>
+            <div class="text-[10px] font-extrabold uppercase text-slate-400">Выпущено продукции</div>
+            <div class="text-xs font-bold text-sky-400 mt-0.5" id="statsTotalBoxesSub">0 коробок / мешков</div>
+          </div>
+          <div class="text-2xl font-black text-sky-400" id="statsTotalKg">0 кг</div>
+        </div>
+
+        <div class="bg-emerald-950/30 border border-emerald-800/60 rounded-xl p-3.5 flex items-center justify-between">
+          <div>
+            <div class="text-[10px] font-extrabold uppercase text-emerald-400">Заработано за период</div>
+            <div class="text-[11px] font-semibold text-slate-400 mt-0.5">С учетом бонусов за план</div>
+          </div>
+          <div class="text-2xl font-black text-emerald-400" id="statsTotalEarned">0 ₽</div>
         </div>
       </div>
-      <button onclick="confirmOpenBatch()" class="w-full py-3 bg-[#10b981] text-white font-bold rounded-xl text-xs uppercase btn-press mt-2">Начать выпуск</button>
-      <button onclick="closeModal('modalOpenBatch')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Отмена</button>
-    </div>
-  </div>
-
-  <div id="modalDefect" class="modal-overlay">
-    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
-      <h3 class="text-base font-black text-[#f87171]">Фиксация брака</h3>
-      <div class="grid grid-cols-2 gap-2">
-        <input type="number" id="defStart" placeholder="С коробки №" class="bg-[#080d1a] border border-[#29385c] rounded-xl p-2 text-white font-bold outline-none">
-        <input type="number" id="defEnd" placeholder="По коробку №" class="bg-[#080d1a] border border-[#29385c] rounded-xl p-2 text-white font-bold outline-none">
-      </div>
-      <button onclick="addDefect()" class="w-full py-3 bg-[#ef4444] text-white font-bold rounded-xl text-xs uppercase btn-press">Внести в брак</button>
-      <div id="defectList" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
-      <button onclick="closeModal('modalDefect')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Готово</button>
-    </div>
-  </div>
-
-  <div id="modalDust" class="modal-overlay">
-    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
-      <h3 class="text-base font-black text-[#38bdf8]">Сброс пыли</h3>
-      <input type="number" id="dustInput" placeholder="Вес мешка (кг)" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl p-2 text-white font-bold outline-none">
-      <button onclick="addDust()" class="w-full py-3 bg-[#0284c7] text-white font-bold rounded-xl text-xs uppercase btn-press">Добавить мешок</button>
-      <div id="dustList" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
-      <button onclick="closeModal('modalDust')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Готово</button>
-    </div>
-  </div>
-
-  <div id="modal5s" class="modal-overlay">
-    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-md space-y-3 max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center">
-        <h3 class="text-base font-black text-[#34d399]">Порядок 5S</h3>
-        <button onclick="closeModal('modal5s')" class="text-gray-400 font-bold text-lg">✕</button>
-      </div>
-      <div id="tasks5sContainer" class="space-y-3">
-        <div class="text-center text-gray-500 text-xs py-6">Загрузка задач 5S...</div>
-      </div>
-    </div>
-  </div>
-
-  <input type="file" accept="image/*" capture="environment" id="camera5sInput" class="hidden" onchange="onCapture5sAfter(this)">
-
-  <div id="modalSummary" class="modal-overlay">
-    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-3">
-      <h3 class="text-base font-black text-[#38bdf8]">Сводка сдачи смены</h3>
-      <div class="space-y-1.5 text-xs">
-        <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Линия / Смена:</span><span id="sumLineShift" class="font-bold">—</span></div>
-        <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Оператор:</span><span id="sumOperator" class="font-bold">—</span></div>
-        <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Готовая краска:</span><span id="sumPaintKg" class="font-bold text-[#34d399]">0 кг</span></div>
-        <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Заработано:</span><span id="sumEarnedRub" class="font-bold text-[#38bdf8]">0 ₽</span></div>
-      </div>
-      <button onclick="submitFinalShift()" class="w-full py-3.5 bg-[#0072ce] text-white font-black rounded-xl text-xs uppercase btn-press mt-2">Подтвердить и сдать</button>
-      <button onclick="closeModal('modalSummary')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Назад</button>
-    </div>
-  </div>
-
-  <div id="statsModal" class="modal-overlay">
-    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-3 max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center">
-        <h3 class="text-base font-black text-[#38bdf8]">Моя выработка</h3>
-        <button onclick="closeModal('statsModal')" class="text-gray-400 font-bold text-lg">✕</button>
-      </div>
-      <div class="grid grid-cols-4 gap-1 bg-[#080d1a] p-1 rounded-xl border border-[#233152] text-[11px] font-bold">
-        <button onclick="setPeriod('month', this)" class="period-btn period-btn-active py-1.5 rounded-lg">Месяц</button>
-        <button onclick="setPeriod('prev', this)" class="period-btn period-btn-idle py-1.5 rounded-lg">Пр. месяц</button>
-        <button onclick="setPeriod('all', this)" class="period-btn period-btn-idle py-1.5 rounded-lg">Всё</button>
-        <button onclick="setPeriod('custom', this)" class="period-btn period-btn-idle py-1.5 rounded-lg">Свой</button>
-      </div>
-      <div id="customPeriodWrap" class="hidden grid grid-cols-2 gap-2">
-        <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">С даты</label><input type="date" id="customDateFrom" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-2 py-2 text-xs text-white outline-none focus:border-[#0072ce]"></div>
-        <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">По дату</label><input type="date" id="customDateTo" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-2 py-2 text-xs text-white outline-none focus:border-[#0072ce]"></div>
-      </div>
-      <div class="grid grid-cols-2 gap-2">
-        <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3">
-          <div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Смены</div>
-          <div class="text-xl font-black text-white" id="stTotalShifts">0</div>
-          <div class="text-[10px] text-[#64748b]" id="stShiftTypes">День: 0 / Ночь: 0</div>
-        </div>
-        <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3">
-          <div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Продукция</div>
-          <div class="text-xl font-black text-[#34d399]" id="stPaintKg">0 кг</div>
-        </div>
-        <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 col-span-2">
-          <div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Заработано</div>
-          <div class="text-xl font-black text-[#fbbf24]" id="stEarnedRub">0 ₽</div>
-        </div>
-      </div>
-      <button onclick="closeModal('statsModal')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Закрыть</button>
     </div>
   </div>
 
   <script>
+    // =========================================================================
+    // 1. КОНСТАНТЫ И КОНФИГУРАЦИЯ SUPABASE (ОСНОВНОЙ ПРОЕКТ + ПРОЕКТ 5S)
+    // =========================================================================
     const SUPABASE_URL = "https://oqhrzruxubqthqyxmdcg.supabase.co";
     const SUPABASE_KEY = "sb_publishable_m5YmzYjW1BpotrbaRpCdgA__kYvilf3";
+
     const SUPABASE_5S_URL = "https://kphyddvstcfoxdqyrakp.supabase.co";
     const SUPABASE_5S_KEY = "sb_publishable_qRFyLNGwpxYUQQqkzvmONg_ZRrlhLy5";
+
     const PRIMATEK_LINES = [1, 5, 6, 7, 8, 13, 14, 15];
-    const EARNING_RATES = { base: 0.50, bonus: 500, overPlan: 1.00 };
-    const UNIT_WEIGHT = 20;
+    const UNIT_WEIGHT_KG = 20;
 
-    const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Статусы всегда цветные (зеленый, желтый, синий, красный)
+    const LINE_STATUSES = [
+      {
+        id: 'В РАБОТЕ',
+        label: 'В РАБОТЕ',
+        baseClass: 'bg-emerald-950/90 border-emerald-600/80 text-emerald-300',
+        activeClass: 'bg-emerald-600 border-emerald-300 text-white ring-2 ring-emerald-400/60 shadow-lg shadow-emerald-950'
+      },
+      {
+        id: 'ЧИСТКА',
+        label: 'ЧИСТКА',
+        baseClass: 'bg-amber-950/90 border-amber-600/80 text-amber-300',
+        activeClass: 'bg-amber-500 border-amber-200 text-slate-950 ring-2 ring-amber-400/60 shadow-lg shadow-amber-950'
+      },
+      {
+        id: 'ПРОБЫ',
+        label: 'ПРОБЫ',
+        baseClass: 'bg-sky-950/90 border-sky-600/80 text-sky-300',
+        activeClass: 'bg-sky-600 border-sky-300 text-white ring-2 ring-sky-400/60 shadow-lg shadow-sky-950'
+      },
+      {
+        id: 'РЕМОНТ',
+        label: 'РЕМОНТ',
+        baseClass: 'bg-rose-950/90 border-rose-600/80 text-rose-300',
+        activeClass: 'bg-rose-600 border-rose-300 text-white ring-2 ring-rose-400/60 shadow-lg shadow-rose-950'
+      }
+    ];
 
+    const PACKAGE_TYPES = [
+      { id: 'box', label: 'Коробки', unitWord: 'коробки' },
+      { id: 'bag', label: 'Мешки', unitWord: 'мешка' },
+      { id: 'chip', label: 'Чипсы', unitWord: 'чипсов' }
+    ];
+
+    const STATS_PERIODS = [
+      { id: 'this_month', label: 'Этот месяц' },
+      { id: 'last_month', label: 'Прошлый месяц' },
+      { id: 'all', label: 'Всё время' },
+      { id: 'custom', label: 'Свой период' }
+    ];
+
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const db5S = supabase.createClient(SUPABASE_5S_URL, SUPABASE_5S_KEY);
+
+    // =========================================================================
+    // 2. СОСТОЯНИЕ ПРИЛОЖЕНИЯ ОПЕРАТОРА
+    // =========================================================================
     let state = {
-      line: 6, operator: localStorage.getItem('primatek_operator_name') || '',
-      handoverStatus: null, lineStatus: 'В РАБОТЕ',
-      packageType: 'box', chipSubtype: 'Обычные',
-      startUnit: 1, closedBatchesKg: 0,
-      defects: [], dust: [], planKg: 0,
-      isBatchOpen: false, newBatchPack: 'box'
+      shiftAccepted: false,
+      lineNumber: PRIMATEK_LINES[0],
+      operatorName: '',
+      lineStatus: LINE_STATUSES[0].id,
+      planKg: 0,
+      statusLog: [],
+
+      // Партия
+      partyOpen: false,
+      batchNumber: '',
+      ralColor: '',
+      packageType: 'box',
+      unitFrom: 1,
+      unitTo: null,
+
+      // Выпуск и отходы
+      goodBoxes: 0,
+      goodBags: 0,
+      totalGoodKg: 0,
+      chipsKg: 0,
+      defectKg: 0,
+      defectBoxes: 0,
+      dustRecords: [],
+
+      // Накопленный выпуск за смену из уже закрытых в эту смену партий
+      closedPartiesKgInShift: 0,
+      closedPartiesBoxesInShift: 0,
+
+      // Временный выбор в модалках
+      modalPackageType: 'box',
+      statsPeriod: 'this_month',
+      temp5SPhotos: {}
     };
 
-    let active5sTaskId = null;
-    let currentStatsPeriod = 'month';
-
+    // =========================================================================
+    // 3. ИНИЦИАЛИЗАЦИЯ
+    // =========================================================================
     window.onload = () => {
-      renderLines();
-      if (state.operator) document.getElementById('operatorName').value = state.operator;
-      loadPreviousShiftData();
-      loadPlanFromCloud();
-      setInterval(loadPlanFromCloud, 60000);
-      load5sTasks();
-      setInterval(load5sTasks, 15000);
-      updateShiftBadge();
+      const savedName = localStorage.getItem('primatek_operator_name') || '';
+      const savedLine = Number(localStorage.getItem('primatek_line_number'));
+      if (savedName) {
+        state.operatorName = savedName;
+        document.getElementById('operatorNameInput').value = savedName;
+      }
+      if (PRIMATEK_LINES.includes(savedLine)) {
+        state.lineNumber = savedLine;
+      }
+
+      updateShiftHeader();
+      renderAcceptLineButtons();
+      renderAcceptStatusButtons();
+      renderLiveStatusButtons();
+      renderPackageTabs();
+      renderModalPackageButtons();
+      renderStatsPeriodButtons();
+
+      setupRealtimeSubscriptions();
+      load5SBadgeCount();
     };
 
-    function updateShiftBadge() {
-      const h = new Date().getHours();
-      document.getElementById('shiftBadge').innerText = 'СМЕНА: ' + ((h >= 8 && h < 20) ? 'ДЕНЬ' : 'НОЧЬ');
+    function getShiftMeta(dateObj = new Date()) {
+      const h = dateObj.getHours();
+      const isDay = h >= 8 && h < 20;
+      const shift = isDay ? 'ДЕНЬ' : 'НОЧЬ';
+      const d = new Date(dateObj);
+      if (h < 8) d.setDate(d.getDate() - 1);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return { shift, planDate: `${yyyy}-${mm}-${dd}` };
     }
 
-    function saveOperatorName() {
-      state.operator = document.getElementById('operatorName').value.trim();
-      localStorage.setItem('primatek_operator_name', state.operator);
-      checkHandoverReady();
+    function updateShiftHeader() {
+      const { shift, planDate } = getShiftMeta();
+      document.getElementById('headerShiftText').innerText = `Смена: ${shift} • ${planDate}`;
+      document.getElementById('acceptShiftBadge').innerText = `СМЕНА: ${shift}`;
     }
 
-    function renderLines() {
-      document.getElementById('lineButtons').innerHTML = PRIMATEK_LINES.map(num => `
-        <button onclick="selectLine(${num})" class="line-sel-btn py-2 text-xs font-black rounded-xl border border-[#233152] ${num === state.line ? 'bg-[#0072ce] text-white border-[#38bdf8]' : 'bg-[#080d1a] text-[#cbd5e1]'}">${num}</button>
+    // =========================================================================
+    // 4. ДИНАМИЧЕСКИЙ РЕНДЕР КНОПОК (БЕЗ ХАРДКОДА В HTML)
+    // =========================================================================
+    function renderAcceptLineButtons() {
+      const container = document.getElementById('acceptLineGrid');
+      container.innerHTML = PRIMATEK_LINES.map(line => {
+        const active = state.lineNumber === line;
+        return `
+          <button type="button" onclick="selectAcceptLine(${line})"
+            class="btn-press py-3 rounded-xl font-black text-sm border transition ${
+              active
+                ? 'bg-sky-600 border-sky-300 text-white shadow-md shadow-sky-950'
+                : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+            }">
+            №${line}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectAcceptLine(line) {
+      state.lineNumber = line;
+      localStorage.setItem('primatek_line_number', String(line));
+      renderAcceptLineButtons();
+      load5SBadgeCount();
+    }
+
+    function renderAcceptStatusButtons() {
+      const container = document.getElementById('acceptStatusGrid');
+      container.innerHTML = LINE_STATUSES.map(st => {
+        const isSelected = state.lineStatus === st.id;
+        return `
+          <button type="button" onclick="selectAcceptStatus('${st.id}')"
+            class="btn-press py-3 px-3 rounded-xl font-black text-xs uppercase border-2 transition ${
+              isSelected ? st.activeClass : st.baseClass
+            }">
+            ${st.label}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectAcceptStatus(statusId) {
+      state.lineStatus = statusId;
+      renderAcceptStatusButtons();
+    }
+
+    function renderLiveStatusButtons() {
+      const container = document.getElementById('liveStatusGrid');
+      document.getElementById('liveStatusIndicator').innerText = state.lineStatus;
+      container.innerHTML = LINE_STATUSES.map(st => {
+        const isSelected = state.lineStatus === st.id;
+        return `
+          <button type="button" onclick="changeLiveLineStatus('${st.id}')"
+            class="btn-press py-3.5 px-3 rounded-xl font-black text-xs uppercase border-2 transition ${
+              isSelected ? st.activeClass : st.baseClass
+            }">
+            ${st.label}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderPackageTabs() {
+      const container = document.getElementById('packageTabsGrid');
+      container.innerHTML = PACKAGE_TYPES.map(pt => {
+        const active = state.packageType === pt.id;
+        return `
+          <button type="button" onclick="switchPackageType('${pt.id}')"
+            class="py-2 rounded-lg text-xs font-extrabold uppercase transition ${
+              active ? 'bg-sky-600 text-white shadow' : 'text-slate-400 hover:text-white'
+            }">
+            ${pt.label}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderModalPackageButtons() {
+      const container = document.getElementById('modalPackageGrid');
+      container.innerHTML = PACKAGE_TYPES.map(pt => {
+        const active = state.modalPackageType === pt.id;
+        return `
+          <button type="button" onclick="selectModalPackageType('${pt.id}')"
+            class="py-2.5 rounded-xl text-xs font-black uppercase border transition ${
+              active
+                ? 'bg-indigo-600 border-indigo-400 text-white'
+                : 'bg-slate-950 border-slate-800 text-slate-400'
+            }">
+            ${pt.label}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectModalPackageType(typeId) {
+      state.modalPackageType = typeId;
+      renderModalPackageButtons();
+    }
+
+    // =========================================================================
+    // 5. ПРИЕМ СМЕНЫ (РАЗДЕЛ 3.1 ТЗ)
+    // =========================================================================
+    async function acceptShift() {
+      const nameInput = document.getElementById('operatorNameInput').value.trim();
+      if (!nameInput) {
+        alert('Пожалуйста, введите ФИО оператора!');
+        return;
+      }
+
+      state.operatorName = nameInput;
+      localStorage.setItem('primatek_operator_name', nameInput);
+      localStorage.setItem('primatek_line_number', String(state.lineNumber));
+
+      const btn = document.getElementById('btnAcceptShift');
+      btn.disabled = true;
+      btn.innerText = 'Прием смены...';
+
+      try {
+        await fetchShiftPlanForLine();
+        await checkInheritedPartyFromLastShift();
+
+        state.statusLog.push({ status: state.lineStatus, timestamp: new Date().toISOString() });
+
+        const { error } = await db.from('shift_reports').insert([{
+          line_number: state.lineNumber,
+          operator_name: state.operatorName,
+          event_type: 'STATUS_CHANGE',
+          line_status: state.lineStatus,
+          package_type: state.partyOpen ? state.packageType : null,
+          batch_number: state.partyOpen ? state.batchNumber : null,
+          ral_color: state.partyOpen ? state.ralColor : null,
+          unit_from: state.partyOpen ? state.unitFrom : null,
+          plan_kg: state.planKg,
+          status_log: state.statusLog
+        }]);
+
+        if (error) throw error;
+
+        state.shiftAccepted = true;
+
+        document.getElementById('shiftAcceptCard').classList.add('hidden');
+        document.getElementById('shiftCompactBar').classList.remove('hidden');
+        document.getElementById('workArea').classList.remove('hidden');
+
+        document.getElementById('compactLineBadge').innerText = `Л-${state.lineNumber}`;
+        document.getElementById('compactOperatorName').innerText = state.operatorName;
+        document.getElementById('compactShiftStarted').innerText = `Принята в ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+
+        renderLiveStatusButtons();
+        syncPartyUI();
+        recalculateProduction();
+        load5SBadgeCount();
+      } catch (err) {
+        alert('Ошибка при приеме смены: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '✓ Принять смену';
+      }
+    }
+
+    function unlockShiftEdit() {
+      document.getElementById('shiftAcceptCard').classList.remove('hidden');
+      document.getElementById('shiftCompactBar').classList.add('hidden');
+    }
+
+    async function fetchShiftPlanForLine() {
+      const { shift, planDate } = getShiftMeta();
+      const { data } = await db.from('shift_plans')
+        .select('plan_kg')
+        .eq('plan_date', planDate)
+        .eq('shift', shift)
+        .eq('line_number', state.lineNumber)
+        .maybeSingle();
+
+      state.planKg = data && data.plan_kg ? Number(data.plan_kg) : 0;
+    }
+
+    async function checkInheritedPartyFromLastShift() {
+      const { data } = await db.from('shift_reports')
+        .select('*')
+        .eq('line_number', state.lineNumber)
+        .in('event_type', ['SHIFT_CLOSE', 'PARTY_CLOSE'])
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0) {
+        const lastRec = data[0];
+        if (lastRec.event_type === 'SHIFT_CLOSE' && lastRec.batch_number && String(lastRec.batch_number).trim() !== '') {
+          state.partyOpen = true;
+          state.batchNumber = lastRec.batch_number;
+          state.ralColor = lastRec.ral_color || '—';
+          state.packageType = lastRec.package_type || 'box';
+          state.unitFrom = (Number(lastRec.unit_to) || 0) + 1;
+          state.unitTo = null;
+          return;
+        }
+      }
+
+      state.partyOpen = false;
+      state.batchNumber = '';
+      state.ralColor = '';
+      state.packageType = 'box';
+      state.unitFrom = 1;
+      state.unitTo = null;
+    }
+
+    // =========================================================================
+    // 6. МГНОВЕННАЯ СМЕНА СТАТУСА ЛИНИИ (РАЗДЕЛ 3.6 ТЗ)
+    // =========================================================================
+    async function changeLiveLineStatus(newStatus) {
+      state.lineStatus = newStatus;
+      state.statusLog.push({ status: newStatus, timestamp: new Date().toISOString() });
+      renderLiveStatusButtons();
+
+      const totalShiftGoodKg = state.closedPartiesKgInShift + state.totalGoodKg;
+
+      const { error } = await db.from('shift_reports').insert([{
+        line_number: state.lineNumber,
+        operator_name: state.operatorName,
+        event_type: 'STATUS_CHANGE',
+        line_status: state.lineStatus,
+        package_type: state.partyOpen ? state.packageType : null,
+        batch_number: state.partyOpen ? state.batchNumber : null,
+        ral_color: state.partyOpen ? state.ralColor : null,
+        good_boxes: state.packageType === 'box' ? state.goodBoxes : 0,
+        good_bags: state.packageType === 'bag' ? state.goodBags : 0,
+        total_good_kg: totalShiftGoodKg,
+        chips_kg: state.chipsKg,
+        defect_kg: state.defectKg,
+        defect_boxes: state.defectBoxes,
+        unit_from: state.partyOpen ? state.unitFrom : null,
+        unit_to: state.unitTo,
+        plan_kg: state.planKg,
+        status_log: state.statusLog
+      }]);
+
+      if (error) {
+        alert('Ошибка отправки статуса: ' + error.message);
+      }
+    }
+
+    // =========================================================================
+    // 7. УПРАВЛЕНИЕ ПАРТИЕЙ (ОТКРЫТИЕ / ЗАКРЫТИЕ — РАЗДЕЛ 3.2 ТЗ)
+    // =========================================================================
+    function syncPartyUI() {
+      const noPartyCard = document.getElementById('noPartyCard');
+      const activePartyCard = document.getElementById('activePartyCard');
+
+      if (!state.partyOpen) {
+        noPartyCard.classList.remove('hidden');
+        activePartyCard.classList.add('hidden');
+      } else {
+        noPartyCard.classList.add('hidden');
+        activePartyCard.classList.remove('hidden');
+        document.getElementById('activeBatchNumber').innerText = state.batchNumber;
+        document.getElementById('activeRalBadge').innerText = state.ralColor;
+        document.getElementById('activeUnitFrom').innerText = `№ ${state.unitFrom}`;
+        renderPackageTabs();
+        updatePackageInputVisibility();
+      }
+      updateCloseShiftButtonState();
+    }
+
+    function openNewPartyModal() {
+      document.getElementById('modalBatchInput').value = '';
+      document.getElementById('modalRalInput').value = '';
+      state.modalPackageType = 'box';
+      renderModalPackageButtons();
+      document.getElementById('modalNewParty').classList.remove('hidden');
+    }
+
+    function closeNewPartyModal() {
+      document.getElementById('modalNewParty').classList.add('hidden');
+    }
+
+    function confirmOpenParty() {
+      const batch = document.getElementById('modalBatchInput').value.trim();
+      const ral = document.getElementById('modalRalInput').value.trim();
+
+      if (!batch || !ral || !state.modalPackageType) {
+        alert('Заполните все обязательные поля: № партии, цвет RAL и тип тары!');
+        return;
+      }
+
+      state.partyOpen = true;
+      state.batchNumber = batch;
+      state.ralColor = ral;
+      state.packageType = state.modalPackageType;
+      state.unitFrom = 1;
+      state.unitTo = null;
+
+      document.getElementById('unitToInput').value = '';
+      document.getElementById('chipsKgInput').value = '';
+      document.getElementById('defectKgInput').value = '';
+      document.getElementById('defectBoxesInput').value = '';
+
+      closeNewPartyModal();
+      syncPartyUI();
+      recalculateProduction();
+    }
+
+    function switchPackageType(typeId) {
+      state.packageType = typeId;
+      renderPackageTabs();
+      updatePackageInputVisibility();
+      recalculateProduction();
+    }
+
+    function updatePackageInputVisibility() {
+      const unitSec = document.getElementById('unitInputSection');
+      const chipsSec = document.getElementById('chipsInputSection');
+      const label = document.getElementById('unitInputLabel');
+
+      if (state.packageType === 'chip') {
+        unitSec.classList.add('hidden');
+        chipsSec.classList.remove('hidden');
+      } else {
+        unitSec.classList.remove('hidden');
+        chipsSec.classList.add('hidden');
+        label.innerText = state.packageType === 'bag'
+          ? 'Номер последнего сошедшего мешка'
+          : 'Номер последней сошедшей коробки';
+      }
+    }
+
+    async function closeCurrentParty() {
+      if (!state.partyOpen) return;
+
+      const totalDustKg = getTotalDustKg();
+      if (state.dustRecords.length === 0 || totalDustKg <= 0) {
+        alert('Нельзя закрыть партию без данных по пыли! Добавьте хотя бы один замер пыли ниже.');
+        return;
+      }
+
+      if (state.packageType !== 'chip' && (!state.unitTo || state.unitTo < state.unitFrom)) {
+        alert('Введите корректный номер последней сошедшей коробки/мешка перед закрытием партии!');
+        return;
+      }
+
+      if (!confirm(`Закрыть партию ${state.batchNumber} (${state.ralColor}) и отправить итоги?`)) {
+        return;
+      }
+
+      const btn = document.getElementById('btnCloseParty');
+      btn.disabled = true;
+
+      try {
+        const { error } = await db.from('shift_reports').insert([{
+          line_number: state.lineNumber,
+          operator_name: state.operatorName,
+          event_type: 'PARTY_CLOSE',
+          line_status: state.lineStatus,
+          package_type: state.packageType,
+          batch_number: state.batchNumber,
+          ral_color: state.ralColor,
+          good_boxes: state.packageType === 'box' ? state.goodBoxes : 0,
+          good_bags: state.packageType === 'bag' ? state.goodBags : 0,
+          total_good_kg: state.totalGoodKg,
+          chips_kg: state.chipsKg,
+          defect_kg: state.defectKg,
+          defect_boxes: state.defectBoxes,
+          dust_kg: totalDustKg,
+          unit_from: state.packageType === 'chip' ? null : state.unitFrom,
+          unit_to: state.packageType === 'chip' ? null : state.unitTo,
+          plan_kg: state.planKg,
+          status_log: state.statusLog
+        }]);
+
+        if (error) throw error;
+
+        state.closedPartiesKgInShift += state.totalGoodKg;
+        state.closedPartiesBoxesInShift += (state.goodBoxes + state.goodBags);
+
+        state.partyOpen = false;
+        state.batchNumber = '';
+        state.ralColor = '';
+        state.unitFrom = 1;
+        state.unitTo = null;
+        state.goodBoxes = 0;
+        state.goodBags = 0;
+        state.totalGoodKg = 0;
+        state.chipsKg = 0;
+        state.defectKg = 0;
+        state.defectBoxes = 0;
+
+        document.getElementById('unitToInput').value = '';
+        document.getElementById('chipsKgInput').value = '';
+        document.getElementById('defectKgInput').value = '';
+        document.getElementById('defectBoxesInput').value = '';
+
+        syncPartyUI();
+        recalculateProduction();
+        alert('Партия успешно закрыта!');
+      } catch (err) {
+        alert('Ошибка закрытия партии: ' + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // =========================================================================
+    // 8. ПОДСЧЕТ ВЫПУСКА И ГЕЙМИФИКАЦИЯ (РАЗДЕЛЫ 3.3 И 4 ТЗ)
+    // =========================================================================
+    function onDefectKgChange() {
+      const defKg = Math.max(0, Number(document.getElementById('defectKgInput').value) || 0);
+      document.getElementById('defectBoxesInput').value = defKg > 0 ? Math.ceil(defKg / UNIT_WEIGHT_KG) : '';
+      recalculateProduction();
+    }
+
+    function onDefectBoxesChange() {
+      const defBoxes = Math.max(0, Number(document.getElementById('defectBoxesInput').value) || 0);
+      document.getElementById('defectKgInput').value = defBoxes > 0 ? defBoxes * UNIT_WEIGHT_KG : '';
+      recalculateProduction();
+    }
+
+    function recalculateProduction() {
+      const defectKg = Math.max(0, Number(document.getElementById('defectKgInput').value) || 0);
+      const defectBoxes = Math.max(0, Number(document.getElementById('defectBoxesInput').value) || 0);
+      state.defectKg = defectKg;
+      state.defectBoxes = defectBoxes;
+
+      if (state.partyOpen) {
+        if (state.packageType === 'chip') {
+          const rawChips = Math.max(0, Number(document.getElementById('chipsKgInput').value) || 0);
+          state.chipsKg = rawChips;
+          state.goodBoxes = 0;
+          state.goodBags = 0;
+          state.totalGoodKg = Math.max(0, rawChips - defectKg);
+          state.unitTo = null;
+          document.getElementById('goodFormulaHint').innerText = `${rawChips} кг чипсов − ${defectKg} кг брака`;
+        } else {
+          const rawUnitTo = Number(document.getElementById('unitToInput').value);
+          if (rawUnitTo && rawUnitTo >= state.unitFrom) {
+            state.unitTo = rawUnitTo;
+            const totalUnits = state.unitTo - state.unitFrom + 1;
+            const grossKg = totalUnits * UNIT_WEIGHT_KG;
+            const netGoodKg = Math.max(0, grossKg - defectKg);
+            const netUnits = Math.max(0, Math.floor(netGoodKg / UNIT_WEIGHT_KG));
+
+            state.totalGoodKg = netGoodKg;
+            state.goodBoxes = state.packageType === 'box' ? netUnits : 0;
+            state.goodBags = state.packageType === 'bag' ? netUnits : 0;
+            state.chipsKg = 0;
+
+            document.getElementById('calcRangeText').innerText = `№ ${state.unitFrom} — № ${state.unitTo}`;
+            document.getElementById('calcUnitsCount').innerText = `${totalUnits} шт`;
+            document.getElementById('goodFormulaHint').innerText = `(${totalUnits} шт × 20 кг) − ${defectKg} кг брака`;
+          } else {
+            state.unitTo = null;
+            state.totalGoodKg = 0;
+            state.goodBoxes = 0;
+            state.goodBags = 0;
+            document.getElementById('calcRangeText').innerText = '—';
+            document.getElementById('calcUnitsCount').innerText = '0 шт';
+            document.getElementById('goodFormulaHint').innerText = `(0 шт × 20 кг) − ${defectKg} кг брака`;
+          }
+        }
+      } else {
+        state.totalGoodKg = 0;
+        state.goodBoxes = 0;
+        state.goodBags = 0;
+      }
+
+      document.getElementById('calcGoodKg').innerText = `${state.totalGoodKg.toLocaleString('ru-RU')} кг`;
+
+      updateGamificationBanner();
+      updateCloseShiftButtonState();
+    }
+
+    function calculateOperatorEarnings(doneKg, planKg) {
+      if (doneKg <= 0) return 0;
+      if (planKg > 0 && doneKg >= planKg) {
+        const overPlanKg = doneKg - planKg;
+        return (planKg * 0.5) + 500 + (overPlanKg * 1.0);
+      }
+      return doneKg * 0.5;
+    }
+
+    function updateGamificationBanner() {
+      const totalShiftKg = state.closedPartiesKgInShift + state.totalGoodKg;
+      const totalShiftBoxes = state.closedPartiesBoxesInShift + state.goodBoxes + state.goodBags;
+      const plan = state.planKg;
+
+      document.getElementById('gameDoneKg').innerText = totalShiftKg.toLocaleString('ru-RU');
+      document.getElementById('gamePlanKg').innerText = plan > 0 ? plan.toLocaleString('ru-RU') : '—';
+      document.getElementById('gameDoneBoxes').innerText = `${totalShiftBoxes} коробок / мешков`;
+
+      const earned = calculateOperatorEarnings(totalShiftKg, plan);
+      document.getElementById('gameEarnedRub').innerText = `${Math.round(earned).toLocaleString('ru-RU')} ₽`;
+
+      const pct = plan > 0 ? Math.min(100, Math.round((totalShiftKg / plan) * 100)) : 0;
+      document.getElementById('gameProgressBar').style.width = `${pct}%`;
+
+      const motEl = document.getElementById('gameMotivationText');
+      if (plan <= 0) {
+        motEl.className = 'text-xs font-extrabold text-center text-slate-400';
+        motEl.innerText = 'План на смену еще не задан начальником (базовая ставка 0.50 ₽/кг)';
+      } else if (totalShiftKg >= plan) {
+        motEl.className = 'text-xs font-black text-center text-emerald-400 tracking-wide';
+        motEl.innerText = '🏆 ПЛАН ВЫПОЛНЕН (+500 ₽)! Каждый кг сверх плана = 1.00 ₽!';
+      } else {
+        const remKg = plan - totalShiftKg;
+        const remBoxes = Math.ceil(remKg / UNIT_WEIGHT_KG);
+        motEl.className = 'text-xs font-extrabold text-center text-amber-400';
+        motEl.innerText = `До премии осталось: ${remKg.toLocaleString('ru-RU')} кг (${remBoxes} коробок)`;
+      }
+    }
+
+    // =========================================================================
+    // 9. ОТПРАВКА НА ДАШБОРД (PRODUCTION БЕЗ ПЫЛИ — РАЗДЕЛ 3.4 ТЗ)
+    // =========================================================================
+    async function sendProductionToDashboard() {
+      if (!state.partyOpen) return;
+
+      if (state.packageType !== 'chip' && (!state.unitTo || state.unitTo < state.unitFrom)) {
+        alert('Введите корректный номер последней сошедшей коробки/мешка!');
+        return;
+      }
+
+      const btn = document.getElementById('btnSendDashboard');
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span><span>Отправка...</span>';
+
+      try {
+        const totalShiftGoodKg = state.closedPartiesKgInShift + state.totalGoodKg;
+        const totalShiftBoxes = state.closedPartiesBoxesInShift + state.goodBoxes;
+
+        const { error } = await db.from('shift_reports').insert([{
+          line_number: state.lineNumber,
+          operator_name: state.operatorName,
+          event_type: 'PRODUCTION',
+          line_status: state.lineStatus,
+          package_type: state.packageType,
+          batch_number: state.batchNumber,
+          ral_color: state.ralColor,
+          good_boxes: state.packageType === 'box' ? totalShiftBoxes : 0,
+          good_bags: state.packageType === 'bag' ? state.goodBags : 0,
+          total_good_kg: totalShiftGoodKg,
+          chips_kg: state.chipsKg,
+          defect_kg: state.defectKg,
+          defect_boxes: state.defectBoxes,
+          dust_kg: null,
+          unit_from: state.packageType === 'chip' ? null : state.unitFrom,
+          unit_to: state.packageType === 'chip' ? null : state.unitTo,
+          plan_kg: state.planKg,
+          status_log: state.statusLog
+        }]);
+
+        if (error) throw error;
+        alert('Данные успешно отправлены на дашборд начальника!');
+      } catch (err) {
+        alert('Ошибка отправки: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>📡</span><span>Отправить на дашборд</span>';
+      }
+    }
+
+    // =========================================================================
+    // 10. УЧЕТ ПЫЛИ И СДАЧА СМЕНЫ (РАЗДЕЛ 3.5 ТЗ)
+    // =========================================================================
+    function addDustRecord() {
+      const input = document.getElementById('dustEntryInput');
+      const val = Number(input.value);
+      if (!val || val <= 0) {
+        alert('Введите положительный вес пыли (кг)!');
+        return;
+      }
+
+      state.dustRecords.push({
+        id: Date.now(),
+        kg: Number(val.toFixed(1)),
+        time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+      });
+
+      input.value = '';
+      renderDustRecords();
+      updateCloseShiftButtonState();
+    }
+
+    function removeDustRecord(id) {
+      state.dustRecords = state.dustRecords.filter(r => r.id !== id);
+      renderDustRecords();
+      updateCloseShiftButtonState();
+    }
+
+    function getTotalDustKg() {
+      return state.dustRecords.reduce((sum, r) => sum + r.kg, 0);
+    }
+
+    function renderDustRecords() {
+      const total = getTotalDustKg();
+      document.getElementById('totalDustBadge').innerText = `${total.toFixed(1)} кг`;
+
+      const list = document.getElementById('dustRecordsList');
+      if (state.dustRecords.length === 0) {
+        list.innerHTML = `<div class="text-[11px] text-slate-500 italic">Записей по пыли пока нет</div>`;
+        return;
+      }
+
+      list.innerHTML = state.dustRecords.map((r, idx) => `
+        <div class="flex items-center justify-between bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 text-xs">
+          <span class="text-slate-300 font-bold">#${idx + 1} • ${r.time} — <b class="text-amber-400">${r.kg.toFixed(1)} кг</b></span>
+          <button onclick="removeDustRecord(${r.id})" class="text-slate-500 hover:text-rose-400 font-bold">✕</button>
+        </div>
       `).join('');
     }
 
-    function selectLine(num) {
-      state.line = num;
-      renderLines();
-      loadPreviousShiftData();
-      loadPlanFromCloud();
-      load5sTasks();
-    }
+    function updateCloseShiftButtonState() {
+      const btn = document.getElementById('btnCloseShift');
+      const hint = document.getElementById('closeShiftHint');
 
-    async function loadPreviousShiftData() {
-      try {
-        const { data } = await client.from('shift_reports')
-          .select('*')
-          .eq('line_number', state.line)
-          .eq('event_type', 'SHIFT_CLOSE')
-          .order('created_at', { ascending: false }).limit(1);
+      const hasDust = state.dustRecords.length > 0;
+      const hasBoxNumber = (
+        (state.partyOpen && state.packageType !== 'chip' && state.unitTo && state.unitTo >= state.unitFrom) ||
+        (state.partyOpen && state.packageType === 'chip' && state.chipsKg > 0) ||
+        (!state.partyOpen && state.closedPartiesBoxesInShift > 0)
+      );
 
-        if (data && data.length > 0) {
-          const last = data[0];
-          state.startUnit = (Number(last.unit_to) || 0) + 1;
-          if (last.batch_number) {
-            state.isBatchOpen = true;
-            document.getElementById('batchNumber').value = last.batch_number;
-            document.getElementById('ralColor').value = last.ral_color ? last.ral_color.replace('RAL ', '') : '';
-            state.packageType = last.package_type || 'box';
-            updateBatchUI();
-          } else {
-            state.isBatchOpen = false;
-            updateBatchUI();
-          }
-        } else {
-          state.startUnit = 1;
-          state.isBatchOpen = false;
-          updateBatchUI();
-        }
-      } catch (e) {
-        state.startUnit = 1;
-        state.isBatchOpen = false;
-        updateBatchUI();
-      }
-    }
-
-    function updateBatchUI() {
-      const openSec = document.getElementById('openBatchSection');
-      const activeSec = document.getElementById('activeBatchSection');
-      
-      if (state.isBatchOpen) {
-        openSec.classList.add('hidden');
-        activeSec.classList.remove('hidden');
-        document.querySelectorAll('.pkg-tab').forEach(t => t.className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle");
-        const activeTabIdx = state.packageType === 'box' ? 0 : (state.packageType === 'bag' ? 1 : 2);
-        document.querySelectorAll('.pkg-tab')[activeTabIdx].className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-active";
-        
-        document.getElementById('displayBatchNum').innerText = document.getElementById('batchNumber').value || '—';
-        document.getElementById('displayRal').innerText = document.getElementById('ralColor').value ? 'RAL ' + document.getElementById('ralColor').value : '—';
-        
-        const unitLabel = document.getElementById('unitLabel');
-        if (state.packageType === 'box') unitLabel.innerText = 'Номер последней выпущенной коробки';
-        else if (state.packageType === 'bag') unitLabel.innerText = 'Номер последнего выпущенного мешка';
-        else unitLabel.innerText = 'Номер последней единицы чипсов';
+      if (hasDust && hasBoxNumber) {
+        btn.disabled = false;
+        hint.className = 'text-[11px] text-center font-semibold text-emerald-400';
+        hint.innerText = 'Все обязательные данные введены. Можно сдавать смену.';
       } else {
-        openSec.classList.remove('hidden');
-        activeSec.classList.add('hidden');
+        btn.disabled = true;
+        hint.className = 'text-[11px] text-center font-semibold text-amber-400';
+        hint.innerText = 'Для сдачи смены введите номер последней коробки и добавьте запись по пыли';
       }
     }
 
-    function selectHandoverStatus(status, btn) {
-      state.handoverStatus = status;
-      document.querySelectorAll('.hand-btn').forEach(b => {
-        b.className = `hand-btn py-2.5 text-xs font-extrabold rounded-xl border ${b.dataset.base || 'border-[#233152] bg-[#1c2742] text-[#8fa0c2]'}`;
-      });
-      updateBtnColor(btn, status);
-      checkHandoverReady();
-    }
-
-    function updateBtnColor(btn, status) {
-      if (status === 'В РАБОТЕ') btn.className = "py-2.5 text-xs font-extrabold rounded-xl border st-active-work";
-      if (status === 'ЧИСТКА') btn.className = "py-2.5 text-xs font-extrabold rounded-xl border st-active-clean";
-      if (status === 'ПРОБЫ') btn.className = "py-2.5 text-xs font-extrabold rounded-xl border st-active-sample";
-      if (status === 'РЕМОНТ') btn.className = "py-2.5 text-xs font-extrabold rounded-xl border st-active-repair";
-    }
-
-    function checkHandoverReady() {
-      document.getElementById('btnAcceptHandover').disabled = !(state.operator && state.handoverStatus);
-    }
-
-    async function acceptHandover() {
-      document.getElementById('handoverSection').classList.add('hidden');
-      document.getElementById('handoverCompact').classList.remove('hidden');
-      setLineStatus(state.handoverStatus, null, true);
-      await sendToSupabase('STATUS_CHANGE', { line_status: state.handoverStatus });
-    }
-
-    function reopenHandover() {
-      document.getElementById('handoverSection').classList.remove('hidden');
-      document.getElementById('handoverCompact').classList.add('hidden');
-    }
-
-    async function setLineStatus(status, btn, silent = false) {
-      state.lineStatus = status;
-      const compact = document.getElementById('handoverCompact');
-      const compactDot = document.getElementById('compactDot');
-      const compactInfo = document.getElementById('compactInfo');
-      
-      if (status === 'В РАБОТЕ') { compact.className = "bg-[#131c31] border border-[#10b981] rounded-xl p-3 flex items-center justify-between shadow"; compactDot.className = "w-2.5 h-2.5 rounded-full bg-[#10b981] animate-pulse"; }
-      else if (status === 'ЧИСТКА') { compact.className = "bg-[#131c31] border border-[#f59e0b] rounded-xl p-3 flex items-center justify-between shadow"; compactDot.className = "w-2.5 h-2.5 rounded-full bg-[#f59e0b] animate-pulse"; }
-      else if (status === 'ПРОБЫ') { compact.className = "bg-[#131c31] border border-[#38bdf8] rounded-xl p-3 flex items-center justify-between shadow"; compactDot.className = "w-2.5 h-2.5 rounded-full bg-[#38bdf8] animate-pulse"; }
-      else if (status === 'РЕМОНТ') { compact.className = "bg-[#131c31] border border-[#ef4444] rounded-xl p-3 flex items-center justify-between shadow"; compactDot.className = "w-2.5 h-2.5 rounded-full bg-[#ef4444] animate-pulse"; }
-      if (compactInfo) compactInfo.innerText = `Линия №${state.line} • ${state.operator} • ${status}`;
-
-      document.querySelectorAll('.st-btn').forEach(b => {
-        b.className = `st-btn py-3 text-xs font-extrabold rounded-xl border ${b.dataset.base || 'border-[#233152] bg-[#1c2742] text-[#8fa0c2]'}`;
-      });
-      if (btn) updateBtnColor(btn, status);
-      
-      const statusMap = { 'В РАБОТЕ': '#34d399', 'ЧИСТКА': '#fbbf24', 'ПРОБЫ': '#38bdf8', 'РЕМОНТ': '#f87171' };
-      document.getElementById('statusTimer').innerText = status;
-      document.getElementById('statusTimer').style.color = statusMap[status] || '#34d399';
-
-      if (!silent) await sendToSupabase('STATUS_CHANGE', { line_status: status });
-    }
-
-    function setNewBatchPack(type, btn) {
-      state.newBatchPack = type;
-      document.querySelectorAll('.new-pack-btn').forEach(t => t.className = "new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle");
-      btn.className = "new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active";
-    }
-
-    function confirmOpenBatch() {
-      const bNum = document.getElementById('newBatchNum').value.trim();
-      const ral = document.getElementById('newRal').value.trim();
-      if (!bNum || !ral) { alert("Заполните № Партии и RAL!"); return; }
-      state.packageType = state.newBatchPack; state.isBatchOpen = true; state.startUnit = 1;
-      document.getElementById('batchNumber').value = bNum; document.getElementById('ralColor').value = ral;
-      closeModal('modalOpenBatch'); updateBatchUI(); calculateProduction();
-    }
-
-    function switchPackage(type, btn) {
-      if (!state.isBatchOpen) return;
-      state.packageType = type;
-      document.querySelectorAll('.pkg-tab').forEach(t => t.className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle");
-      btn.className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-active";
-      document.getElementById('chipSubtypeWrap').classList.toggle('hidden', type !== 'chip');
-      updateBatchUI();
-      calculateProduction();
-    }
-
-    function selectChipSub(sub, btn) {
-      state.chipSubtype = sub;
-      document.querySelectorAll('.chip-sub-btn').forEach(b => b.className = "chip-sub-btn py-1.5 text-[11px] font-bold rounded-lg bg-[#1c2742] text-[#8fa0c2]");
-      btn.className = "chip-sub-btn py-1.5 text-[11px] font-bold rounded-lg bg-[#0072ce] text-white";
-    }
-
-    function calculateProduction() {
-      const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
-      let count = (endVal > 0 && endVal >= state.startUnit) ? (endVal - state.startUnit + 1) : 0;
-      
-      const rawKg = count * UNIT_WEIGHT;
-      const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
-      const goodKg = Math.max(0, rawKg - defectKg) + state.closedBatchesKg;
-
-      let earned = (state.planKg > 0 && goodKg >= state.planKg)
-        ? (state.planKg * EARNING_RATES.base) + EARNING_RATES.bonus + ((goodKg - state.planKg) * EARNING_RATES.overPlan)
-        : goodKg * EARNING_RATES.base;
-
-      document.getElementById('statMoney').innerText = Math.round(earned) + ' ₽';
-      document.getElementById('statDonePlan').innerText = `${goodKg} / ${state.planKg > 0 ? state.planKg + ' кг' : '—'}`;
-
-      if (state.planKg > 0) {
-        const pct = Math.min(100, Math.round((goodKg / state.planKg) * 100));
-        document.getElementById('progressBar').style.width = pct + '%';
-        document.getElementById('premiumLeftText').innerHTML = pct >= 100 
-          ? `🔥 <span class="text-[#fbbf24]">ПЛАН ВЫПОЛНЕН (+500 ₽)!</span> Сверхплан идет по двойному тарифу!`
-          : `До премии осталось: ${state.planKg - goodKg} кг (${Math.ceil((state.planKg - goodKg)/UNIT_WEIGHT)} ${state.packageType === 'bag' ? 'меш.' : (state.packageType === 'box' ? 'кор.' : 'ед.')})`;
-      } else {
-        document.getElementById('premiumLeftText').innerText = `⏳ Ожидание плана от начальника смены`;
+    async function submitShiftClose() {
+      if (!confirm('Подтверждаете сдачу смены? Текущая открытая партия перейдет следующему оператору.')) {
+        return;
       }
-      
-      const hasUnit = endVal > 0 && endVal >= state.startUnit;
-      const hasDust = state.dust.length > 0;
-      const btnSubmit = document.getElementById('btnSubmitShift');
-      const warning = document.getElementById('submitWarning');
-      
-      if (hasUnit && hasDust) {
-        btnSubmit.disabled = false; btnSubmit.classList.remove('opacity-40', 'cursor-not-allowed'); warning.style.display = 'none';
-      } else {
-        btnSubmit.disabled = true; btnSubmit.classList.add('opacity-40', 'cursor-not-allowed'); warning.style.display = 'block';
-        let missing = []; if (!hasUnit) missing.push('номер коробки'); if (!hasDust) missing.push('данные по пыли');
-        warning.innerText = `Для сдачи смены введите: ${missing.join(' и ')}`;
-      }
-    }
 
-    async function closeBatch() {
-      const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
-      if (endVal < state.startUnit || endVal === 0) { alert("Укажите корректный номер!"); return; }
-      if (state.dust.length === 0) { alert("Для закрытия партии обязательно укажите данные по пыли!"); return; }
-
-      const count = (endVal - state.startUnit + 1);
-      const kg = count * UNIT_WEIGHT;
-      const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
-      const chipsKg = state.packageType === 'chip' ? kg : 0;
-      
-      const payload = {
-        line_number: state.line, operator_name: state.operator, event_type: 'PARTY_CLOSE',
-        line_status: state.lineStatus, batch_number: document.getElementById('batchNumber').value,
-        ral_color: 'RAL ' + document.getElementById('ralColor').value, package_type: state.packageType,
-        total_good_kg: Math.max(0, kg - defectKg), good_boxes: state.packageType === 'box' ? count : 0,
-        good_bags: state.packageType === 'bag' ? count : 0, chips_kg: chipsKg,
-        defect_kg: defectKg, defect_boxes: state.defects.reduce((s, d) => s + d.count, 0),
-        dust_kg: state.dust.reduce((s, d) => s + d, 0), unit_from: state.startUnit, unit_to: endVal,
-        plan_kg: state.planKg > 0 ? state.planKg : null
-      };
-
-      const { error } = await client.from('shift_reports').insert([payload]);
-      if (error) { alert("Ошибка: " + error.message); return; }
-      
-      alert(`Партия закрыта! Засчитано: ${Math.max(0, kg - defectKg)} кг.`);
-      state.closedBatchesKg += Math.max(0, kg - defectKg);
-      
-      state.isBatchOpen = false; state.startUnit = 1; state.defects = []; state.dust = [];
-      document.getElementById('currentUnitInput').value = ''; document.getElementById('batchNumber').value = ''; document.getElementById('ralColor').value = '';
-      
-      renderDefects(); renderDust(); updateBatchUI(); calculateProduction();
-    }
-
-    async function loadPlanFromCloud() {
-      try {
-        const today = new Date().toISOString().slice(0, 10);
-        const shiftName = (new Date().getHours() >= 8 && new Date().getHours() < 20) ? 'ДЕНЬ' : 'НОЧЬ';
-        const { data } = await client.from('shift_plans').select('plan_kg').eq('plan_date', today).eq('shift', shiftName).eq('line_number', state.line).limit(1);
-        state.planKg = (data && data.length > 0 && data[0].plan_kg) ? Number(data[0].plan_kg) : 0;
-        calculateProduction();
-      } catch (e) {}
-    }
-
-    async function sendToSupabase(eventType, extraData = {}) {
-      const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
-      let count = (endVal > 0 && endVal >= state.startUnit) ? (endVal - state.startUnit + 1) : 0;
-      
-      const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
-      const chipsKg = state.packageType === 'chip' ? (count * UNIT_WEIGHT) : 0;
-      
-      const payload = {
-        line_number: state.line, operator_name: state.operator, event_type: eventType,
-        line_status: state.lineStatus, package_type: state.packageType, ...extraData
-      };
-
-      if (eventType === 'PRODUCTION' || eventType === 'SHIFT_CLOSE') {
-        payload.good_boxes = state.packageType === 'box' ? count : 0;
-        payload.good_bags = state.packageType === 'bag' ? count : 0;
-        payload.total_good_kg = Math.max(0, (count * UNIT_WEIGHT) - defectKg) + state.closedBatchesKg;
-        payload.chips_kg = chipsKg; payload.defect_kg = defectKg;
-        payload.defect_boxes = state.defects.reduce((s, d) => s + d.count, 0);
-        payload.dust_kg = state.dust.reduce((s, d) => s + d, 0);
-        payload.unit_from = state.startUnit; payload.unit_to = endVal;
-        payload.plan_kg = state.planKg > 0 ? state.planKg : null;
-        if (state.isBatchOpen) {
-          payload.batch_number = document.getElementById('batchNumber').value;
-          payload.ral_color = 'RAL ' + document.getElementById('ralColor').value;
-        }
-      }
+      const btn = document.getElementById('btnCloseShift');
+      btn.disabled = true;
+      btn.innerText = 'Сдача смены...';
 
       try {
-        const { error } = await client.from('shift_reports').insert([payload]);
+        const totalShiftGoodKg = state.closedPartiesKgInShift + state.totalGoodKg;
+        const totalShiftBoxes = state.closedPartiesBoxesInShift + state.goodBoxes;
+        const totalDustKg = getTotalDustKg();
+
+        const { error } = await db.from('shift_reports').insert([{
+          line_number: state.lineNumber,
+          operator_name: state.operatorName,
+          event_type: 'SHIFT_CLOSE',
+          line_status: state.lineStatus,
+          package_type: state.partyOpen ? state.packageType : null,
+          batch_number: state.partyOpen ? state.batchNumber : null,
+          ral_color: state.partyOpen ? state.ralColor : null,
+          good_boxes: totalShiftBoxes,
+          good_bags: state.goodBags,
+          total_good_kg: totalShiftGoodKg,
+          chips_kg: state.chipsKg,
+          defect_kg: state.defectKg,
+          defect_boxes: state.defectBoxes,
+          dust_kg: totalDustKg,
+          unit_from: state.partyOpen ? state.unitFrom : null,
+          unit_to: state.partyOpen ? state.unitTo : null,
+          plan_kg: state.planKg,
+          status_log: state.statusLog
+        }]);
+
         if (error) throw error;
-        
-        if (eventType === 'PRODUCTION') {
-          const notice = document.getElementById('lastSyncNotice');
-          notice.style.display = 'block'; notice.innerText = `Отправлено в ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}`;
-          setTimeout(() => { notice.style.display = 'none'; }, 5000);
-        }
-        return true;
-      } catch (err) { alert('Ошибка: ' + err.message); return false; }
-    }
 
-    async function sendCheckpoint() {
-      if (!state.isBatchOpen) { alert("Сначала откройте партию!"); return; }
-      if (await sendToSupabase('PRODUCTION')) alert('Результат отправлен на дашборд!');
-    }
-
-    function addDefect() {
-      const s = parseInt(document.getElementById('defStart').value), e = parseInt(document.getElementById('defEnd').value);
-      if (s && e && e >= s) {
-        state.defects.push({ from: s, to: e, count: (e - s + 1), kg: (e - s + 1) * UNIT_WEIGHT });
-        document.getElementById('defStart').value = ''; document.getElementById('defEnd').value = '';
-        renderDefects(); calculateProduction();
-      } else alert('Укажите корректный диапазон');
-    }
-
-    function renderDefects() {
-      document.getElementById('badgeDefect').innerText = state.defects.reduce((s, d) => s + d.kg, 0) + ' кг';
-      document.getElementById('defectList').innerHTML = state.defects.map(d => `<div class="text-[#fca5a5]">#${d.from}-#${d.to} (${d.count} шт = ${d.kg} кг)</div>`).join('');
-    }
-
-    function addDust() {
-      const val = parseFloat(document.getElementById('dustInput').value);
-      if (val && val > 0) {
-        state.dust.push(val); document.getElementById('dustInput').value = '';
-        renderDust(); calculateProduction();
+        alert('Смена успешно сдана! Спасибо за работу.');
+        window.location.reload();
+      } catch (err) {
+        alert('Ошибка при сдаче смены: ' + err.message);
+        btn.disabled = false;
+        btn.innerText = '🏁 Сдать смену';
       }
     }
 
-    function renderDust() {
-      document.getElementById('badgeDust').innerText = state.dust.reduce((s, d) => s + d, 0).toFixed(1) + ' кг';
-      document.getElementById('dustList').innerHTML = state.dust.map((d, i) => `<div class="text-[#94a3b8]">Мешок #${i+1}: ${d} кг</div>`).join('');
+    // =========================================================================
+    // 11. МОДУЛЬ 5S (ВТОРОЙ ПРОЕКТ SUPABASE — РАЗДЕЛ 5 ТЗ)
+    // =========================================================================
+    async function load5SBadgeCount() {
+      const { data } = await db5S.from('tasks')
+        .select('id')
+        .eq('line', String(state.lineNumber))
+        .in('status', ['NEW', 'REWORK']);
+
+      const count = data ? data.length : 0;
+      document.getElementById('badge5SCount').innerText = count;
     }
 
-    async function load5sTasks() {
-      try {
-        const res = await fetch(`${SUPABASE_5S_URL}/rest/v1/tasks?line=eq.${state.line}&status=in.(NEW,REWORK)&order=created_at.desc`, {
-          headers: { 'apikey': SUPABASE_5S_KEY, 'Authorization': `Bearer ${SUPABASE_5S_KEY}` }
-        });
-        const tasks = await res.json();
-        const dot = document.getElementById('badge5sDot'), title = document.getElementById('title5sBtn'), sub = document.getElementById('sub5sBtn');
+    async function open5SModal() {
+      document.getElementById('modal5SLineNum').innerText = state.lineNumber;
+      document.getElementById('modal5S').classList.remove('hidden');
+      await load5STasksForLine();
+    }
 
-        if (tasks && tasks.length > 0) {
-          dot.className = "absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-red-500 animate-ping";
-          title.innerText = `5S: (${tasks.length})`; sub.innerText = "Устранить"; sub.className = "text-[10px] text-red-400 font-bold";
-        } else {
-          dot.className = "absolute top-2 right-2 w-2 h-2 rounded-full bg-[#34d399]";
-          title.innerText = "Порядок 5S"; sub.innerText = "Всё чисто"; sub.className = "text-[10px] text-[#94a3b8]";
-        }
+    function close5SModal() {
+      document.getElementById('modal5S').classList.add('hidden');
+    }
 
-        const container = document.getElementById('tasks5sContainer');
-        if (!tasks || tasks.length === 0) {
-          container.innerHTML = `<div class="text-center text-gray-500 text-xs py-6">Замечаний 5S нет 🎉</div>`; return;
-        }
+    async function compress5SPhoto(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.src = ev.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_W = 1200;
+            let w = img.width;
+            let h = img.height;
+            if (w > MAX_W) {
+              h = Math.round((h * MAX_W) / w);
+              w = MAX_W;
+            }
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.75);
+          };
+        };
+      });
+    }
 
-        container.innerHTML = tasks.map(t => `
-          <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 space-y-2">
-            <div class="flex justify-between text-xs font-bold text-red-400"><span>От ${t.inspector}</span><span>Линия ${t.line}</span></div>
-            ${t.comment_before ? `<p class="text-xs text-gray-200">${t.comment_before}</p>` : ''}
-            <img src="${t.photo_before}" class="w-full h-36 object-cover rounded-lg border border-gray-800">
-            <button onclick="startResolve5s('${t.id}')" class="w-full py-2.5 bg-[#10b981] text-white font-bold rounded-xl text-xs uppercase btn-press">Сфотографировать устранение</button>
+    async function onCapture5SAfter(input, taskId) {
+      if (!input.files || !input.files[0]) return;
+      const blob = await compress5SPhoto(input.files[0]);
+      state.temp5SPhotos[taskId] = blob;
+      const preview = document.getElementById(`preview-5s-${taskId}`);
+      if (preview) {
+        preview.innerHTML = `
+          <img src="${URL.createObjectURL(blob)}" class="w-full h-36 object-cover rounded-xl border border-emerald-500">
+          <p class="text-[10px] text-emerald-400 font-bold mt-1">✓ Снимок готов к отправке</p>
+        `;
+      }
+    }
+
+    async function load5STasksForLine() {
+      const container = document.getElementById('modal5SList');
+      container.innerHTML = `<div class="text-center text-xs text-slate-400 py-8">Загрузка замечаний 5S...</div>`;
+
+      const { data, error } = await db5S.from('tasks')
+        .select('*')
+        .eq('line', String(state.lineNumber))
+        .in('status', ['NEW', 'REWORK'])
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        container.innerHTML = `<div class="text-center text-xs text-rose-400 py-6">Ошибка загрузки 5S: ${error.message}</div>`;
+        return;
+      }
+
+      document.getElementById('badge5SCount').innerText = data.length;
+
+      if (data.length === 0) {
+        container.innerHTML = `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center text-xs text-slate-400 font-bold">
+            На линии №${state.lineNumber} замечаний 5S нет! Всё чисто 🎉
           </div>
-        `).join('');
-      } catch (e) {}
-    }
-
-    function startResolve5s(taskId) { active5sTaskId = taskId; document.getElementById('camera5sInput').click(); }
-
-    async function onCapture5sAfter(input) {
-      if (!input.files || !input.files[0] || !active5sTaskId) return;
-      const reader = new FileReader();
-      reader.readAsDataURL(input.files[0]);
-      reader.onload = async (e) => {
-        try {
-          await fetch(`${SUPABASE_5S_URL}/rest/v1/tasks?id=eq.${active5sTaskId}`, {
-            method: 'PATCH', headers: { 'apikey': SUPABASE_5S_KEY, 'Authorization': `Bearer ${SUPABASE_5S_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ operator: state.operator, photo_after: e.target.result, status: 'PENDING_REVIEW' })
-          });
-          alert("Фото отправлено контролёру!"); load5sTasks();
-        } catch (err) { alert("Ошибка 5S: " + err.message); }
-      };
-      input.value = '';
-    }
-
-    function openModal(id) { document.getElementById(id).classList.add('open'); }
-    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-    function openSummary() {
-      document.getElementById('sumLineShift').innerText = `Линия №${state.line} (${(new Date().getHours() >= 8 && new Date().getHours() < 20) ? 'День' : 'Ночь'})`;
-      document.getElementById('sumOperator').innerText = state.operator;
-      
-      const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
-      const count = (endVal > 0 && endVal >= state.startUnit) ? (endVal - state.startUnit + 1) : 0;
-      
-      const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
-      const goodKg = Math.max(0, (count * UNIT_WEIGHT) - defectKg) + state.closedBatchesKg;
-      
-      document.getElementById('sumPaintKg').innerText = goodKg + ' кг';
-      
-      let earned = (state.planKg > 0 && goodKg >= state.planKg)
-        ? (state.planKg * EARNING_RATES.base) + EARNING_RATES.bonus + ((goodKg - state.planKg) * EARNING_RATES.overPlan)
-        : goodKg * EARNING_RATES.base;
-        
-      document.getElementById('sumEarnedRub').innerText = Math.round(earned) + ' ₽';
-      
-      openModal('modalSummary');
-    }
-
-    async function submitFinalShift() {
-      // Отправляем сдачу смены, НЕ закрывая партию автоматически
-      const success = await sendToSupabase('SHIFT_CLOSE');
-      if (success) {
-        alert("Смена успешно сдана в архив PRIMATEK! Партия остается открытой для следующего оператора.");
-        closeModal('modalSummary');
-        
-        // Очищаем данные смены, но партию оставляем
-        state.closedBatchesKg = 0;
-        state.defects = [];
-        state.dust = [];
-        document.getElementById('currentUnitInput').value = '';
-        renderDefects();
-        renderDust();
-        calculateProduction();
-        
-        setTimeout(() => location.reload(), 1500);
+        `;
+        return;
       }
+
+      container.innerHTML = data.map(task => `
+        <div class="bg-slate-900 rounded-2xl border ${task.status === 'REWORK' ? 'border-amber-500/70' : 'border-slate-800'} p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-black px-2 py-0.5 rounded ${
+              task.status === 'REWORK' ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-red-950 text-red-300 border border-red-800'
+            }">
+              ${task.status === 'REWORK' ? 'НА ДОРАБОТКУ' : 'ЗАМЕЧАНИЕ 5S'}
+            </span>
+            <span class="text-xs text-slate-400">Контролёр: <b class="text-white">${task.inspector || '—'}</b></span>
+          </div>
+
+          ${task.comment_before ? `<div class="text-xs bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-slate-200"><b>Замечание:</b> ${task.comment_before}</div>` : ''}
+          ${task.rework_comment ? `<div class="text-xs bg-amber-950/40 p-2.5 rounded-xl border border-amber-800 text-amber-300"><b>Причина возврата:</b> ${task.rework_comment}</div>` : ''}
+
+          <div>
+            <div class="text-[10px] font-bold uppercase text-rose-400 mb-1">Фото недостатка:</div>
+            <img src="${task.photo_before}" class="w-full h-44 object-cover rounded-xl border border-slate-800">
+          </div>
+
+          <div class="pt-2 border-t border-slate-800 space-y-2.5">
+            <label class="flex flex-col items-center justify-center min-h-[7rem] border-2 border-dashed border-emerald-500/60 rounded-xl cursor-pointer bg-slate-950 p-3">
+              <input type="file" accept="image/*" capture="environment" class="hidden" onchange="onCapture5SAfter(this, '${task.id}')">
+              <div id="preview-5s-${task.id}" class="text-center">
+                <span class="text-2xl">📸</span>
+                <p class="text-xs font-bold text-emerald-400 mt-1">Сфотографировать устранение</p>
+              </div>
+            </label>
+
+            <input type="text" id="comment-5s-${task.id}" placeholder="Комментарий оператора (необязательно)"
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none">
+
+            <button onclick="submit5SResolution('${task.id}')"
+              class="btn-press w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase">
+              Отправить на проверку контролёру
+            </button>
+          </div>
+        </div>
+      `).join('');
     }
 
-    function setPeriod(period, btn) {
-      currentStatsPeriod = period;
-      document.querySelectorAll('.period-btn').forEach(b => b.className = "period-btn period-btn-idle py-1.5 rounded-lg");
-      btn.className = "period-btn period-btn-active py-1.5 rounded-lg";
-      document.getElementById('customPeriodWrap').classList.toggle('hidden', period !== 'custom');
-      if (period !== 'custom') loadStats();
-    }
-
-    async function loadStats() {
-      if (!state.operator) { alert("Введите вашу фамилию!"); return; }
-      const now = new Date(); let startStr, endStr;
-      if (currentStatsPeriod === 'month') {
-        startStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-        endStr = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
-      } else if (currentStatsPeriod === 'prev') {
-        startStr = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
-        endStr = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10);
-      } else if (currentStatsPeriod === 'all') {
-        startStr = '2020-01-01'; endStr = now.toISOString().slice(0, 10);
-      } else {
-        startStr = document.getElementById('customDateFrom').value; endStr = document.getElementById('customDateTo').value;
-        if (!startStr || !endStr) return;
+    async function submit5SResolution(taskId) {
+      const opName = state.operatorName || document.getElementById('operatorNameInput').value.trim();
+      if (!opName) {
+        alert('Укажите ваше ФИО перед отправкой задачи 5S!');
+        return;
       }
+      const photoBlob = state.temp5SPhotos[taskId];
+      if (!photoBlob) {
+        alert('Сделайте фото устраненного замечания!');
+        return;
+      }
+
+      const commentAfter = document.getElementById(`comment-5s-${taskId}`).value.trim();
 
       try {
-        const { data } = await client.from('shift_reports').select('*')
-          .eq('operator_name', state.operator).in('event_type', ['SHIFT_CLOSE', 'PARTY_CLOSE'])
-          .gte('created_at', startStr).lte('created_at', endStr + 'T23:59:59Z');
-        
-        const shifts = data.filter(r => r.event_type === 'SHIFT_CLOSE');
-        let totalShifts = shifts.length, dayShifts = 0, nightShifts = 0;
-        shifts.forEach(r => {
-          const isDay = (new Date(r.created_at).getHours() >= 8 && new Date(r.created_at).getHours() < 20);
-          if (isDay) dayShifts++; else nightShifts++;
-        });
+        const filename = `after_${Date.now()}_task_${taskId}.jpg`;
+        const { error: upErr } = await db5S.storage.from('photos').upload(filename, photoBlob, { contentType: 'image/jpeg' });
+        if (upErr) throw upErr;
 
-        let totalKg = 0, totalEarned = 0;
-        data.forEach(r => {
-          const kg = Number(r.total_good_kg) || 0; totalKg += kg;
+        const photoAfterUrl = `${SUPABASE_5S_URL}/storage/v1/object/public/photos/${filename}`;
+
+        const { error: updErr } = await db5S.from('tasks').update({
+          operator: opName,
+          comment_after: commentAfter,
+          photo_after: photoAfterUrl,
+          status: 'PENDING_REVIEW'
+        }).eq('id', taskId);
+
+        if (updErr) throw updErr;
+
+        delete state.temp5SPhotos[taskId];
+        alert('Задача отправлена на проверку контролёру!');
+        await load5STasksForLine();
+      } catch (err) {
+        alert('Ошибка отправки 5S: ' + err.message);
+      }
+    }
+
+    // =========================================================================
+    // 12. ЛИЧНЫЙ КАБИНЕТ / СТАТИСТИКА ОПЕРАТОРА (РАЗДЕЛ 6 ТЗ)
+    // =========================================================================
+    function renderStatsPeriodButtons() {
+      const container = document.getElementById('statsPeriodButtons');
+      container.innerHTML = STATS_PERIODS.map(p => {
+        const active = state.statsPeriod === p.id;
+        return `
+          <button type="button" onclick="selectStatsPeriod('${p.id}')"
+            class="py-2 rounded-lg text-xs font-extrabold transition ${
+              active ? 'bg-sky-600 text-white shadow' : 'text-slate-400 hover:text-white'
+            }">
+            ${p.label}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectStatsPeriod(periodId) {
+      state.statsPeriod = periodId;
+      renderStatsPeriodButtons();
+      document.getElementById('customDateRangeBox').classList.toggle('hidden', periodId !== 'custom');
+      loadOperatorCabinetStats();
+    }
+
+    function openStatsModal() {
+      const currentOp = state.operatorName || document.getElementById('operatorNameInput').value.trim();
+      document.getElementById('statsOperatorInput').value = currentOp;
+      document.getElementById('modalStats').classList.remove('hidden');
+      loadOperatorCabinetStats();
+    }
+
+    function closeStatsModal() {
+      document.getElementById('modalStats').classList.add('hidden');
+    }
+
+    async function loadOperatorCabinetStats() {
+      const opName = document.getElementById('statsOperatorInput').value.trim();
+      document.getElementById('statsOperatorTitle').innerText = opName || 'Укажите ФИО';
+
+      if (!opName) {
+        document.getElementById('statsTotalShifts').innerText = '0';
+        document.getElementById('statsShiftsBreakdown').innerText = '☀️ День: 0 • 🌙 Ночь: 0';
+        document.getElementById('statsTotalKg').innerText = '0 кг';
+        document.getElementById('statsTotalBoxesSub').innerText = '0 коробок / мешков';
+        document.getElementById('statsTotalEarned').innerText = '0 ₽';
+        return;
+      }
+
+      const now = new Date();
+      let fromISO = null;
+      let toISO = null;
+
+      if (state.statsPeriod === 'this_month') {
+        fromISO = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      } else if (state.statsPeriod === 'last_month') {
+        fromISO = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+        toISO = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString();
+      } else if (state.statsPeriod === 'custom') {
+        const dFrom = document.getElementById('statsDateFrom').value;
+        const dTo = document.getElementById('statsDateTo').value;
+        if (dFrom) fromISO = new Date(dFrom + 'T00:00:00').toISOString();
+        if (dTo) toISO = new Date(dTo + 'T23:59:59').toISOString();
+      }
+
+      let query = db.from('shift_reports')
+        .select('*')
+        .ilike('operator_name', opName)
+        .in('event_type', ['SHIFT_CLOSE', 'PARTY_CLOSE']);
+
+      if (fromISO) query = query.gte('created_at', fromISO);
+      if (toISO) query = query.lte('created_at', toISO);
+
+      const { data, error } = await query;
+      if (error || !data) return;
+
+      let dayShifts = 0;
+      let nightShifts = 0;
+      let totalKg = 0;
+      let totalBoxes = 0;
+      let totalEarned = 0;
+
+      data.forEach(r => {
+        if (r.event_type === 'SHIFT_CLOSE') {
+          const h = new Date(r.created_at).getHours();
+          if (h >= 8 && h < 20) dayShifts++;
+          else nightShifts++;
+
+          const kg = Number(r.total_good_kg) || 0;
           const plan = Number(r.plan_kg) || 0;
-          totalEarned += (plan > 0 && kg >= plan) ? (plan * EARNING_RATES.base) + EARNING_RATES.bonus + ((kg - plan) * EARNING_RATES.overPlan) : kg * EARNING_RATES.base;
-        });
+          totalKg += kg;
+          totalBoxes += (Number(r.good_boxes) || 0) + (Number(r.good_bags) || 0);
+          totalEarned += calculateOperatorEarnings(kg, plan);
+        }
+      });
 
-        document.getElementById('stTotalShifts').innerText = totalShifts;
-        document.getElementById('stShiftTypes').innerText = `День: ${dayShifts} / Ночь: ${nightShifts}`;
-        document.getElementById('stPaintKg').innerText = totalKg.toLocaleString('ru-RU') + ' кг';
-        document.getElementById('stEarnedRub').innerText = Math.round(totalEarned).toLocaleString('ru-RU') + ' ₽';
-      } catch (err) { alert("Ошибка загрузки статистики"); }
+      const hasShiftClose = data.some(r => r.event_type === 'SHIFT_CLOSE');
+      if (!hasShiftClose) {
+        data.filter(r => r.event_type === 'PARTY_CLOSE').forEach(r => {
+          const kg = Number(r.total_good_kg) || 0;
+          totalKg += kg;
+          totalBoxes += (Number(r.good_boxes) || 0) + (Number(r.good_bags) || 0);
+          totalEarned += calculateOperatorEarnings(kg, Number(r.plan_kg) || 0);
+        });
+      }
+
+      document.getElementById('statsTotalShifts').innerText = String(dayShifts + nightShifts);
+      document.getElementById('statsShiftsBreakdown').innerText = `☀️ День: ${dayShifts} • 🌙 Ночь: ${nightShifts}`;
+      document.getElementById('statsTotalKg').innerText = `${totalKg.toLocaleString('ru-RU')} кг`;
+      document.getElementById('statsTotalBoxesSub').innerText = `${totalBoxes.toLocaleString('ru-RU')} коробок / мешков`;
+      document.getElementById('statsTotalEarned').innerText = `${Math.round(totalEarned).toLocaleString('ru-RU')} ₽`;
+    }
+
+    // =========================================================================
+    // 13. REALTIME ПОДПИСКИ (ПЛАНЫ СМЕНЫ И ЗАДАЧИ 5S)
+    // =========================================================================
+    function setupRealtimeSubscriptions() {
+      db.channel('operator-shift-plans')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_plans' }, async () => {
+          if (state.shiftAccepted) {
+            await fetchShiftPlanForLine();
+            updateGamificationBanner();
+          }
+        })
+        .subscribe();
+
+      db5S.channel('operator-5s-tasks')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (payload) => {
+          load5SBadgeCount();
+          if (payload.eventType === 'INSERT' && String(payload.new.line) === String(state.lineNumber)) {
+            if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
+          }
+        })
+        .subscribe();
     }
   </script>
 </body>

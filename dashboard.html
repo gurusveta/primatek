@@ -226,14 +226,6 @@
         </div>
         <select id="filterLine" class="filter-select" onchange="filterShiftsTable()">
           <option value="all">Все линии</option>
-          <option value="1">Линия №1</option>
-          <option value="5">Линия №5</option>
-          <option value="6">Линия №6</option>
-          <option value="7">Линия №7</option>
-          <option value="8">Линия №8</option>
-          <option value="13">Линия №13</option>
-          <option value="14">Линия №14</option>
-          <option value="15">Линия №15</option>
         </select>
         <input type="text" id="searchInput" class="search-input" placeholder="Поиск (оператор, RAL, партия)..." oninput="filterShiftsTable()">
       </div>
@@ -283,10 +275,53 @@
 
   // ===== ИНИЦИАЛИЗАЦИЯ =====
   window.onload = () => {
+    populateLineFilter();
     updateDateAndShiftDisplay();
     loadDashboardData();
     setupRealtime();
   };
+
+  function populateLineFilter() {
+    const sel = document.getElementById('filterLine');
+    sel.innerHTML = '<option value="all">Все линии</option>' +
+      PRIMATEK_LINES.map(l => `<option value="${l}">Линия №${l}</option>`).join('');
+  }
+
+  function getCurrentShiftInfo() {
+    const now = new Date();
+    const h = now.getHours();
+    let start = new Date(now);
+    let end = new Date(now);
+    let shiftName = 'ДЕНЬ';
+
+    if (h >= 8 && h < 20) {
+      shiftName = 'ДЕНЬ';
+      start.setHours(8, 0, 0, 0);
+      end.setHours(20, 0, 0, 0);
+    } else if (h >= 20) {
+      shiftName = 'НОЧЬ';
+      start.setHours(20, 0, 0, 0);
+      end.setDate(end.getDate() + 1);
+      end.setHours(8, 0, 0, 0);
+    } else {
+      shiftName = 'НОЧЬ';
+      start.setDate(start.getDate() - 1);
+      start.setHours(20, 0, 0, 0);
+      end.setHours(8, 0, 0, 0);
+    }
+
+    const yyyy = start.getFullYear();
+    const mm = String(start.getMonth() + 1).padStart(2, '0');
+    const dd = String(start.getDate()).padStart(2, '0');
+    const planDate = `${yyyy}-${mm}-${dd}`;
+
+    return { start, end, shiftName, planDate };
+  }
+
+  function getCurrentShiftWindow() {
+    const info = getCurrentShiftInfo();
+    return { start: info.start, end: info.end };
+  }
 
   function updateDateAndShiftDisplay() {
     const now = new Date();
@@ -299,9 +334,7 @@
   // ===== ЗАГРУЗКА ДАННЫХ =====
   async function loadDashboardData() {
     try {
-      const today = new Date().toISOString().slice(0, 10);
-      const h = new Date().getHours();
-      const shiftName = (h >= 8 && h < 20) ? 'ДЕНЬ' : 'НОЧЬ';
+      const { planDate: today, shiftName } = getCurrentShiftInfo();
 
       // 1. Загружаем отчеты (последние 500 записей для истории и текущих статусов)
       const { data: reports } = await client.from('shift_reports')
@@ -348,9 +381,7 @@
   // ===== СОХРАНЕНИЕ ПЛАНА =====
   async function savePlan() {
     const val = Number(document.getElementById('shiftPlanInput').value) || 0;
-    const today = new Date().toISOString().slice(0, 10);
-    const h = new Date().getHours();
-    const shiftName = (h >= 8 && h < 20) ? 'ДЕНЬ' : 'НОЧЬ';
+    const { planDate: today, shiftName } = getCurrentShiftInfo();
 
     // Распределяем общий план поровну по линиям (для простоты, можно изменить)
     const planPerLine = Math.round(val / PRIMATEK_LINES.length);
@@ -382,22 +413,22 @@
 
     let totalLiveKg = 0, totalLivePcs = 0, shiftDefectKg = 0, shiftDefectBoxes = 0, shiftChipsKg = 0, shiftDustKg = 0;
 
-    // Ищем последнюю запись по каждой линии для актуального факта
+    // Ищем последнюю запись по каждой линии для актуального факта (PRODUCTION имеет накопленный итог за смену)
     PRIMATEK_LINES.forEach(lineNum => {
-      const lineReports = shiftReports.filter(r => Number(r.line_number) === lineNum && (r.event_type === 'PRODUCTION' || r.event_type === 'SHIFT_CLOSE'));
+      const lineReports = shiftReports.filter(r => Number(r.line_number) === lineNum && (r.event_type === 'PRODUCTION' || r.event_type === 'SHIFT_CLOSE' || r.event_type === 'PARTY_CLOSE'));
       if (lineReports.length > 0) {
         const latest = lineReports[0];
         totalLiveKg += Number(latest.total_good_kg) || 0;
         totalLivePcs += Number(latest.good_boxes || latest.good_bags) || 0;
+        shiftDefectKg += Number(latest.defect_kg) || 0;
+        shiftDefectBoxes += Number(latest.defect_boxes) || 0;
+        shiftChipsKg += Number(latest.chips_kg) || 0;
       }
-    });
-
-    // Суммируем брак, чипсы, пыль за смену
-    shiftReports.forEach(r => {
-      shiftDefectKg += Number(r.defect_kg) || 0;
-      shiftDefectBoxes += Number(r.defect_boxes) || 0;
-      shiftChipsKg += Number(r.chips_kg) || 0;
-      shiftDustKg += Number(r.dust_kg) || 0;
+      // Пыль отправляется при PARTY_CLOSE и SHIFT_CLOSE
+      const dustReports = shiftReports.filter(r => Number(r.line_number) === lineNum && (r.event_type === 'SHIFT_CLOSE' || r.event_type === 'PARTY_CLOSE'));
+      if (dustReports.length > 0) {
+        shiftDustKg += Number(dustReports[0].dust_kg) || 0;
+      }
     });
 
     document.getElementById('sumLiveKg').innerText = totalLiveKg.toLocaleString('ru-RU') + ' кг';
