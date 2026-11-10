@@ -416,7 +416,10 @@
       
       if (error) throw error;
       
-      document.getElementById(`savebtn-${lineNum}`).style.display = 'none';
+      // Безопасно скрываем кнопку, если она существует
+      const btn = document.getElementById(`savebtn-${lineNum}`);
+      if (btn) btn.style.display = 'none';
+
       await loadDashboardData();
       alert(`План для линии №${lineNum} (${val} кг) отправлен оператору!`);
     } catch (e) {
@@ -425,7 +428,8 @@
   }
 
   function showSaveBtn(lineNum) {
-    document.getElementById(`savebtn-${lineNum}`).style.display = 'inline-block';
+    const btn = document.getElementById(`savebtn-${lineNum}`);
+    if (btn) btn.style.display = 'inline-block';
   }
 
   function renderTopSummary() {
@@ -474,10 +478,9 @@
   function renderLiveLineCards() {
     const grid = document.getElementById('linesGrid');
     grid.innerHTML = '';
-    const { start: shiftStart } = getCurrentShiftInfo(); // Берем начало текущей смены
+    const { start: shiftStart } = getCurrentShiftInfo();
 
     PRIMATEK_LINES.forEach(lineNum => {
-      // Ищем самую свежую запись по линии (любую: статус, чекпоинт, закрытие)
       const latestAny = rawReports.find(r => Number(r.line_number) === lineNum);
       
       let statusClass = 'st-idle';
@@ -485,7 +488,6 @@
       let op = '—', batch = '—', ral = '—', boxText = '—', timeText = 'Замеров не было';
       let currentKg = 0, chipsKg = 0;
 
-      // Проверяем, относится ли последняя запись к ТЕКУЩЕЙ смене
       if (latestAny && new Date(latestAny.created_at) >= shiftStart) {
         statusText = latestAny.line_status || 'В РАБОТЕ';
         if (statusText === 'В РАБОТЕ') statusClass = 'st-work';
@@ -504,7 +506,6 @@
         const t = new Date(latestAny.created_at);
         timeText = `Данные в ${t.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}`;
       } else if (latestAny) {
-        // Если запись старая (из прошлой смены), показываем только статус, а данные обнуляем
         statusText = latestAny.line_status || 'В РАБОТЕ';
         if (statusText === 'В РАБОТЕ') statusClass = 'st-work';
         else if (statusText === 'ЧИСТКА') statusClass = 'st-clean';
@@ -515,7 +516,6 @@
         timeText = 'Нет данных за текущую смену';
       }
 
-      // План по линии
       const linePlanObj = rawPlans.find(p => Number(p.line_number) === lineNum);
       const linePlan = linePlanObj ? Number(linePlanObj.plan_kg) : 0;
       const planPercent = linePlan > 0 ? Math.min(999, Math.round((currentKg / linePlan) * 100)) : 0;
