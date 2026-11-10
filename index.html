@@ -28,9 +28,6 @@
     
     .tab-active { background:#0072ce; color:#fff; }
     .tab-idle { color:#8fa0c2; }
-    
-    #diagLog { display: none; position: fixed; bottom: 10px; left: 10px; right: 10px; background: rgba(0,0,0,0.8); color: #10b981; font-family: monospace; font-size: 11px; padding: 8px; border-radius: 8px; z-index: 100; max-height: 150px; overflow-y: auto; border: 1px solid #10b981; }
-    #diagLog.err { color: #ef4444; border-color: #ef4444; }
   </style>
 </head>
 <body class="min-h-screen pb-24 select-none">
@@ -307,8 +304,6 @@
     </div>
   </div>
 
-  <div id="diagLog"></div>
-
   <script>
     const SUPABASE_URL = "https://oqhrzruxubqthqyxmdcg.supabase.co";
     const SUPABASE_KEY = "sb_publishable_m5YmzYjW1BpotrbaRpCdgA__kYvilf3";
@@ -330,11 +325,8 @@
 
     let currentStatsPeriod = 'month';
 
+    // Логирование теперь только в консоль (не перекрывает интерфейс)
     function logDiag(msg, isErr = false) {
-      const el = document.getElementById('diagLog');
-      el.style.display = 'block';
-      el.className = isErr ? 'err' : '';
-      el.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + el.innerHTML;
       console.log(isErr ? 'ERROR:' : 'DIAG:', msg);
     }
 
@@ -380,13 +372,12 @@
       checkHandoverReady();
     }
 
-    // ВОТ ТУТ МАГИЯ: Подхватываем партию предыдущей смены
     async function loadPreviousShiftData() {
       try {
         const { data } = await client.from('shift_reports')
           .select('unit_to, batch_number, ral_color, package_type')
           .eq('line_number', state.line)
-          .not('batch_number', 'is', null) // Ищем последнюю запись, где была партия
+          .not('batch_number', 'is', null) 
           .order('created_at', { ascending: false }).limit(1);
 
         if (data && data.length > 0) {
@@ -395,21 +386,16 @@
             document.getElementById('prevShiftHint').innerText = `Предыдущая смена закончила на №${last.unit_to}`;
             document.getElementById('prevShiftHint').classList.remove('hidden');
           }
-          
-          // Восстанавливаем партию, если она была
           state.isBatchOpen = true;
           state.batchNumber = last.batch_number;
           state.ralColor = last.ral_color || '—';
           state.packageType = last.package_type || 'box';
-          
           logDiag(`Подхвачена партия: ${state.batchNumber}`);
         } else {
           state.isBatchOpen = false;
           document.getElementById('prevShiftHint').classList.add('hidden');
         }
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) { console.error(e); }
     }
 
     function checkHandoverReady() {
@@ -439,7 +425,6 @@
           line_number: state.line, operator_name: state.operator, event_type: 'STATUS_CHANGE',
           line_status: state.lineStatus, unit_from: state.startUnit
         };
-        
         const { error } = await client.from('shift_reports').insert([payload]);
         if (error) throw error;
         logDiag(`Приём смены OK. Линия ${state.line}, старт №${state.startUnit || '—'}`);
@@ -450,7 +435,7 @@
         document.getElementById('workArea').classList.remove('hidden');
         
         updateCompactBar();
-        updateBatchUI(); // ВАЖНО: Показываем подхваченную партию
+        updateBatchUI(); 
         calculateProduction();
       } catch (err) {
         logDiag('Ошибка приёма смены: ' + err.message, true);
@@ -813,7 +798,6 @@
         document.getElementById('stShiftTypes').innerText = `День: ${dayShifts} / Ночь: ${nightShifts}`;
         document.getElementById('stPaintKg').innerText = totalKg.toLocaleString('ru-RU') + ' кг';
         document.getElementById('stEarnedRub').innerText = Math.round(totalEarned).toLocaleString('ru-RU') + ' ₽';
-        logDiag(`Статистика загружена для ${opName}. Смен: ${totalShifts}, Кг: ${totalKg}`);
       } catch (err) { logDiag("Ошибка статистики: " + err.message, true); } finally { loading.classList.add('hidden'); }
     }
 
