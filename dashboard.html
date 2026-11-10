@@ -170,7 +170,7 @@
         <span style="font-weight: 800; font-size: 16px; color:#fff;">кг</span>
         <button class="btn-save-plan" onclick="saveGeneralPlan()">Сохранить</button>
       </div>
-      <div class="card-sub" id="planRemainingSub">Введите планы в карточках линий</div>
+      <div class="card-sub" id="planRemainingSub">Общий план для отчетности</div>
     </div>
 
     <div class="summary-card" style="border-left-color: #38bdf8;">
@@ -275,6 +275,7 @@
   let rawPlans = [];
   let currentArchiveTab = 'shifts';
   let shiftPlanKg = 0;
+  let totalGeneralPlanKg = 0;
 
   window.onload = () => {
     populateLineFilter();
@@ -319,7 +320,6 @@
       start.setHours(20, 0, 0, 0);
       end.setHours(8, 0, 0, 0);
     }
-    // Важно: используем локальное время для строки, чтобы не сбивались часовые пояса
     const yyyy = start.getFullYear();
     const mm = String(start.getMonth() + 1).padStart(2, '0');
     const dd = String(start.getDate()).padStart(2, '0');
@@ -354,10 +354,15 @@
       
       if (planErr) throw planErr;
       rawPlans = plans || [];
-      // Считаем общий план только по линиям (1, 5, 6, 7, 8, 13, 14, 15)
+
+      // Ищем общий план (он записан на линию 0)
+      const genPlan = rawPlans.find(p => Number(p.line_number) === 0);
+      totalGeneralPlanKg = genPlan ? Number(genPlan.plan_kg) : 0;
+      
+      // Считаем факт по линиям для верхней плашки
       shiftPlanKg = rawPlans.filter(p => PRIMATEK_LINES.includes(Number(p.line_number))).reduce((sum, p) => sum + Number(p.plan_kg), 0);
 
-      document.getElementById('shiftPlanInput').value = shiftPlanKg > 0 ? shiftPlanKg : 0;
+      document.getElementById('shiftPlanInput').value = totalGeneralPlanKg > 0 ? totalGeneralPlanKg : 20000;
 
       renderTopSummary();
       renderLiveLineCards();
@@ -379,35 +384,28 @@
       .subscribe();
   }
 
-  // Сохранение ОБЩЕГО плана. Делим его на количество линий и сохраняем для каждой. 
-  // Это позволит операторам получить свои планы сразу.
+  // Сохраняем ОБЩИЙ план просто как инфу (привязываем к виртуальной линии 0)
   async function saveGeneralPlan() {
     const val = Number(document.getElementById('shiftPlanInput').value) || 0;
     const { planDate: today, shiftName } = getCurrentShiftInfo();
-    
-    // Делим общий план поровну (или можно ввести свой расчет)
-    const planPerLine = Math.round(val / PRIMATEK_LINES.length);
-    const upserts = PRIMATEK_LINES.map(line => ({ 
-      plan_date: today, 
-      shift: shiftName, 
-      line_number: line, 
-      plan_kg: planPerLine 
-    }));
 
     try {
-      // Удаляем старые планы на эту смену и вставляем новые
-      await client.from('shift_plans').delete().eq('plan_date', today).eq('shift', shiftName);
-      const { error } = await client.from('shift_plans').insert(upserts);
-      if (error) throw error;
+      const { error } = await client.from('shift_plans').upsert({
+        plan_date: today,
+        shift: shiftName,
+        line_number: 0, // Виртуальная линия для общего плана
+        plan_kg: val
+      }, { onConflict: 'plan_date,shift,line_number' });
       
-      alert(`Общий план ${val} кг сохранен и разослан по линиям (по ${planPerLine} кг на линию)!`);
+      if (error) throw error;
+      alert(`Общий план ${val} кг сохранен (для отчетности цеха).`);
       loadDashboardData();
     } catch (e) {
-      alert("Ошибка сохранения плана: " + e.message);
+      alert("Ошибка сохранения общего плана: " + e.message);
     }
   }
 
-  // Индивидуальный план для конкретной линии (через галочку)
+  // Индивидуальный план для конкретной линии (улетает оператору)
   async function saveLinePlan(lineNum, inputId) {
     const val = Number(document.getElementById(inputId).value) || 0;
     const { planDate: today, shiftName } = getCurrentShiftInfo();
@@ -424,6 +422,7 @@
       
       document.getElementById(`savebtn-${lineNum}`).style.display = 'none';
       await loadDashboardData();
+      alert(`План для линии №${lineNum} (${val} кг) отправлен оператору!`);
     } catch (e) {
       alert("Ошибка сохранения плана линии: " + e.message);
     }
@@ -436,7 +435,6 @@
   function renderTopSummary() {
     const { start: shiftStart, end: shiftEnd } = getCurrentShiftInfo();
     
-    // Точная фильтрация по времени (включая часовой пояс устройства)
     const shiftReports = rawReports.filter(r => {
       if (!r.created_at) return false;
       const t = new Date(r.created_at).getTime();
@@ -463,12 +461,15 @@
 
     document.getElementById('sumLiveKg').innerText = totalLiveKg.toLocaleString('ru-RU') + ' кг';
     document.getElementById('sumLivePcs').innerText = `${totalLivePcs} кор./меш. краски`;
-    const plan = shiftPlanKg > 0 ? shiftPlanKg : 1;
+    
+    // Процент считаем от ОБЩЕГО плана
+    const plan = totalGeneralPlanKg > 0 ? totalGeneralPlanKg : 1;
     const percent = Math.min(100, Math.round((totalLiveKg / plan) * 100));
     document.getElementById('sumPlanPercent').innerText = `${percent}%`;
     document.getElementById('sumProgressBar').style.width = `${percent}%`;
     const remaining = Math.max(0, plan - totalLiveKg);
     document.getElementById('planRemainingSub').innerText = `Осталось: ${remaining.toLocaleString('ru-RU')} кг`;
+    
     document.getElementById('sumDefectKg').innerText = `${shiftDefectKg.toLocaleString('ru-RU')} кг`;
     document.getElementById('sumDefectBoxes').innerText = `${shiftDefectBoxes} коробок`;
     document.getElementById('sumChipsKg').innerText = `${shiftChipsKg.toLocaleString('ru-RU')} кг`;
