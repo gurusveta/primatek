@@ -127,15 +127,9 @@
   <div class="header">
     <div class="header-left">
       <svg width="195" height="42" viewBox="0 0 230 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="6" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.5"/>
-        <circle cx="16" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.8"/>
-        <circle cx="26" cy="11" r="3.2" fill="#0072ce"/>
-        <circle cx="6" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.6"/>
-        <circle cx="16" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.9"/>
-        <circle cx="26" cy="22" r="3.2" fill="#0072ce"/>
-        <circle cx="6" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.4"/>
-        <circle cx="16" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.7"/>
-        <circle cx="26" cy="33" r="3.2" fill="#0072ce"/>
+        <circle cx="6" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.5"/><circle cx="16" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.8"/><circle cx="26" cy="11" r="3.2" fill="#0072ce"/>
+        <circle cx="6" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.6"/><circle cx="16" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.9"/><circle cx="26" cy="22" r="3.2" fill="#0072ce"/>
+        <circle cx="6" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.4"/><circle cx="16" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.7"/><circle cx="26" cy="33" r="3.2" fill="#0072ce"/>
         <text x="36" y="34" font-family="'Arial Black', sans-serif" font-weight="900" font-size="31" fill="#0072ce" letter-spacing="1">PRIMATEK</text>
         <text x="38" y="47" font-family="Arial, sans-serif" font-weight="600" font-size="8" fill="#94a3b8" letter-spacing="0.8">ИННОВАЦИИ В ПОКРЫТИЯХ</text>
       </svg>
@@ -148,6 +142,7 @@
 
     <div class="header-actions">
       <div class="sync-time" id="lastSyncTime"><span class="live-dot"></span> Онлайн (Realtime)</div>
+      <button class="btn-refresh" onclick="loadDashboardData()">Обновить</button>
       <button class="btn-excel" onclick="exportToExcel()">Скачать смены в Excel</button>
     </div>
   </div>
@@ -226,14 +221,6 @@
         </div>
         <select id="filterLine" class="filter-select" onchange="filterShiftsTable()">
           <option value="all">Все линии</option>
-          <option value="1">Линия №1</option>
-          <option value="5">Линия №5</option>
-          <option value="6">Линия №6</option>
-          <option value="7">Линия №7</option>
-          <option value="8">Линия №8</option>
-          <option value="13">Линия №13</option>
-          <option value="14">Линия №14</option>
-          <option value="15">Линия №15</option>
         </select>
         <input type="text" id="searchInput" class="search-input" placeholder="Поиск (оператор, RAL, партия)..." oninput="filterShiftsTable()">
       </div>
@@ -283,40 +270,79 @@
 
   // ===== ИНИЦИАЛИЗАЦИЯ =====
   window.onload = () => {
+    populateLineFilter();
     updateDateAndShiftDisplay();
     loadDashboardData();
     setupRealtime();
   };
 
+  function populateLineFilter() {
+    const sel = document.getElementById('filterLine');
+    sel.innerHTML = '<option value="all">Все линии</option>' +
+      PRIMATEK_LINES.map(l => `<option value="${l}">Линия №${l}</option>`).join('');
+  }
+
+  function getCurrentShiftInfo() {
+    const now = new Date();
+    const h = now.getHours();
+    let start = new Date(now);
+    let end = new Date(now);
+    let shiftName = 'ДЕНЬ';
+
+    if (h >= 8 && h < 20) {
+      shiftName = 'ДЕНЬ';
+      start.setHours(8, 0, 0, 0);
+      end.setHours(20, 0, 0, 0);
+    } else if (h >= 20) {
+      shiftName = 'НОЧЬ';
+      start.setHours(20, 0, 0, 0);
+      end.setDate(end.getDate() + 1);
+      end.setHours(8, 0, 0, 0);
+    } else {
+      shiftName = 'НОЧЬ';
+      start.setDate(start.getDate() - 1);
+      start.setHours(20, 0, 0, 0);
+      end.setHours(8, 0, 0, 0);
+    }
+
+    const yyyy = start.getFullYear();
+    const mm = String(start.getMonth() + 1).padStart(2, '0');
+    const dd = String(start.getDate()).padStart(2, '0');
+    const planDate = `${yyyy}-${mm}-${dd}`;
+
+    return { start, end, shiftName, planDate };
+  }
+
   function updateDateAndShiftDisplay() {
     const now = new Date();
     document.getElementById('currentDateText').innerText = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-    const h = now.getHours();
-    const isDay = (h >= 8 && h < 20);
-    document.getElementById('currentShiftBadge').innerText = 'СМЕНА: ' + (isDay ? 'ДЕНЬ (08:00 – 20:00)' : 'НОЧЬ (20:00 – 08:00)');
+    const { shiftName } = getCurrentShiftInfo();
+    document.getElementById('currentShiftBadge').innerText = 'СМЕНА: ' + (shiftName === 'ДЕНЬ' ? 'ДЕНЬ (08:00 – 20:00)' : 'НОЧЬ (20:00 – 08:00)');
   }
 
   // ===== ЗАГРУЗКА ДАННЫХ =====
   async function loadDashboardData() {
     try {
-      const today = new Date().toISOString().slice(0, 10);
-      const h = new Date().getHours();
-      const shiftName = (h >= 8 && h < 20) ? 'ДЕНЬ' : 'НОЧЬ';
+      document.getElementById('lastSyncTime').innerHTML = `<span class="live-dot"></span> Синхронизация...`;
+      
+      const { planDate: today, shiftName } = getCurrentShiftInfo();
 
       // 1. Загружаем отчеты (последние 500 записей для истории и текущих статусов)
-      const { data: reports } = await client.from('shift_reports')
+      const { data: reports, error: repErr } = await client.from('shift_reports')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(500);
       
+      if (repErr) throw repErr;
       rawReports = reports || [];
 
       // 2. Загружаем планы на сегодня
-      const { data: plans } = await client.from('shift_plans')
+      const { data: plans, error: planErr } = await client.from('shift_plans')
         .select('*')
         .eq('plan_date', today)
         .eq('shift', shiftName);
       
+      if (planErr) throw planErr;
       rawPlans = plans || [];
       shiftPlanKg = rawPlans.reduce((sum, p) => sum + Number(p.plan_kg), 0);
 
@@ -330,6 +356,7 @@
     } catch (e) {
       console.error(e);
       document.getElementById('lastSyncTime').innerText = 'Ошибка связи';
+      document.getElementById('lastSyncTime').style.color = '#ef4444';
     }
   }
 
@@ -337,10 +364,10 @@
   function setupRealtime() {
     client.channel('schema-db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_reports' }, () => {
-        loadDashboardData(); // При любом изменении перезагружаем данные
+        loadDashboardData();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_plans' }, () => {
-        loadDashboardData(); // При изменении плана перезагружаем
+        loadDashboardData();
       })
       .subscribe();
   }
@@ -348,11 +375,8 @@
   // ===== СОХРАНЕНИЕ ПЛАНА =====
   async function savePlan() {
     const val = Number(document.getElementById('shiftPlanInput').value) || 0;
-    const today = new Date().toISOString().slice(0, 10);
-    const h = new Date().getHours();
-    const shiftName = (h >= 8 && h < 20) ? 'ДЕНЬ' : 'НОЧЬ';
+    const { planDate: today, shiftName } = getCurrentShiftInfo();
 
-    // Распределяем общий план поровну по линиям (для простоты, можно изменить)
     const planPerLine = Math.round(val / PRIMATEK_LINES.length);
 
     const upserts = PRIMATEK_LINES.map(line => ({
@@ -362,7 +386,6 @@
       plan_kg: planPerLine
     }));
 
-    // Удаляем старый план на эту смену и вставляем новый
     await client.from('shift_plans').delete().eq('plan_date', today).eq('shift', shiftName);
     const { error } = await client.from('shift_plans').insert(upserts);
     
@@ -372,32 +395,35 @@
 
   // ===== ВЕРХНЯЯ СВОДКА =====
   function renderTopSummary() {
-    const { start: shiftStart, end: shiftEnd } = getCurrentShiftWindow();
+    const { start: shiftStart, end: shiftEnd } = getCurrentShiftInfo();
 
+    // Фильтруем записи текущей смены
     const shiftReports = rawReports.filter(r => {
       if (!r.created_at) return false;
       const t = new Date(r.created_at).getTime();
-      return t >= shiftStart.getTime() && t <= shiftEnd.getTime() && r.event_type !== 'STATUS_CHANGE';
+      return t >= shiftStart.getTime() && t <= shiftEnd.getTime();
     });
 
     let totalLiveKg = 0, totalLivePcs = 0, shiftDefectKg = 0, shiftDefectBoxes = 0, shiftChipsKg = 0, shiftDustKg = 0;
 
     // Ищем последнюю запись по каждой линии для актуального факта
     PRIMATEK_LINES.forEach(lineNum => {
-      const lineReports = shiftReports.filter(r => Number(r.line_number) === lineNum && (r.event_type === 'PRODUCTION' || r.event_type === 'SHIFT_CLOSE'));
+      // Берем самую свежую запись по линии, где есть данные о килограммах
+      const lineReports = shiftReports
+        .filter(r => Number(r.line_number) === lineNum && r.total_good_kg !== null)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      
       if (lineReports.length > 0) {
         const latest = lineReports[0];
         totalLiveKg += Number(latest.total_good_kg) || 0;
         totalLivePcs += Number(latest.good_boxes || latest.good_bags) || 0;
+        
+        // Брак, чипсы и пыль суммируем по последней записи линии
+        shiftDefectKg += Number(latest.defect_kg) || 0;
+        shiftDefectBoxes += Number(latest.defect_boxes) || 0;
+        shiftChipsKg += Number(latest.chips_kg) || 0;
+        shiftDustKg += Number(latest.dust_kg) || 0;
       }
-    });
-
-    // Суммируем брак, чипсы, пыль за смену
-    shiftReports.forEach(r => {
-      shiftDefectKg += Number(r.defect_kg) || 0;
-      shiftDefectBoxes += Number(r.defect_boxes) || 0;
-      shiftChipsKg += Number(r.chips_kg) || 0;
-      shiftDustKg += Number(r.dust_kg) || 0;
     });
 
     document.getElementById('sumLiveKg').innerText = totalLiveKg.toLocaleString('ru-RU') + ' кг';
@@ -508,7 +534,6 @@
     const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
     const lineVal = document.getElementById('filterLine').value;
 
-    // Фильтруем по типу события (смены или партии)
     const targetEvent = currentArchiveTab === 'shifts' ? 'SHIFT_CLOSE' : 'PARTY_CLOSE';
     
     const filtered = rawReports.filter(r => {
@@ -539,7 +564,8 @@
       const boxHtml = (r.unit_from && r.unit_to) ? `<span class="tag-range">№ ${r.unit_from} — № ${r.unit_to}</span>` : `<span style="color:#64748b;">—</span>`;
       
       const planKg = Number(r.plan_kg) || 0;
-      const planPercent = Number(r.plan_percent) || (planKg > 0 ? Math.round((Number(r.total_good_kg || 0) / planKg) * 100) : 0);
+      // Считаем процент на лету, так как колонки в базе может не быть
+      const planPercent = planKg > 0 ? Math.round((Number(r.total_good_kg || 0) / planKg) * 100) : 0;
       
       const shiftType = r.event_type === 'SHIFT_CLOSE' ? ((new Date(r.created_at).getHours() >= 8 && new Date(r.created_at).getHours() < 20) ? 'ДЕНЬ' : 'НОЧЬ') : '—';
 
@@ -584,7 +610,7 @@
         "Брак (кг)": r.defect_kg || 0,
         "Пыль (кг)": r.dust_kg || 0,
         "План (кг)": r.plan_kg || "",
-        "Выполнение плана (%)": r.plan_percent || ""
+        "Выполнение плана (%)": r.plan_kg ? Math.round((Number(r.total_good_kg || 0) / r.plan_kg) * 100) : ""
       };
     });
 
