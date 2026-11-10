@@ -355,11 +355,9 @@
       if (planErr) throw planErr;
       rawPlans = plans || [];
 
-      // Ищем общий план (он записан на линию 0)
       const genPlan = rawPlans.find(p => Number(p.line_number) === 0);
       totalGeneralPlanKg = genPlan ? Number(genPlan.plan_kg) : 0;
       
-      // Считаем факт по линиям для верхней плашки
       shiftPlanKg = rawPlans.filter(p => PRIMATEK_LINES.includes(Number(p.line_number))).reduce((sum, p) => sum + Number(p.plan_kg), 0);
 
       document.getElementById('shiftPlanInput').value = totalGeneralPlanKg > 0 ? totalGeneralPlanKg : 20000;
@@ -384,7 +382,6 @@
       .subscribe();
   }
 
-  // Сохраняем ОБЩИЙ план просто как инфу (привязываем к виртуальной линии 0)
   async function saveGeneralPlan() {
     const val = Number(document.getElementById('shiftPlanInput').value) || 0;
     const { planDate: today, shiftName } = getCurrentShiftInfo();
@@ -393,7 +390,7 @@
       const { error } = await client.from('shift_plans').upsert({
         plan_date: today,
         shift: shiftName,
-        line_number: 0, // Виртуальная линия для общего плана
+        line_number: 0,
         plan_kg: val
       }, { onConflict: 'plan_date,shift,line_number' });
       
@@ -405,7 +402,6 @@
     }
   }
 
-  // Индивидуальный план для конкретной линии (улетает оператору)
   async function saveLinePlan(lineNum, inputId) {
     const val = Number(document.getElementById(inputId).value) || 0;
     const { planDate: today, shiftName } = getCurrentShiftInfo();
@@ -462,7 +458,6 @@
     document.getElementById('sumLiveKg').innerText = totalLiveKg.toLocaleString('ru-RU') + ' кг';
     document.getElementById('sumLivePcs').innerText = `${totalLivePcs} кор./меш. краски`;
     
-    // Процент считаем от ОБЩЕГО плана
     const plan = totalGeneralPlanKg > 0 ? totalGeneralPlanKg : 1;
     const percent = Math.min(100, Math.round((totalLiveKg / plan) * 100));
     document.getElementById('sumPlanPercent').innerText = `${percent}%`;
@@ -479,12 +474,19 @@
   function renderLiveLineCards() {
     const grid = document.getElementById('linesGrid');
     grid.innerHTML = '';
+    const { start: shiftStart } = getCurrentShiftInfo(); // Берем начало текущей смены
 
     PRIMATEK_LINES.forEach(lineNum => {
+      // Ищем самую свежую запись по линии (любую: статус, чекпоинт, закрытие)
       const latestAny = rawReports.find(r => Number(r.line_number) === lineNum);
-      let statusClass = 'st-idle', statusText = 'НЕТ ДАННЫХ', op = '—', batch = '—', ral = '—', boxText = '—', timeText = 'Замеров не было', currentKg = 0, chipsKg = 0;
+      
+      let statusClass = 'st-idle';
+      let statusText = 'НЕТ ДАННЫХ';
+      let op = '—', batch = '—', ral = '—', boxText = '—', timeText = 'Замеров не было';
+      let currentKg = 0, chipsKg = 0;
 
-      if (latestAny) {
+      // Проверяем, относится ли последняя запись к ТЕКУЩЕЙ смене
+      if (latestAny && new Date(latestAny.created_at) >= shiftStart) {
         statusText = latestAny.line_status || 'В РАБОТЕ';
         if (statusText === 'В РАБОТЕ') statusClass = 'st-work';
         else if (statusText === 'ЧИСТКА') statusClass = 'st-clean';
@@ -498,10 +500,22 @@
         chipsKg = Number(latestAny.chips_kg) || 0;
 
         if (latestAny.unit_from && latestAny.unit_to) boxText = `№ ${latestAny.unit_from} — № ${latestAny.unit_to}`;
+        
         const t = new Date(latestAny.created_at);
         timeText = `Данные в ${t.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}`;
+      } else if (latestAny) {
+        // Если запись старая (из прошлой смены), показываем только статус, а данные обнуляем
+        statusText = latestAny.line_status || 'В РАБОТЕ';
+        if (statusText === 'В РАБОТЕ') statusClass = 'st-work';
+        else if (statusText === 'ЧИСТКА') statusClass = 'st-clean';
+        else if (statusText === 'ПРОБЫ') statusClass = 'st-sample';
+        else if (statusText === 'РЕМОНТ') statusClass = 'st-repair';
+        
+        boxText = 'Ожидание данных...';
+        timeText = 'Нет данных за текущую смену';
       }
 
+      // План по линии
       const linePlanObj = rawPlans.find(p => Number(p.line_number) === lineNum);
       const linePlan = linePlanObj ? Number(linePlanObj.plan_kg) : 0;
       const planPercent = linePlan > 0 ? Math.min(999, Math.round((currentKg / linePlan) * 100)) : 0;
@@ -515,10 +529,12 @@
           <span class="line-num">Линия №${lineNum}</span>
           <span class="status-badge ${statusClass}"><span class="status-dot"></span>${statusText}</span>
         </div>
+
         <div class="line-details">
           <div>Оператор: <b>${op}</b></div>
           <div>Партия: <b>${batch}</b> | <span class="ral-tag">${ral}</span></div>
         </div>
+
         <div class="line-output-box">
           <div class="output-label">Текущий результат</div>
           <div class="output-val">${currentKg.toLocaleString('ru-RU')} кг</div>
@@ -526,6 +542,7 @@
           ${chipsKg > 0 ? `<div class="output-chips">+ ${chipsKg} кг чипсы</div>` : ''}
           <div class="output-time">${timeText}</div>
         </div>
+
         <div class="line-plan-block">
           <div class="line-plan-row">
             <span class="line-plan-label">План:</span>
