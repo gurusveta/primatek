@@ -268,7 +268,6 @@
     </div>
   </div>
 
-  <!-- ОБНОВЛЕННАЯ МОДАЛКА СТАТИСТИКИ -->
   <div id="statsModal" class="modal-overlay">
     <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-[#1c2742] pb-2">
@@ -319,26 +318,43 @@
 
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let state = {
+    // Восстановление состояния из памяти (localStorage) или создание нового
+    let state = JSON.parse(localStorage.getItem('primatek_state')) || {
       line: 6, operator: '', handoverStatus: null, lineStatus: 'В РАБОТЕ',
       packageType: 'box', chipSubtype: 'Обычные', startUnit: null, 
       closedBatchesKg: 0, defects: [], dust: [], planKg: 0,
-      isBatchOpen: false, newBatchPack: 'box', batchNumber: '', ralColor: '', isEditingBatch: false 
+      isBatchOpen: false, newBatchPack: 'box', batchNumber: '', ralColor: '', isEditingBatch: false,
+      shiftAccepted: false // Флаг, что смена принята
     };
 
-    function logDiag(msg, isErr = false) {
-      console.log(isErr ? 'ERROR:' : 'DIAG:', msg);
+    function saveState() {
+      localStorage.setItem('primatek_state', JSON.stringify(state));
     }
 
     window.onload = () => {
       renderLines();
-      document.getElementById('operatorName').value = ''; 
-      loadPreviousShiftData(); 
+      
+      if (state.shiftAccepted) {
+        // Если смена уже была принята, восстанавливаем интерфейс
+        document.getElementById('handoverSection').classList.add('hidden');
+        document.getElementById('handoverCompact').classList.remove('hidden');
+        document.getElementById('gamificationBlock').classList.remove('hidden');
+        document.getElementById('workArea').classList.remove('hidden');
+        
+        document.getElementById('operatorName').value = state.operator;
+        updateCompactBar();
+        updateBatchUI(); 
+        calculateProduction();
+      } else {
+        // Если нет, показываем экран приёма
+        document.getElementById('operatorName').value = ''; 
+        loadPreviousShiftData(); 
+      }
+
       loadPlanFromCloud();
       setInterval(loadPlanFromCloud, 60000);
       updateShiftBadge();
       
-      // Устанавливаем сегодняшнюю дату по умолчанию для статистики
       const today = new Date().toISOString().slice(0, 10);
       document.getElementById('customDateFrom').value = today;
       document.getElementById('customDateTo').value = today;
@@ -357,6 +373,7 @@
 
     function selectLine(num) {
       state.line = num;
+      saveState();
       renderLines();
       loadPreviousShiftData();
       loadPlanFromCloud();
@@ -365,6 +382,7 @@
 
     function selectHandoverStatus(status, btn) {
       state.handoverStatus = status;
+      saveState();
       document.querySelectorAll('.hand-btn').forEach(b => {
         const type = b.innerText === 'В РАБОТЕ' ? 'work' : b.innerText === 'ЧИСТКА' ? 'clean' : b.innerText === 'ПРОБЫ' ? 'sample' : 'repair';
         b.className = `hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-${type}`;
@@ -391,20 +409,28 @@
             document.getElementById('prevShiftHint').innerText = `Предыдущая смена закончила на №${last.unit_to}`;
             document.getElementById('prevShiftHint').classList.remove('hidden');
           }
-          state.isBatchOpen = true;
-          state.batchNumber = last.batch_number;
-          state.ralColor = last.ral_color || '—';
-          state.packageType = last.package_type || 'box';
+          
+          if (!state.shiftAccepted) {
+            // Подхватываем партию только если смена еще не принята
+            state.isBatchOpen = true;
+            state.batchNumber = last.batch_number;
+            state.ralColor = last.ral_color || '—';
+            state.packageType = last.package_type || 'box';
+            saveState();
+          }
         } else {
-          state.isBatchOpen = false;
+          if (!state.shiftAccepted) {
+            state.isBatchOpen = false;
+            saveState();
+          }
           document.getElementById('prevShiftHint').classList.add('hidden');
         }
       } catch (e) { console.error(e); }
     }
 
     function checkHandoverReady() {
-      state.operator = document.getElementById('operatorName').value.trim();
-      let isReady = state.operator && state.handoverStatus;
+      const nameInput = document.getElementById('operatorName').value.trim();
+      let isReady = nameInput && state.handoverStatus;
       if (state.handoverStatus === 'В РАБОТЕ') {
         const startNum = parseInt(document.getElementById('handoverStartNumber').value);
         if (!startNum || startNum < 1) isReady = false;
@@ -423,6 +449,8 @@
       state.operator = document.getElementById('operatorName').value.trim();
       state.lineStatus = state.handoverStatus;
       state.startUnit = state.handoverStatus === 'В РАБОТЕ' ? parseInt(document.getElementById('handoverStartNumber').value) : null;
+      state.shiftAccepted = true;
+      saveState();
 
       try {
         const payload = {
@@ -444,6 +472,8 @@
         alert('Ошибка приёма смены: ' + err.message);
         btn.innerText = 'ПРИНЯТЬ СМЕНУ';
         btn.disabled = false;
+        state.shiftAccepted = false;
+        saveState();
       }
     }
 
@@ -462,6 +492,7 @@
 
     async function setLineStatus(status, btn) {
       state.lineStatus = status;
+      saveState();
       document.querySelectorAll('.st-btn').forEach(b => {
         const type = b.innerText === 'В РАБОТЕ' ? 'work' : b.innerText === 'ЧИСТКА' ? 'clean' : b.innerText === 'ПРОБЫ' ? 'sample' : 'repair';
         b.className = `st-btn py-3 text-xs font-extrabold rounded-xl border st-${type}`;
@@ -486,12 +517,14 @@
 
     function setNewBatchPack(type, btn) {
       state.newBatchPack = type;
+      saveState();
       document.querySelectorAll('.new-pack-btn').forEach(t => t.className = "new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle");
       btn.className = "new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active";
     }
 
     function editParty() {
       state.isEditingBatch = true;
+      saveState();
       document.getElementById('modalBatchTitle').innerText = 'Редактирование партии';
       document.getElementById('newBatchNum').value = state.batchNumber;
       document.getElementById('newRal').value = state.ralColor.replace('RAL ', '');
@@ -523,6 +556,7 @@
       }
 
       state.isEditingBatch = false;
+      saveState();
       document.getElementById('modalBatchTitle').innerText = 'Открытие новой партии';
       closeModal('modalOpenBatch'); updateBatchUI(); calculateProduction();
     }
@@ -559,6 +593,7 @@
       if (document.getElementById('currentUnitInput').value) { alert("Нельзя изменить тип тары после начала выпуска!"); return; }
       
       state.packageType = type;
+      saveState();
       document.querySelectorAll('.pkg-tab').forEach(t => t.className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle");
       btn.className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-active";
       updateBatchUI(); calculateProduction();
@@ -600,6 +635,7 @@
         state.isBatchOpen = false; state.batchNumber = ''; state.ralColor = ''; state.startUnit = null; state.defects = []; state.dust = [];
         document.getElementById('currentUnitInput').value = ''; document.getElementById('closeUnitTo').value = '';
         
+        saveState();
         closeModal('modalCloseBatch'); renderDefects(); renderDust(); updateBatchUI(); calculateProduction();
       } catch (err) {
         alert("Ошибка: " + err.message);
@@ -693,7 +729,7 @@
       if (s && e && e >= s) {
         state.defects.push({ from: s, to: e, count: (e - s + 1), kg: (e - s + 1) * UNIT_WEIGHT });
         document.getElementById('defStart').value = ''; document.getElementById('defEnd').value = '';
-        renderDefects(); calculateProduction();
+        saveState(); renderDefects(); calculateProduction();
       } else alert('Укажите корректный диапазон');
     }
 
@@ -706,7 +742,7 @@
       const val = parseFloat(document.getElementById('dustInput').value);
       if (val && val > 0) {
         state.dust.push(val); document.getElementById('dustInput').value = '';
-        renderDust(); calculateProduction();
+        saveState(); renderDust(); calculateProduction();
       }
     }
 
@@ -735,12 +771,13 @@
         closeModal('modalSummary');
         state.closedBatchesKg = 0; state.defects = []; state.dust = [];
         document.getElementById('currentUnitInput').value = '';
+        state.shiftAccepted = false; // Сбрасываем флаг принятия
+        saveState();
         renderDefects(); renderDust(); calculateProduction();
         setTimeout(() => location.reload(), 1500);
       }
     }
 
-    // СТАТИСТИКА
     function openStatsModal() { 
       const opName = document.getElementById('operatorName').value.trim() || state.operator;
       if (!opName) {
@@ -798,6 +835,7 @@
         const shiftName = (new Date().getHours() >= 8 && new Date().getHours() < 20) ? 'ДЕНЬ' : 'НОЧЬ';
         const { data } = await client.from('shift_plans').select('plan_kg').eq('plan_date', today).eq('shift', shiftName).eq('line_number', state.line).limit(1);
         state.planKg = (data && data.length > 0 && data[0].plan_kg) ? Number(data[0].plan_kg) : 0;
+        saveState();
         calculateProduction();
       } catch (e) {}
     }
