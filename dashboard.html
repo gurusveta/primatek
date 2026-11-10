@@ -93,8 +93,7 @@
     .line-progress-fill { height: 100%; background: #10b981; width: 0%; transition: width 0.4s; }
     .line-progress-fill.gold { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
     
-    /* Ввод плана в карточке */
-    .line-plan-input { background: transparent; border: 1px dashed #334155; color: #fff; font-weight: 900; width: 60px; text-align: right; outline: none; padding: 0 2px; border-radius: 4px;}
+    .line-plan-input { background: transparent; border: 1px dashed #334155; color: #fff; font-weight: 900; width: 65px; text-align: right; outline: none; padding: 2px 4px; border-radius: 4px; font-size: 13px; }
     .line-plan-input:focus { border-color: #0072ce; background: #0f172a; }
 
     .oem-total-card { background: #0f172a; border-radius: 12px; padding: 14px 18px; border: 1px solid #1e293b; border-left: 4px solid #6366f1; display: flex; flex-direction: column; justify-content: space-between; }
@@ -152,10 +151,10 @@
     <div class="summary-card" style="border-left-color: #6366f1;">
       <div class="card-title">ПЛАН НА СМЕНУ (ЦЕХ)</div>
       <div class="plan-input-group">
-        <input type="number" id="shiftPlanInput" class="plan-input" value="20000" step="500">
+        <input type="number" id="shiftPlanInput" class="plan-input" value="20000" step="500" readonly style="opacity: 0.7; cursor: not-allowed;">
         <span style="font-weight: 800; font-size: 16px; color:#fff;">кг</span>
       </div>
-      <div class="card-sub" id="planRemainingSub">Осталось: 0 кг</div>
+      <div class="card-sub" id="planRemainingSub">Введите планы в карточках линий</div>
     </div>
 
     <div class="summary-card" style="border-left-color: #38bdf8;">
@@ -253,7 +252,6 @@
   const SUPABASE_URL = "https://oqhrzruxubqthqyxmdcg.supabase.co";
   const SUPABASE_KEY = "sb_publishable_m5YmzYjW1BpotrbaRpCdgA__kYvilf3";
   const PRIMATEK_LINES = [1, 5, 6, 7, 8, 13, 14, 15];
-  const UNIT_WEIGHT = 20;
 
   const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -267,12 +265,6 @@
     updateDateAndShiftDisplay();
     loadDashboardData();
     setupRealtime();
-    
-    // Слушаем изменение общего плана, чтобы обновить сумму
-    document.getElementById('shiftPlanInput').addEventListener('input', () => {
-       shiftPlanKg = Number(document.getElementById('shiftPlanInput').value) || 0;
-       renderTopSummary();
-    });
   };
 
   function populateLineFilter() {
@@ -339,7 +331,7 @@
       rawPlans = plans || [];
       shiftPlanKg = rawPlans.reduce((sum, p) => sum + Number(p.plan_kg), 0);
 
-      document.getElementById('shiftPlanInput').value = shiftPlanKg > 0 ? shiftPlanKg : 20000;
+      document.getElementById('shiftPlanInput').value = shiftPlanKg > 0 ? shiftPlanKg : 0;
 
       renderTopSummary();
       renderLiveLineCards();
@@ -361,41 +353,34 @@
       .subscribe();
   }
 
-  // Общий план (делит на всех)
-  async function saveGeneralPlan() {
-    const val = Number(document.getElementById('shiftPlanInput').value) || 0;
-    const { planDate: today, shiftName } = getCurrentShiftInfo();
-    const planPerLine = Math.round(val / PRIMATEK_LINES.length);
-    const upserts = PRIMATEK_LINES.map(line => ({ plan_date: today, shift: shiftName, line_number: line, plan_kg: planPerLine }));
-
-    try {
-      await client.from('shift_plans').delete().eq('plan_date', today).eq('shift', shiftName);
-      const { error } = await client.from('shift_plans').insert(upserts);
-      if (error) throw error;
-      alert("План на смену сохранен и разослан операторам!");
-    } catch (e) {
-      alert("Ошибка сохранения плана: " + e.message);
-    }
-  }
-
   // Индивидуальный план для линии
-  async function saveLinePlan(lineNum, newVal) {
+  async function saveLinePlan(lineNum, newVal, inputEl) {
     const val = Number(newVal) || 0;
     const { planDate: today, shiftName } = getCurrentShiftInfo();
 
+    // Визуальный фидбек
+    inputEl.style.borderColor = '#f59e0b';
+    inputEl.disabled = true;
+
     try {
+      // Используем upsert, который теперь работает благодаря созданному unique constraint
       const { error } = await client.from('shift_plans').upsert({
         plan_date: today,
         shift: shiftName,
         line_number: lineNum,
         plan_kg: val
-      }, { onConflict: 'plan_date, shift, line_number' });
+      }, { onConflict: 'plan_date,shift,line_number' });
       
       if (error) throw error;
-      console.log(`План для линии ${lineNum} обновлен: ${val} кг`);
-      // Дашборд перезагрузится сам через Realtime, так как мы обновили таблицу
+      
+      inputEl.style.borderColor = '#10b981';
+      // Принудительно перезагружаем данные с сервера, чтобы обновить общую сумму плана
+      await loadDashboardData();
     } catch (e) {
       alert("Ошибка сохранения плана линии: " + e.message);
+      inputEl.style.borderColor = '#ef4444';
+    } finally {
+      inputEl.disabled = false;
     }
   }
 
@@ -427,7 +412,7 @@
 
     document.getElementById('sumLiveKg').innerText = totalLiveKg.toLocaleString('ru-RU') + ' кг';
     document.getElementById('sumLivePcs').innerText = `${totalLivePcs} кор./меш. краски`;
-    const plan = shiftPlanKg > 0 ? shiftPlanKg : 20000;
+    const plan = shiftPlanKg > 0 ? shiftPlanKg : 1; // Защита от деления на 0
     const percent = Math.min(100, Math.round((totalLiveKg / plan) * 100));
     document.getElementById('sumPlanPercent').innerText = `${percent}%`;
     document.getElementById('sumProgressBar').style.width = `${percent}%`;
@@ -493,7 +478,7 @@
           <div class="line-plan-row">
             <span class="line-plan-label">План:</span>
             <div class="flex items-center gap-1">
-               <input type="number" class="line-plan-input" value="${linePlan}" onchange="saveLinePlan(${lineNum}, this.value)">
+               <input type="number" class="line-plan-input" value="${linePlan || ''}" placeholder="0" onchange="saveLinePlan(${lineNum}, this.value, this)">
                <span style="font-size:10px; color:#64748b;">кг</span>
             </div>
           </div>
