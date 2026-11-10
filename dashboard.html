@@ -24,6 +24,8 @@
     .btn-refresh { background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 9px 14px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
     .btn-refresh:hover { background: #334155; }
     
+    .shift-select { background: #070c18; border: 1px solid #334155; color: #fff; padding: 8px 12px; border-radius: 8px; font-weight: 700; font-size: 13px; outline: none; cursor: pointer; }
+    
     .sync-time { font-size: 11px; color: #64748b; display: flex; flex-direction: column; }
     .sync-err { font-size: 10px; color: #ef4444; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     
@@ -41,7 +43,10 @@
 
     .plan-input-group { display: flex; align-items: center; gap: 6px; }
     .plan-input { width: 120px; background: #070c18; border: 1px solid #334155; border-radius: 6px; padding: 4px 8px; color: #38bdf8; font-weight: 900; font-size: 18px; text-align: right; outline: none; }
-    
+    .plan-input:focus { border-color: #0072ce; }
+    .btn-save-plan { background: #0072ce; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 800; cursor: pointer; }
+    .btn-save-plan:hover { background: #0284c7; }
+
     .progress-bar-bg { width: 100%; height: 7px; background: #1e293b; border-radius: 4px; overflow: hidden; margin-top: 6px; }
     .progress-bar-fill { height: 100%; background: #10b981; width: 0%; transition: width 0.4s; }
 
@@ -90,7 +95,6 @@
     .line-progress-fill { height: 100%; background: #10b981; width: 0%; transition: width 0.4s; }
     .line-progress-fill.gold { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
     
-    /* Убираем стрелки в input type=number */
     input[type=number]::-webkit-inner-spin-button, 
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     input[type=number] { -moz-appearance: textfield; }
@@ -136,7 +140,15 @@
       
       <div class="header-info">
         <div class="date-badge" id="currentDateText">Загрузка даты...</div>
-        <div class="shift-badge" id="currentShiftBadge">СМЕНА: ДЕНЬ (08:00 – 20:00)</div>
+        <div class="flex items-center gap-2">
+          <div class="shift-badge" id="currentShiftBadge">СМЕНА: ДЕНЬ</div>
+          <select id="supervisorSelect" class="shift-select" onchange="saveSupervisor()">
+            <option value="">Начальник смены...</option>
+            <option value="Шарапов">Шарапов</option>
+            <option value="Токин">Токин</option>
+            <option value="Крылова">Крылова</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -154,8 +166,9 @@
     <div class="summary-card" style="border-left-color: #6366f1;">
       <div class="card-title">ПЛАН НА СМЕНУ (ЦЕХ)</div>
       <div class="plan-input-group">
-        <input type="number" id="shiftPlanInput" class="plan-input" value="0" readonly style="opacity: 0.9; cursor: not-allowed; border:none;">
+        <input type="number" id="shiftPlanInput" class="plan-input" value="20000" step="500">
         <span style="font-weight: 800; font-size: 16px; color:#fff;">кг</span>
+        <button class="btn-save-plan" onclick="saveGeneralPlan()">Сохранить</button>
       </div>
       <div class="card-sub" id="planRemainingSub">Введите планы в карточках линий</div>
     </div>
@@ -268,7 +281,15 @@
     updateDateAndShiftDisplay();
     loadDashboardData();
     setupRealtime();
+    
+    const savedSup = localStorage.getItem('primatek_supervisor');
+    if (savedSup) document.getElementById('supervisorSelect').value = savedSup;
   };
+
+  function saveSupervisor() {
+    const val = document.getElementById('supervisorSelect').value;
+    localStorage.setItem('primatek_supervisor', val);
+  }
 
   function populateLineFilter() {
     const sel = document.getElementById('filterLine');
@@ -298,6 +319,7 @@
       start.setHours(20, 0, 0, 0);
       end.setHours(8, 0, 0, 0);
     }
+    // Важно: используем локальное время для строки, чтобы не сбивались часовые пояса
     const yyyy = start.getFullYear();
     const mm = String(start.getMonth() + 1).padStart(2, '0');
     const dd = String(start.getDate()).padStart(2, '0');
@@ -332,9 +354,10 @@
       
       if (planErr) throw planErr;
       rawPlans = plans || [];
-      shiftPlanKg = rawPlans.reduce((sum, p) => sum + Number(p.plan_kg), 0);
+      // Считаем общий план только по линиям (1, 5, 6, 7, 8, 13, 14, 15)
+      shiftPlanKg = rawPlans.filter(p => PRIMATEK_LINES.includes(Number(p.line_number))).reduce((sum, p) => sum + Number(p.plan_kg), 0);
 
-      document.getElementById('shiftPlanInput').value = shiftPlanKg;
+      document.getElementById('shiftPlanInput').value = shiftPlanKg > 0 ? shiftPlanKg : 0;
 
       renderTopSummary();
       renderLiveLineCards();
@@ -356,7 +379,35 @@
       .subscribe();
   }
 
-  // Индивидуальный план для линии
+  // Сохранение ОБЩЕГО плана. Делим его на количество линий и сохраняем для каждой. 
+  // Это позволит операторам получить свои планы сразу.
+  async function saveGeneralPlan() {
+    const val = Number(document.getElementById('shiftPlanInput').value) || 0;
+    const { planDate: today, shiftName } = getCurrentShiftInfo();
+    
+    // Делим общий план поровну (или можно ввести свой расчет)
+    const planPerLine = Math.round(val / PRIMATEK_LINES.length);
+    const upserts = PRIMATEK_LINES.map(line => ({ 
+      plan_date: today, 
+      shift: shiftName, 
+      line_number: line, 
+      plan_kg: planPerLine 
+    }));
+
+    try {
+      // Удаляем старые планы на эту смену и вставляем новые
+      await client.from('shift_plans').delete().eq('plan_date', today).eq('shift', shiftName);
+      const { error } = await client.from('shift_plans').insert(upserts);
+      if (error) throw error;
+      
+      alert(`Общий план ${val} кг сохранен и разослан по линиям (по ${planPerLine} кг на линию)!`);
+      loadDashboardData();
+    } catch (e) {
+      alert("Ошибка сохранения плана: " + e.message);
+    }
+  }
+
+  // Индивидуальный план для конкретной линии (через галочку)
   async function saveLinePlan(lineNum, inputId) {
     const val = Number(document.getElementById(inputId).value) || 0;
     const { planDate: today, shiftName } = getCurrentShiftInfo();
@@ -371,7 +422,6 @@
       
       if (error) throw error;
       
-      // Скрываем кнопку "ОК" после сохранения
       document.getElementById(`savebtn-${lineNum}`).style.display = 'none';
       await loadDashboardData();
     } catch (e) {
@@ -385,6 +435,8 @@
 
   function renderTopSummary() {
     const { start: shiftStart, end: shiftEnd } = getCurrentShiftInfo();
+    
+    // Точная фильтрация по времени (включая часовой пояс устройства)
     const shiftReports = rawReports.filter(r => {
       if (!r.created_at) return false;
       const t = new Date(r.created_at).getTime();
