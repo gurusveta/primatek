@@ -173,7 +173,7 @@
 
   </main>
 
-  <!-- МОДАЛКИ (открытие партии, закрытие, брак, пыль, 5s, сводка, статистика) -->
+  <!-- МОДАЛКИ -->
   <div id="modalOpenBatch" class="modal-overlay">
     <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
       <h3 class="text-base font-black text-[#38bdf8]" id="modalBatchTitle">Открытие новой партии</h3>
@@ -268,23 +268,26 @@
     </div>
   </div>
 
+  <!-- ОБНОВЛЕННАЯ МОДАЛКА СТАТИСТИКИ -->
   <div id="statsModal" class="modal-overlay">
-    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-3 max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center">
+    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-[#1c2742] pb-2">
         <h3 class="text-base font-black text-[#38bdf8]">Моя выработка</h3>
         <button onclick="closeModal('statsModal')" class="text-gray-400 font-bold text-lg">✕</button>
       </div>
-      <div class="grid grid-cols-4 gap-1 bg-[#080d1a] p-1 rounded-xl border border-[#233152] text-[11px] font-bold">
-        <button onclick="setPeriod('month', this)" class="period-btn period-btn-active py-1.5 rounded-lg">Месяц</button>
-        <button onclick="setPeriod('prev', this)" class="period-btn period-btn-idle py-1.5 rounded-lg">Пр. месяц</button>
-        <button onclick="setPeriod('all', this)" class="period-btn period-btn-idle py-1.5 rounded-lg">Всё</button>
-        <button onclick="setPeriod('custom', this)" class="period-btn period-btn-idle py-1.5 rounded-lg">Свой</button>
+      
+      <div>
+        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Оператор</label>
+        <input type="text" id="statsOperatorName" readonly class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-gray-400 outline-none cursor-not-allowed uppercase">
       </div>
-      <div id="customPeriodWrap" class="hidden grid grid-cols-2 gap-2">
-        <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">С даты</label><input type="date" id="customDateFrom" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-2 py-2 text-xs text-white outline-none focus:border-[#0072ce]"></div>
-        <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">По дату</label><input type="date" id="customDateTo" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-2 py-2 text-xs text-white outline-none focus:border-[#0072ce]"></div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">С даты</label><input type="date" id="customDateFrom" onchange="loadStats()" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-2 py-2 text-xs text-white outline-none focus:border-[#0072ce]"></div>
+        <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">По дату</label><input type="date" id="customDateTo" onchange="loadStats()" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-2 py-2 text-xs text-white outline-none focus:border-[#0072ce]"></div>
       </div>
-      <div id="statsLoading" class="text-center text-xs text-[#38bdf8] py-4 hidden">Загрузка данных...</div>
+      
+      <div id="statsLoading" class="text-center text-xs text-[#38bdf8] py-2 hidden">Загрузка данных...</div>
+      
       <div class="grid grid-cols-2 gap-2">
         <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3">
           <div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Смены</div>
@@ -323,9 +326,6 @@
       isBatchOpen: false, newBatchPack: 'box', batchNumber: '', ralColor: '', isEditingBatch: false 
     };
 
-    let currentStatsPeriod = 'month';
-
-    // Логирование теперь только в консоль (не перекрывает интерфейс)
     function logDiag(msg, isErr = false) {
       console.log(isErr ? 'ERROR:' : 'DIAG:', msg);
     }
@@ -337,6 +337,11 @@
       loadPlanFromCloud();
       setInterval(loadPlanFromCloud, 60000);
       updateShiftBadge();
+      
+      // Устанавливаем сегодняшнюю дату по умолчанию для статистики
+      const today = new Date().toISOString().slice(0, 10);
+      document.getElementById('customDateFrom').value = today;
+      document.getElementById('customDateTo').value = today;
     };
 
     function updateShiftBadge() {
@@ -390,7 +395,6 @@
           state.batchNumber = last.batch_number;
           state.ralColor = last.ral_color || '—';
           state.packageType = last.package_type || 'box';
-          logDiag(`Подхвачена партия: ${state.batchNumber}`);
         } else {
           state.isBatchOpen = false;
           document.getElementById('prevShiftHint').classList.add('hidden');
@@ -427,7 +431,6 @@
         };
         const { error } = await client.from('shift_reports').insert([payload]);
         if (error) throw error;
-        logDiag(`Приём смены OK. Линия ${state.line}, старт №${state.startUnit || '—'}`);
 
         document.getElementById('handoverSection').classList.add('hidden');
         document.getElementById('handoverCompact').classList.remove('hidden');
@@ -438,7 +441,6 @@
         updateBatchUI(); 
         calculateProduction();
       } catch (err) {
-        logDiag('Ошибка приёма смены: ' + err.message, true);
         alert('Ошибка приёма смены: ' + err.message);
         btn.innerText = 'ПРИНЯТЬ СМЕНУ';
         btn.disabled = false;
@@ -476,8 +478,7 @@
         await client.from('shift_reports').insert([{
           line_number: state.line, operator_name: state.operator, event_type: 'STATUS_CHANGE', line_status: status
         }]);
-        logDiag(`Смена статуса OK: ${status}`);
-      } catch(e) { logDiag('Ошибка смены статуса: ' + e.message, true); }
+      } catch(e) { console.error(e); }
     }
 
     function openModal(id) { document.getElementById(id).classList.add('open'); }
@@ -524,7 +525,6 @@
       state.isEditingBatch = false;
       document.getElementById('modalBatchTitle').innerText = 'Открытие новой партии';
       closeModal('modalOpenBatch'); updateBatchUI(); calculateProduction();
-      logDiag(`Партия ${state.isEditingBatch ? 'изменена' : 'открыта'}: ${state.batchNumber}`);
     }
 
     function updateBatchUI() {
@@ -593,7 +593,7 @@
       try {
         const { error } = await client.from('shift_reports').insert([payload]);
         if (error) throw error;
-        logDiag(`Партия закрыта OK. Итого: ${payload.total_good_kg} кг.`);
+        
         alert(`Партия закрыта! Засчитано: ${payload.total_good_kg} кг.`);
         
         state.closedBatchesKg += payload.total_good_kg;
@@ -602,7 +602,7 @@
         
         closeModal('modalCloseBatch'); renderDefects(); renderDust(); updateBatchUI(); calculateProduction();
       } catch (err) {
-        logDiag("Ошибка закрытия партии: " + err.message, true); alert("Ошибка: " + err.message);
+        alert("Ошибка: " + err.message);
       }
     }
 
@@ -671,18 +671,16 @@
         if (state.isBatchOpen) { payload.batch_number = state.batchNumber; payload.ral_color = state.ralColor; }
       }
 
-      logDiag(`Отправка ${eventType}...`);
       try {
         const { error } = await client.from('shift_reports').insert([payload]);
         if (error) throw error;
-        logDiag(`Отправка ${eventType} OK`);
         if (eventType === 'PRODUCTION') {
           const notice = document.getElementById('lastSyncNotice');
           notice.style.display = 'block'; notice.innerText = `Отправлено в ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}`;
           setTimeout(() => { notice.style.display = 'none'; }, 5000);
         }
         return true;
-      } catch (err) { logDiag(`Ошибка отправки ${eventType}: ` + err.message, true); alert('Ошибка: ' + err.message); return false; }
+      } catch (err) { alert('Ошибка: ' + err.message); return false; }
     }
 
     async function sendCheckpoint() {
@@ -742,40 +740,33 @@
       }
     }
 
-    function openStatsModal() { openModal('statsModal'); loadStats(); }
-
-    function setPeriod(period, btn) {
-      currentStatsPeriod = period;
-      document.querySelectorAll('.period-btn').forEach(b => b.className = "period-btn period-btn-idle py-1.5 rounded-lg");
-      btn.className = "period-btn period-btn-active py-1.5 rounded-lg";
-      document.getElementById('customPeriodWrap').classList.toggle('hidden', period !== 'custom');
-      if (period !== 'custom') loadStats();
+    // СТАТИСТИКА
+    function openStatsModal() { 
+      const opName = document.getElementById('operatorName').value.trim() || state.operator;
+      if (!opName) {
+        alert("Сначала введите вашу фамилию в шапке!");
+        return;
+      }
+      document.getElementById('statsOperatorName').value = opName;
+      openModal('statsModal'); 
+      loadStats(); 
     }
 
     async function loadStats() {
-      const opName = document.getElementById('operatorName').value.trim() || state.operator;
-      if (!opName) { alert("Сначала введите вашу фамилию в шапке!"); return; }
+      const opName = document.getElementById('statsOperatorName').value;
+      if (!opName) return;
       
       const loading = document.getElementById('statsLoading');
       loading.classList.remove('hidden');
 
-      const now = new Date(); let startStr, endStr;
-      if (currentStatsPeriod === 'month') {
-        startStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-        endStr = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
-      } else if (currentStatsPeriod === 'prev') {
-        startStr = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
-        endStr = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10);
-      } else if (currentStatsPeriod === 'all') {
-        startStr = '2020-01-01'; endStr = now.toISOString().slice(0, 10);
-      } else {
-        startStr = document.getElementById('customDateFrom').value; endStr = document.getElementById('customDateTo').value;
-        if (!startStr || !endStr) { loading.classList.add('hidden'); return; }
-      }
+      const startStr = document.getElementById('customDateFrom').value; 
+      const endStr = document.getElementById('customDateTo').value;
+      
+      if (!startStr || !endStr) { loading.classList.add('hidden'); return; }
 
       try {
         const { data, error } = await client.from('shift_reports').select('*')
-          .ilike('operator_name', opName).in('event_type', ['SHIFT_CLOSE', 'PARTY_CLOSE'])
+          .eq('operator_name', opName).in('event_type', ['SHIFT_CLOSE', 'PARTY_CLOSE'])
           .gte('created_at', startStr).lte('created_at', endStr + 'T23:59:59Z');
         
         if (error) throw error;
@@ -798,7 +789,7 @@
         document.getElementById('stShiftTypes').innerText = `День: ${dayShifts} / Ночь: ${nightShifts}`;
         document.getElementById('stPaintKg').innerText = totalKg.toLocaleString('ru-RU') + ' кг';
         document.getElementById('stEarnedRub').innerText = Math.round(totalEarned).toLocaleString('ru-RU') + ' ₽';
-      } catch (err) { logDiag("Ошибка статистики: " + err.message, true); } finally { loading.classList.add('hidden'); }
+      } catch (err) { console.error(err); } finally { loading.classList.add('hidden'); }
     }
 
     async function loadPlanFromCloud() {
