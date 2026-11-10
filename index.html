@@ -318,13 +318,12 @@
 
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Восстановление состояния из памяти (localStorage) или создание нового
     let state = JSON.parse(localStorage.getItem('primatek_state')) || {
       line: 6, operator: '', handoverStatus: null, lineStatus: 'В РАБОТЕ',
       packageType: 'box', chipSubtype: 'Обычные', startUnit: null, 
       closedBatchesKg: 0, defects: [], dust: [], planKg: 0,
       isBatchOpen: false, newBatchPack: 'box', batchNumber: '', ralColor: '', isEditingBatch: false,
-      shiftAccepted: false // Флаг, что смена принята
+      shiftAccepted: false
     };
 
     function saveState() {
@@ -335,7 +334,6 @@
       renderLines();
       
       if (state.shiftAccepted) {
-        // Если смена уже была принята, восстанавливаем интерфейс
         document.getElementById('handoverSection').classList.add('hidden');
         document.getElementById('handoverCompact').classList.remove('hidden');
         document.getElementById('gamificationBlock').classList.remove('hidden');
@@ -346,7 +344,6 @@
         updateBatchUI(); 
         calculateProduction();
       } else {
-        // Если нет, показываем экран приёма
         document.getElementById('operatorName').value = ''; 
         loadPreviousShiftData(); 
       }
@@ -411,7 +408,6 @@
           }
           
           if (!state.shiftAccepted) {
-            // Подхватываем партию только если смена еще не принята
             state.isBatchOpen = true;
             state.batchNumber = last.batch_number;
             state.ralColor = last.ral_color || '—';
@@ -771,7 +767,7 @@
         closeModal('modalSummary');
         state.closedBatchesKg = 0; state.defects = []; state.dust = [];
         document.getElementById('currentUnitInput').value = '';
-        state.shiftAccepted = false; // Сбрасываем флаг принятия
+        state.shiftAccepted = false; 
         saveState();
         renderDefects(); renderDust(); calculateProduction();
         setTimeout(() => location.reload(), 1500);
