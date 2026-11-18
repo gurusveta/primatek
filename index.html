@@ -3,1022 +3,1029 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PRIMATEK — Пульт оператора</title>
+  <title>PRIMATEK — Приложение оператора</title>
   <meta name="theme-color" content="#0b132b">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { -webkit-tap-highlight-color: transparent; background-color: #070c18; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     .btn-press:active { transform: scale(0.97); }
-    
-    .st-work { border-color: #10b981; color: #34d399; background: rgba(16,185,129,.1); }
-    .st-work.active { background: #10b981; color: #fff; border-color: #34d399; box-shadow: 0 0 10px rgba(16,185,129,0.4); }
-    
-    .st-clean { border-color: #f59e0b; color: #fbbf24; background: rgba(245,158,11,.1); }
-    .st-clean.active { background: #f59e0b; color: #fff; border-color: #fbbf24; box-shadow: 0 0 10px rgba(245,158,11,0.4); }
-    
-    .st-sample { border-color: #38bdf8; color: #38bdf8; background: rgba(2,132,199,.1); }
-    .st-sample.active { background: #0284c7; color: #fff; border-color: #38bdf8; box-shadow: 0 0 10px rgba(2,132,199,0.4); }
-    
-    .st-repair { border-color: #ef4444; color: #f87171; background: rgba(239,68,68,.1); }
-    .st-repair.active { background: #ef4444; color: #fff; border-color: #f87171; box-shadow: 0 0 10px rgba(239,68,68,0.4); }
-
-    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(5,9,20,.9); z-index:50; justify-content:center; align-items:center; padding:16px; backdrop-filter: blur(2px); }
-    .modal-overlay.open { display:flex; }
-    
-    .tab-active { background:#0072ce; color:#fff; }
-    .tab-idle { color:#8fa0c2; }
-
-    /* Стили для журнала операций */
-    .log-item { background: #080d1a; border: 1px solid #233152; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; }
-    .log-item-del { color: #ef4444; font-weight: bold; cursor: pointer; padding: 0 5px; font-size: 16px; }
+    .st-work { border-color:#10b981; color:#34d399; background:rgba(16,185,129,.1);} .st-work.active{background:#10b981;color:#fff;border-color:#34d399;}
+    .st-clean { border-color:#f59e0b; color:#fbbf24; background:rgba(245,158,11,.1);} .st-clean.active{background:#f59e0b;color:#fff;border-color:#fbbf24;}
+    .st-sample { border-color:#38bdf8; color:#38bdf8; background:rgba(2,132,199,.1);} .st-sample.active{background:#0284c7;color:#fff;border-color:#38bdf8;}
+    .st-repair { border-color:#ef4444; color:#f87171; background:rgba(239,68,68,.1);} .st-repair.active{background:#ef4444;color:#fff;border-color:#f87171;}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(5,9,20,.9);z-index:50;justify-content:center;align-items:center;padding:16px;backdrop-filter:blur(2px);}
+    .modal-overlay.open{display:flex;}
+    .tab-active{background:#0072ce;color:#fff;} .tab-idle{color:#8fa0c2;}
+    .comp-btn{border:1px solid #29385c;background:#080d1a;color:#8fa0c2;}
+    .comp-btn.active{background:#0072ce;color:#fff;border-color:#38bdf8;box-shadow:0 0 10px rgba(0,114,206,.4);}
   </style>
 </head>
 <body class="min-h-screen pb-24 select-none">
 
-  <header class="bg-[#0f172a] border-b border-[#1e293b] px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-md">
-    <div class="flex items-center space-x-2">
-      <svg width="120" height="26" viewBox="0 0 230 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="6" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.5"/><circle cx="16" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.8"/><circle cx="26" cy="11" r="3.2" fill="#0072ce"/>
-        <circle cx="6" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.6"/><circle cx="16" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.9"/><circle cx="26" cy="22" r="3.2" fill="#0072ce"/>
-        <circle cx="6" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.4"/><circle cx="16" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.7"/><circle cx="26" cy="33" r="3.2" fill="#0072ce"/>
-        <text x="36" y="34" font-family="'Arial Black', sans-serif" font-weight="900" font-size="31" fill="#0072ce">PRIMATEK</text>
-      </svg>
-    </div>
-    <div class="flex items-center space-x-2">
-      <div id="shiftBadge" class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-[#1a2744] text-[#38bdf8] border border-[#2c4270]">СМЕНА: ДЕНЬ</div>
-      <button onclick="openStatsModal()" class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-[#172554] text-[#38bdf8] border border-[#1e40af] btn-press">Выработка</button>
-    </div>
-  </header>
+<header class="bg-[#0f172a] border-b border-[#1e293b] px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-md">
+  <svg width="120" height="26" viewBox="0 0 230 50" fill="none"><circle cx="6" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.5"/><circle cx="16" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.8"/><circle cx="26" cy="11" r="3.2" fill="#0072ce"/><circle cx="6" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.6"/><circle cx="16" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.9"/><circle cx="26" cy="22" r="3.2" fill="#0072ce"/><circle cx="6" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.4"/><circle cx="16" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.7"/><circle cx="26" cy="33" r="3.2" fill="#0072ce"/><text x="36" y="34" font-family="'Arial Black',sans-serif" font-weight="900" font-size="31" fill="#0072ce">PRIMATEK</text></svg>
+  <div class="flex items-center space-x-2">
+    <div id="shiftBadge" class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-[#1a2744] text-[#38bdf8] border border-[#2c4270]">СМЕНА: —</div>
+    <button onclick="openStatsModal()" class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-[#172554] text-[#38bdf8] border border-[#1e40af] btn-press">Выработка</button>
+  </div>
+</header>
 
-  <main class="p-3 max-w-md mx-auto space-y-3">
+<main class="p-3 max-w-md mx-auto space-y-3">
 
-    <!-- 1. ПРИЕМКА СМЕНЫ -->
-    <div id="handoverSection" class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-3">
-      <h2 class="text-xs font-extrabold text-[#38bdf8] uppercase tracking-wider">Приём смены и выбор линии</h2>
-      <div class="grid grid-cols-4 gap-1.5" id="lineButtons"></div>
-      <div>
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">ФИО Оператора</label>
-        <input type="text" id="operatorName" placeholder="ВВЕДИТЕ ФАМИЛИЮ И ИМЯ" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-[#0072ce] uppercase placeholder:normal-case">
-      </div>
-      <div>
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Статус линии при приёмке</label>
-        <div class="grid grid-cols-2 gap-1.5" id="handoverStatusGrid">
-          <button onclick="selectHandoverStatus('В РАБОТЕ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-work">В РАБОТЕ</button>
-          <button onclick="selectHandoverStatus('ЧИСТКА', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-clean">ЧИСТКА</button>
-          <button onclick="selectHandoverStatus('ПРОБЫ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-sample">ПРОБЫ</button>
-          <button onclick="selectHandoverStatus('РЕМОНТ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-repair">РЕМОНТ</button>
-        </div>
-      </div>
-      
-      <div id="handoverStartNumberWrap" class="hidden">
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">С какой коробки начинаете?</label>
-        <input type="number" id="handoverStartNumber" placeholder="Введите номер" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-[#0072ce]">
-      </div>
-
-      <button id="btnAcceptHandover" onclick="acceptHandover()" disabled class="w-full py-3 bg-[#10b981] disabled:opacity-40 font-black rounded-xl text-white text-xs uppercase tracking-wider btn-press">ПРИНЯТЬ СМЕНУ</button>
+  <!-- ПРИЁМКА -->
+  <div id="handoverSection" class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-3">
+    <h2 class="text-xs font-extrabold text-[#38bdf8] uppercase tracking-wider">Приём смены и выбор линии</h2>
+    <div class="grid grid-cols-4 gap-1.5" id="lineButtons"></div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">ФИО Оператора</label>
+      <input type="text" id="operatorName" placeholder="ВВЕДИТЕ ФАМИЛИЮ И ИМЯ" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-[#0072ce] uppercase">
     </div>
 
-    <!-- 2. ПЛАШКА -->
-    <div id="handoverCompact" class="hidden bg-[#131c31] border rounded-xl p-3 flex items-center justify-between shadow">
-      <div class="flex items-center space-x-2">
-        <span id="compactDot" class="w-2.5 h-2.5 rounded-full bg-[#10b981] animate-pulse"></span>
-        <span id="compactInfo" class="text-xs font-bold text-white">—</span>
-      </div>
-      <button onclick="reopenHandover()" class="text-[11px] font-bold text-[#38bdf8] underline btn-press">Изменить ✎</button>
+    <!-- Найденная открытая партия -->
+    <div id="foundBatchCard" class="hidden bg-[#080d1a] border border-[#10b981] rounded-xl p-3 space-y-1.5">
+      <div class="text-[10px] font-extrabold text-[#34d399] uppercase">Открытая партия на линии</div>
+      <div class="text-sm font-black text-white" id="foundBatchTitle">—</div>
+      <div class="text-[11px] text-[#8fa0c2]" id="foundBatchNumbers">—</div>
+      <div class="text-[10px] text-[#64748b]" id="foundBatchOpened">—</div>
+    </div>
+    <div id="noBatchCard" class="hidden bg-[#080d1a] border border-[#29385c] rounded-xl p-3 text-[11px] text-[#8fa0c2]">
+      Открытой партии нет — после приёмки откройте новую.
     </div>
 
-    <!-- 3. ГЕЙМИФИКАЦИЯ -->
-    <div id="gamificationBlock" class="hidden bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-2">
-      <div class="flex justify-between items-end">
-        <div>
-          <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">СДЕЛАНО / ПЛАН</span>
-          <div class="text-xl font-black text-white" id="statDonePlan">0 / — кг</div>
-        </div>
-        <div class="text-right">
-          <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">ЗАРАБОТАНО ₽</span>
-          <div class="text-xl font-black text-[#34d399]" id="statMoney">0 ₽</div>
-        </div>
-      </div>
-      <div class="w-full bg-[#080d1a] h-3 rounded-full overflow-hidden border border-[#233152]">
-        <div id="progressBar" class="h-full bg-gradient-to-r from-[#0072ce] to-[#38bdf8] w-0 transition-all duration-500"></div>
-      </div>
-      <div class="text-[11px] font-bold text-[#cbd5e1] text-center" id="premiumLeftText">
-        ⏳ Ожидание плана от начальника смены...
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Статус линии при приёмке</label>
+      <div class="grid grid-cols-2 gap-1.5">
+        <button onclick="selectHandoverStatus('В РАБОТЕ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-work">В РАБОТЕ</button>
+        <button onclick="selectHandoverStatus('ЧИСТКА', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-clean">ЧИСТКА</button>
+        <button onclick="selectHandoverStatus('ПРОБЫ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-sample">ПРОБЫ</button>
+        <button onclick="selectHandoverStatus('РЕМОНТ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-repair">РЕМОНТ</button>
       </div>
     </div>
 
-    <!-- 4. РАБОЧАЯ ЗОНА -->
-    <div id="workArea" class="hidden space-y-3">
-      <!-- СТАТУСЫ -->
-      <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-3 shadow-lg space-y-2">
-        <div class="flex justify-between items-center px-1">
-          <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider">Текущий статус линии</span>
-          <span id="statusTimer" class="text-[11px] font-bold text-[#34d399]">В РАБОТЕ</span>
-        </div>
-        <div class="grid grid-cols-2 gap-2" id="lineStatusGrid">
-          <button onclick="setLineStatus('В РАБОТЕ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-work">В РАБОТЕ</button>
-          <button onclick="setLineStatus('ЧИСТКА', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-clean">ЧИСТКА</button>
-          <button onclick="setLineStatus('ПРОБЫ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-sample">ПРОБЫ</button>
-          <button onclick="setLineStatus('РЕМОНТ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-repair">РЕМОНТ</button>
-        </div>
-        
-        <div id="repairReasonWrap" class="hidden mt-2">
-          <select id="repairReasonSelect" class="w-full bg-[#080d1a] border border-[#ef4444] text-white text-xs rounded-lg p-2 outline-none" onchange="submitRepairReason()">
-            <option value="">Выберите причину поломки...</option>
-            <option value="Поломка основного оборудования">Поломка основного оборудования</option>
-            <option value="Поломка вспомогательного оборудования">Поломка вспомогательного оборудования</option>
-            <option value="Разрыв/замена сетки">Разрыв/замена сетки</option>
-            <option value="Отсутствие персонала (СГИ)">Отсутствие персонала (СГИ)</option>
-            <option value="Другое (Остановка)">Другое (Остановка)</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- ПАРТИЯ / СМЕШЕНИЕ -->
-      <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-3">
-        
-        <div id="openBatchSection">
-          <button onclick="openModal('modalOpenBatch')" class="w-full py-4 border-2 border-dashed border-[#38bdf8] rounded-xl bg-[#1a2744] text-[#38bdf8] font-black text-sm uppercase tracking-wider btn-press">
-            + Открыть новую партию / Смешение
-          </button>
-        </div>
-
-        <div id="activeBatchSection" class="hidden space-y-3">
-          <div class="flex justify-between items-center bg-[#080d1a] border border-[#233152] p-2.5 rounded-xl text-xs">
-            <div>Партия: <b id="displayBatchNum" class="text-white">—</b> <button id="editBatchBtn" onclick="editParty()" class="text-[#38bdf8] ml-1">✎</button></div>
-            <div>RAL: <b id="displayRal" class="text-white">—</b></div>
-          </div>
-
-          <div class="flex bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
-            <button onclick="switchPackage('box', this)" class="pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-active">Коробки</button>
-            <button onclick="switchPackage('mix', this)" class="pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle">Смешение</button>
-          </div>
-
-          <!-- Ввод для КОРОБОК -->
-          <div id="standardInputWrap" class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-center space-y-1">
-            <label id="unitLabel" class="text-[10px] font-extrabold text-[#8fa0c2] uppercase block">Номер последней выпущенной коробки</label>
-            <input type="number" id="currentUnitInput" placeholder="Введите номер" oninput="calculateProduction()" class="w-full bg-[#131c31] border-2 border-[#0072ce] rounded-xl py-3 text-center text-3xl font-black text-white outline-none">
-          </div>
-
-          <!-- Ввод для СМЕШЕНИЯ (Журнал) -->
-          <div id="mixInputWrap" class="hidden space-y-2">
-            <button onclick="openModal('modalAddMix')" class="w-full py-3 border border-[#38bdf8] text-[#38bdf8] rounded-xl font-bold text-xs uppercase btn-press mb-2 bg-[#1a2744]/50">
-              + Добавить операцию
-            </button>
-            <div id="mixLogList" class="space-y-1 max-h-48 overflow-y-auto">
-              <!-- Сюда падают записи -->
-            </div>
-            <div class="text-right text-xs text-[#8fa0c2] mt-1 pr-1" id="mixTotalText">Итого смешение: 0 кг</div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-2 mt-2">
-            <button onclick="sendCheckpoint()" class="py-3 bg-[#1e1b4b] border border-[#4338ca] hover:bg-[#312e81] font-extrabold rounded-xl text-[#a5b4fc] text-xs uppercase btn-press">Отправить на дашборд</button>
-            <button onclick="openClosePartyModal()" class="py-3 bg-[#1c2742] border border-[#ef4444] text-[#fca5a5] hover:bg-[#7f1d1d]/30 font-extrabold rounded-xl text-xs uppercase btn-press">Закрыть партию</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Брак / Пыль / 5S -->
-      <div class="grid grid-cols-3 gap-2">
-        <button onclick="openModal('modalDefect')" class="bg-[#131c31] border border-[#55222b] p-3 rounded-2xl text-center btn-press space-y-1">
-          <div class="text-[11px] font-black text-[#f87171] uppercase">Брак</div>
-          <div id="badgeDefect" class="text-[10px] text-[#94a3b8]">0 кг</div>
-        </button>
-        <button onclick="openModal('modalDust')" class="bg-[#131c31] border border-[#233152] p-3 rounded-2xl text-center btn-press space-y-1">
-          <div class="text-[11px] font-black text-[#38bdf8] uppercase">Пыль</div>
-          <div id="badgeDust" class="text-[10px] text-[#94a3b8]">0 кг</div>
-        </button>
-        <button onclick="openModal('modal5s')" class="bg-[#131c31] border border-[#233152] p-3 rounded-2xl text-center btn-press space-y-1 relative">
-          <span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#34d399]"></span>
-          <div class="text-[11px] font-black text-[#34d399] uppercase">Порядок 5S</div>
-          <div class="text-[10px] text-[#94a3b8]">Всё чисто</div>
-        </button>
-      </div>
-
-      <button id="btnSubmitShift" onclick="openSummary()" disabled class="w-full py-4 bg-gradient-to-r from-[#0072ce] to-[#0284c7] font-black rounded-2xl text-white text-sm uppercase tracking-wider shadow-xl btn-press opacity-40 cursor-not-allowed">
-        СДАТЬ СМЕНУ И ОТПРАВИТЬ ОТЧЁТ
-      </button>
-      <div id="submitWarning" class="text-[10px] text-center text-[#fbbf24]">Введите данные по выпуску, чтобы сдать смену</div>
+    <div id="handoverRepairWrap" class="hidden">
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Причина ремонта</label>
+      <select id="handoverRepairReason" onchange="checkHandoverReady()" class="w-full bg-[#080d1a] border border-[#ef4444] text-white text-xs rounded-lg p-2 outline-none">
+        <option value="">Выберите причину...</option>
+        <option>Поломка основного оборудования</option>
+        <option>Поломка вспомогательного оборудования</option>
+        <option>Разрыв/замена сетки</option>
+        <option>Отсутствие персонала (СГИ)</option>
+        <option>Другое (Остановка)</option>
+      </select>
     </div>
 
-  </main>
-
-  <!-- МОДАЛКИ -->
-  <div id="modalOpenBatch" class="modal-overlay">
-    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
-      <h3 class="text-base font-black text-[#38bdf8]" id="modalBatchTitle">Открытие партии</h3>
-      <div>
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">№ Партии (обязательно)</label>
-        <input type="text" id="newBatchNum" placeholder="24-0419" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none focus:border-[#0072ce]">
-      </div>
-      <div>
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Цвет RAL (обязательно)</label>
-        <div class="flex bg-[#080d1a] border border-[#29385c] rounded-xl overflow-hidden">
-          <span class="bg-[#1c2742] text-[#38bdf8] font-black text-xs px-2.5 flex items-center border-r border-[#29385c]">RAL</span>
-          <input type="text" id="newRal" placeholder="9005" class="w-full bg-transparent px-2 py-2 text-sm text-white font-bold outline-none">
-        </div>
-      </div>
-      <div>
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Режим работы</label>
-        <div class="grid grid-cols-2 gap-1 bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
-          <button onclick="setNewBatchPack('box', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active">Коробки</button>
-          <button onclick="setNewBatchPack('mix', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle">Смешение</button>
-        </div>
-      </div>
-      <button onclick="confirmOpenBatch()" class="w-full py-3 bg-[#10b981] text-white font-bold rounded-xl text-xs uppercase btn-press mt-2">Начать работу</button>
-      <button onclick="closeModal('modalOpenBatch')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Отмена</button>
-    </div>
+    <button id="btnAcceptHandover" onclick="acceptHandover()" disabled class="w-full py-3 bg-[#10b981] disabled:opacity-40 font-black rounded-xl text-white text-xs uppercase tracking-wider btn-press">ПРИНЯТЬ СМЕНУ</button>
+    <div id="handoverHint" class="text-[10px] text-center text-[#64748b]">Выберите линию, введите ФИО и статус</div>
   </div>
 
-  <!-- МОДАЛКА ДОБАВЛЕНИЯ ОПЕРАЦИИ СМЕШЕНИЯ -->
-  <div id="modalAddMix" class="modal-overlay">
-    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
-      <h3 class="text-base font-black text-[#38bdf8]">Добавить операцию</h3>
-      
+  <!-- ПЛАШКА -->
+  <div id="handoverCompact" class="hidden bg-[#131c31] border border-[#233152] rounded-xl p-3 flex items-center justify-between shadow">
+    <div class="flex items-center space-x-2">
+      <span id="compactDot" class="w-2.5 h-2.5 rounded-full bg-[#10b981] animate-pulse"></span>
+      <span id="compactInfo" class="text-xs font-bold text-white">—</span>
+    </div>
+    <button onclick="reopenHandover()" class="text-[11px] font-bold text-[#38bdf8] underline btn-press">Изменить ✎</button>
+  </div>
+
+  <!-- ГАМИФИКАЦИЯ -->
+  <div id="gamificationBlock" class="hidden bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-2">
+    <div class="flex justify-between items-end">
       <div>
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Что сделали?</label>
-        <select id="addMixType" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none" onchange="updateMixModalLabels()">
-          <option value="comp1">1 п/ф (мешки)</option>
-          <option value="comp2">2 п/ф (мешки)</option>
-          <option value="finished">Готовая краска (коробки)</option>
+        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">СДЕЛАНО / ПЛАН (ВАША СМЕНА)</span>
+        <div class="text-xl font-black text-white" id="statDonePlan">0 / — кг</div>
+      </div>
+      <div class="text-right">
+        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">ЗАРАБОТАНО ₽</span>
+        <div class="text-xl font-black text-[#34d399]" id="statMoney">0 ₽</div>
+      </div>
+    </div>
+    <div class="w-full bg-[#080d1a] h-3 rounded-full overflow-hidden border border-[#233152]">
+      <div id="progressBar" class="h-full bg-gradient-to-r from-[#0072ce] to-[#38bdf8] w-0 transition-all duration-500"></div>
+    </div>
+    <div class="text-[11px] font-bold text-[#cbd5e1] text-center" id="premiumLeftText">⏳ Ожидание плана от начальника смены...</div>
+  </div>
+
+  <!-- РАБОЧАЯ ЗОНА -->
+  <div id="workArea" class="hidden space-y-3">
+
+    <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-3 shadow-lg space-y-2">
+      <div class="flex justify-between items-center px-1">
+        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider">Текущий статус линии</span>
+        <span id="statusTimer" class="text-[11px] font-bold text-[#34d399]">—</span>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="setLineStatus('В РАБОТЕ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-work">В РАБОТЕ</button>
+        <button onclick="setLineStatus('ЧИСТКА', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-clean">ЧИСТКА</button>
+        <button onclick="setLineStatus('ПРОБЫ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-sample">ПРОБЫ</button>
+        <button onclick="setLineStatus('РЕМОНТ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-repair">РЕМОНТ</button>
+      </div>
+      <div id="repairReasonWrap" class="hidden mt-2">
+        <select id="repairReasonSelect" class="w-full bg-[#080d1a] border border-[#ef4444] text-white text-xs rounded-lg p-2 outline-none" onchange="submitRepairReason()">
+          <option value="">Выберите причину поломки...</option>
+          <option>Поломка основного оборудования</option>
+          <option>Поломка вспомогательного оборудования</option>
+          <option>Разрыв/замена сетки</option>
+          <option>Отсутствие персонала (СГИ)</option>
+          <option>Другое (Остановка)</option>
         </select>
       </div>
+    </div>
 
-      <div class="flex gap-2">
-        <div class="flex-1">
-          <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">С номера</label>
-          <input type="number" id="addMixFrom" placeholder="1" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
+    <!-- ПАРТИЯ -->
+    <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-3">
+      <div id="openBatchSection">
+        <button onclick="openNewBatchModal()" class="w-full py-4 border-2 border-dashed border-[#38bdf8] rounded-xl bg-[#1a2744] text-[#38bdf8] font-black text-sm uppercase tracking-wider btn-press">+ Открыть новую партию</button>
+      </div>
+
+      <div id="activeBatchSection" class="hidden space-y-3">
+        <div class="flex justify-between items-center bg-[#080d1a] border border-[#233152] p-2.5 rounded-xl text-xs">
+          <div>Партия: <b id="displayBatchNum" class="text-white">—</b></div>
+          <div>RAL: <b id="displayRal" class="text-white">—</b></div>
+          <div id="displayPackType" class="text-[#38bdf8] font-bold">—</div>
         </div>
-        <div class="flex-1">
-          <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">По номер</label>
-          <input type="number" id="addMixTo" placeholder="10" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
+
+        <!-- КОРОБКИ -->
+        <div id="boxInputWrap" class="hidden bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-center space-y-1">
+          <label class="text-[10px] font-extrabold text-[#8fa0c2] uppercase block">Номер последней выпущенной коробки</label>
+          <input type="number" id="boxUnitInput" placeholder="№" oninput="onUnitInput()" class="w-full bg-[#131c31] border-2 border-[#0072ce] rounded-xl py-3 text-center text-3xl font-black text-white outline-none">
+          <div class="text-[11px] text-[#8fa0c2]" id="boxDeltaText">—</div>
         </div>
-      </div>
 
-      <button onclick="confirmAddMix()" class="w-full py-3 bg-[#10b981] text-white font-bold rounded-xl text-xs uppercase btn-press mt-2">Добавить в журнал</button>
-      <button onclick="closeModal('modalAddMix')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Отмена</button>
-    </div>
-  </div>
-
-  <div id="modalCloseBatch" class="modal-overlay">
-    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
-      <h3 class="text-base font-black text-[#ef4444]">Закрытие партии</h3>
-      <div id="closeInputWrap">
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Номер последней коробки</label>
-        <input type="number" id="closeUnitTo" placeholder="Номер" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
-      </div>
-      <div class="mt-2">
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Вес последней коробки (если не 20 кг)</label>
-        <input type="number" id="closeLastBoxWeight" placeholder="20" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
-      </div>
-      <button onclick="closeBatch()" class="w-full py-3 bg-[#ef4444] text-white font-bold rounded-xl text-xs uppercase btn-press mt-2">Подтвердить закрытие</button>
-      <button onclick="closeModal('modalCloseBatch')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Отмена</button>
-    </div>
-  </div>
-
-  <div id="modalDefect" class="modal-overlay">
-    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
-      <h3 class="text-base font-black text-[#f87171]">Фиксация брака</h3>
-      <div class="grid grid-cols-2 gap-2">
-        <input type="number" id="defStart" placeholder="С коробки №" class="bg-[#080d1a] border border-[#29385c] rounded-xl p-2 text-white font-bold outline-none">
-        <input type="number" id="defEnd" placeholder="По коробку №" class="bg-[#080d1a] border border-[#29385c] rounded-xl p-2 text-white font-bold outline-none">
-      </div>
-      <button onclick="addDefect()" class="w-full py-3 bg-[#ef4444] text-white font-bold rounded-xl text-xs uppercase btn-press">Внести в брак</button>
-      <div id="defectList" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
-      <button onclick="closeModal('modalDefect')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Готово</button>
-    </div>
-  </div>
-
-  <div id="modalDust" class="modal-overlay">
-    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
-      <h3 class="text-base font-black text-[#38bdf8]">Сброс пыли</h3>
-      <input type="number" id="dustInput" placeholder="Вес мешка (кг)" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl p-2 text-white font-bold outline-none">
-      <button onclick="addDust()" class="w-full py-3 bg-[#0284c7] text-white font-bold rounded-xl text-xs uppercase btn-press">Добавить мешок</button>
-      <div id="dustList" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
-      <button onclick="closeModal('modalDust')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Готово</button>
-    </div>
-  </div>
-
-  <div id="modal5s" class="modal-overlay"><div class="bg-[#131c31] p-5 rounded-2xl"><h3 class="text-white">5S в разработке</h3><button onclick="closeModal('modal5s')" class="mt-4 text-white">Закрыть</button></div></div>
-
-  <div id="modalSummary" class="modal-overlay">
-    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-3">
-      <h3 class="text-base font-black text-[#38bdf8]">Сводка сдачи смены</h3>
-      <div class="space-y-1.5 text-xs">
-        <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Линия / Смена:</span><span id="sumLineShift" class="font-bold">—</span></div>
-        <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Оператор:</span><span id="sumOperator" class="font-bold">—</span></div>
-        <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Готовая краска (суммарно):</span><span id="sumPaintKg" class="font-bold text-[#34d399]">0 кг</span></div>
-        <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Заработано:</span><span id="sumEarnedRub" class="font-bold text-[#38bdf8]">0 ₽</span></div>
-      </div>
-      <button onclick="submitFinalShift()" class="w-full py-3.5 bg-[#0072ce] text-white font-black rounded-xl text-xs uppercase btn-press mt-2">Подтвердить и сдать</button>
-      <button onclick="closeModal('modalSummary')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Назад</button>
-    </div>
-  </div>
-
-  <div id="statsModal" class="modal-overlay">
-    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4 max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center border-b border-[#1c2742] pb-2">
-        <h3 class="text-base font-black text-[#38bdf8]">Моя выработка</h3>
-        <button onclick="closeModal('statsModal')" class="text-gray-400 font-bold text-lg">✕</button>
-      </div>
-      <div>
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Оператор</label>
-        <input type="text" id="statsOperatorName" readonly class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-gray-400 outline-none uppercase">
-      </div>
-      <div class="grid grid-cols-2 gap-2">
-        <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">С даты</label><input type="date" id="customDateFrom" onchange="loadStats()" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-2 py-2 text-xs text-white outline-none"></div>
-        <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">По дату</label><input type="date" id="customDateTo" onchange="loadStats()" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-2 py-2 text-xs text-white outline-none"></div>
-      </div>
-      <div id="statsLoading" class="text-center text-xs text-[#38bdf8] py-2 hidden">Загрузка...</div>
-      <div class="grid grid-cols-2 gap-2">
-        <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3">
-          <div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Смены</div>
-          <div class="text-xl font-black text-white" id="stTotalShifts">0</div>
-          <div class="text-[10px] text-[#64748b]" id="stShiftTypes">День: 0 / Ночь: 0</div>
+        <!-- СМЕШЕНИЕ -->
+        <div id="mixInputWrap" class="hidden space-y-2">
+          <div class="text-[10px] font-extrabold text-[#8fa0c2] uppercase">Сейчас делаю:</div>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button onclick="setComponent('comp1', this)" class="comp-btn py-2.5 text-xs font-extrabold rounded-xl btn-press">1 п/ф</button>
+            <button onclick="setComponent('comp2', this)" class="comp-btn py-2.5 text-xs font-extrabold rounded-xl btn-press">2 п/ф</button>
+            <button onclick="setComponent('finished', this)" class="comp-btn py-2.5 text-xs font-extrabold rounded-xl btn-press">Готовая</button>
+          </div>
+          <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-center space-y-1">
+            <label class="text-[10px] font-extrabold text-[#8fa0c2] uppercase block" id="mixUnitLabel">Номер последнего мешка</label>
+            <input type="number" id="mixUnitInput" placeholder="№" oninput="onUnitInput()" class="w-full bg-[#131c31] border-2 border-[#0072ce] rounded-xl py-3 text-center text-3xl font-black text-white outline-none">
+            <div class="text-[11px] text-[#8fa0c2]" id="mixDeltaText">—</div>
+          </div>
+          <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-xs space-y-1" id="mixTotals"></div>
         </div>
-        <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3">
-          <div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Продукция</div>
-          <div class="text-xl font-black text-[#34d399]" id="stPaintKg">0 кг</div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="sendCheckpoint()" class="py-3 bg-[#1e1b4b] border border-[#4338ca] font-extrabold rounded-xl text-[#a5b4fc] text-xs uppercase btn-press">Отправить на дашборд</button>
+          <button onclick="openClosePartyModal()" class="py-3 bg-[#1c2742] border border-[#ef4444] text-[#fca5a5] font-extrabold rounded-xl text-xs uppercase btn-press">Закрыть партию</button>
         </div>
-        <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 col-span-2">
-          <div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Заработано</div>
-          <div class="text-xl font-black text-[#fbbf24]" id="stEarnedRub">0 ₽</div>
-        </div>
+        <div id="lastSyncNotice" class="hidden text-[10px] text-center text-[#34d399]"></div>
       </div>
-      <button onclick="closeModal('statsModal')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Закрыть</button>
     </div>
+
+    <!-- БРАК / ПЫЛЬ -->
+    <div class="grid grid-cols-2 gap-2">
+      <button onclick="openModal('modalDefect')" class="bg-[#131c31] border border-[#55222b] p-3 rounded-2xl text-center btn-press space-y-1">
+        <div class="text-[11px] font-black text-[#f87171] uppercase">Брак</div>
+        <div id="badgeDefect" class="text-[10px] text-[#94a3b8]">0 кг</div>
+      </button>
+      <button onclick="openModal('modalDust')" class="bg-[#131c31] border border-[#233152] p-3 rounded-2xl text-center btn-press space-y-1">
+        <div class="text-[11px] font-black text-[#38bdf8] uppercase">Пыль</div>
+        <div id="badgeDust" class="text-[10px] text-[#94a3b8]">0 кг</div>
+      </button>
+    </div>
+
+    <button id="btnSubmitShift" onclick="openSummary()" class="w-full py-4 bg-gradient-to-r from-[#0072ce] to-[#0284c7] font-black rounded-2xl text-white text-sm uppercase tracking-wider shadow-xl btn-press">СДАТЬ СМЕНУ И ОТПРАВИТЬ ОТЧЁТ</button>
   </div>
+</main>
 
-  <script>
-    const SUPABASE_URL = "https://oqhrzruxubqthqyxmdcg.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_m5YmzYjW1BpotrbaRpCdgA__kYvilf3";
-    const PRIMATEK_LINES = [1, 5, 6, 7, 8, 13, 14, 15];
-    const EARNING_RATES = { base: 0.50, bonus: 500, overPlan: 1.00 };
-    const UNIT_WEIGHT = 20;
+<!-- МОДАЛКА: НОВАЯ ПАРТИЯ -->
+<div id="modalOpenBatch" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
+    <h3 class="text-base font-black text-[#38bdf8]">Открытие партии</h3>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">№ Партии</label>
+      <input type="text" id="newBatchNum" placeholder="26060780" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none focus:border-[#0072ce]">
+    </div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Цвет RAL</label>
+      <div class="flex bg-[#080d1a] border border-[#29385c] rounded-xl overflow-hidden">
+        <span class="bg-[#1c2742] text-[#38bdf8] font-black text-xs px-2.5 flex items-center border-r border-[#29385c]">RAL</span>
+        <input type="text" id="newRal" placeholder="7021" class="w-full bg-transparent px-2 py-2 text-sm text-white font-bold outline-none">
+      </div>
+    </div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Тип партии</label>
+      <div class="grid grid-cols-2 gap-1 bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
+        <button onclick="setNewBatchPack('box', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active">Коробки</button>
+        <button onclick="setNewBatchPack('mix', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle">Смешение</button>
+      </div>
+    </div>
+    <button id="btnConfirmOpenBatch" onclick="confirmOpenBatch()" class="w-full py-3 bg-[#10b981] text-white font-bold rounded-xl text-xs uppercase btn-press">Начать работу</button>
+    <button onclick="closeModal('modalOpenBatch')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Отмена</button>
+  </div>
+</div>
 
-    const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+<!-- МОДАЛКА: ЗАКРЫТИЕ -->
+<div id="modalCloseBatch" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-3 max-h-[90vh] overflow-y-auto">
+    <h3 class="text-base font-black text-[#ef4444]">Закрытие партии</h3>
+    <div id="closeBoxFields">
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Номер последней коробки</label>
+      <input type="number" id="closeUnitTo" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
+    </div>
+    <div id="closeMixFields" class="hidden space-y-2">
+      <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Последний мешок 1 п/ф</label><input type="number" id="closeComp1" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none"></div>
+      <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Последний мешок 2 п/ф</label><input type="number" id="closeComp2" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none"></div>
+      <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Последняя коробка готовой краски</label><input type="number" id="closeFinished" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none"></div>
+    </div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Вес последней коробки (если не 20 кг)</label>
+      <input type="number" id="closeLastBoxWeight" placeholder="20" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
+    </div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Пыль при закрытии, кг (необязательно)</label>
+      <input type="number" id="closeDust" placeholder="0" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
+    </div>
+    <div id="closePreview" class="text-xs text-[#8fa0c2] bg-[#080d1a] border border-[#233152] rounded-xl p-2.5">—</div>
+    <button id="btnCloseBatch" onclick="closeBatch()" class="w-full py-3 bg-[#ef4444] text-white font-bold rounded-xl text-xs uppercase btn-press">Подтвердить закрытие</button>
+    <button onclick="closeModal('modalCloseBatch')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Отмена</button>
+  </div>
+</div>
 
-    let state = JSON.parse(localStorage.getItem('primatek_state')) || {
-      line: 6, operator: '', handoverStatus: null, lineStatus: 'В РАБОТЕ',
-      packageType: 'box', startUnit: null, 
-      mixLog: [], // Журнал операций смешения
-      closedBatchesKg: 0, defects: [], dust: [], planKg: 0, 
-      isBatchOpen: false, newBatchPack: 'box', batchNumber: '', ralColor: '', 
-      isEditingBatch: false, shiftAccepted: false, repairReason: ''
-    };
+<!-- МОДАЛКА: БРАК -->
+<div id="modalDefect" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
+    <h3 class="text-base font-black text-[#f87171]">Фиксация брака (коробки по 20 кг)</h3>
+    <div class="grid grid-cols-2 gap-2">
+      <input type="number" id="defStart" placeholder="С коробки №" class="bg-[#080d1a] border border-[#29385c] rounded-xl p-2 text-white font-bold outline-none">
+      <input type="number" id="defEnd" placeholder="По коробку №" class="bg-[#080d1a] border border-[#29385c] rounded-xl p-2 text-white font-bold outline-none">
+    </div>
+    <button onclick="addDefect()" class="w-full py-3 bg-[#ef4444] text-white font-bold rounded-xl text-xs uppercase btn-press">Внести в брак</button>
+    <div id="defectList" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
+    <button onclick="closeModal('modalDefect')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Готово</button>
+  </div>
+</div>
 
-    // Конвертация старых данных, если mixLog не было
-    if (!state.mixLog) state.mixLog = [];
+<!-- МОДАЛКА: ПЫЛЬ -->
+<div id="modalDust" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
+    <h3 class="text-base font-black text-[#38bdf8]">Сброс пыли</h3>
+    <input type="number" id="dustInput" placeholder="Вес мешка (кг)" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl p-2 text-white font-bold outline-none">
+    <button onclick="addDust()" class="w-full py-3 bg-[#0284c7] text-white font-bold rounded-xl text-xs uppercase btn-press">Добавить мешок</button>
+    <div id="dustList" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
+    <button onclick="closeModal('modalDust')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Готово</button>
+  </div>
+</div>
 
-    function saveState() { localStorage.setItem('primatek_state', JSON.stringify(state)); }
+<!-- МОДАЛКА: СВОДКА -->
+<div id="modalSummary" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-3">
+    <h3 class="text-base font-black text-[#38bdf8]">Сводка сдачи смены</h3>
+    <div class="space-y-1.5 text-xs" id="summaryRows"></div>
+    <div class="text-[10px] text-[#64748b]">Партия останется открытой для следующего оператора.</div>
+    <button id="btnFinalShift" onclick="submitFinalShift()" class="w-full py-3.5 bg-[#0072ce] text-white font-black rounded-xl text-xs uppercase btn-press">Подтвердить и сдать</button>
+    <button onclick="closeModal('modalSummary')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Назад</button>
+  </div>
+</div>
 
-    window.onload = () => {
-      renderLines();
-      
-      if (state.shiftAccepted) {
-        document.getElementById('handoverSection').classList.add('hidden');
-        document.getElementById('handoverCompact').classList.remove('hidden');
-        document.getElementById('gamificationBlock').classList.remove('hidden');
-        document.getElementById('workArea').classList.remove('hidden');
-        
-        document.getElementById('operatorName').value = state.operator;
-        updateCompactBar();
-        updateBatchUI(); 
-        renderMixLog();
-        calculateProduction();
-        if (state.lineStatus === 'РЕМОНТ') {
-          document.getElementById('repairReasonWrap').classList.remove('hidden');
-        }
-      } else {
-        document.getElementById('operatorName').value = ''; 
-        loadPreviousShiftData(); 
-      }
+<!-- МОДАЛКА: СТАТИСТИКА -->
+<div id="statsModal" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4 max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center border-b border-[#1c2742] pb-2">
+      <h3 class="text-base font-black text-[#38bdf8]">Моя выработка</h3>
+      <button onclick="closeModal('statsModal')" class="text-gray-400 font-bold text-lg">✕</button>
+    </div>
+    <input type="text" id="statsOperatorName" readonly class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-gray-400 outline-none uppercase">
+    <div class="grid grid-cols-2 gap-2">
+      <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">С даты</label><input type="date" id="customDateFrom" onchange="loadStats()" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-2 py-2 text-xs text-white outline-none"></div>
+      <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">По дату</label><input type="date" id="customDateTo" onchange="loadStats()" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-2 py-2 text-xs text-white outline-none"></div>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Смены</div><div class="text-xl font-black text-white" id="stTotalShifts">0</div><div class="text-[10px] text-[#64748b]" id="stShiftTypes">День: 0 / Ночь: 0</div></div>
+      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Продукция</div><div class="text-xl font-black text-[#34d399]" id="stPaintKg">0 кг</div></div>
+      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 col-span-2"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Заработано</div><div class="text-xl font-black text-[#fbbf24]" id="stEarnedRub">0 ₽</div></div>
+    </div>
+    <button onclick="closeModal('statsModal')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Закрыть</button>
+  </div>
+</div>
 
-      loadPlanFromCloud();
-      setInterval(loadPlanFromCloud, 60000);
-      updateShiftBadge();
-      
-      const today = new Date().toISOString().slice(0, 10);
-      document.getElementById('customDateFrom').value = today;
-      document.getElementById('customDateTo').value = today;
-    };
+<script>
+const SUPABASE_URL = "https://oqhrzruxubqthqyxmdcg.supabase.co";
+const SUPABASE_KEY = "sb_publishable_m5YmzYjW1BpotrbaRpCdgA__kYvilf3";
+const PRIMATEK_LINES = [1, 5, 6, 7, 8, 13, 14, 15];
+const EARNING_RATES = { base: 0.50, bonus: 500, overPlan: 1.00 };
+const UNIT_WEIGHT = 20;
+const COMP_NAMES = { comp1: '1 п/ф', comp2: '2 п/ф', finished: 'Готовая краска' };
 
-    function updateShiftBadge() {
-      const h = new Date().getHours();
-      document.getElementById('shiftBadge').innerText = 'СМЕНА: ' + ((h >= 8 && h < 20) ? 'ДЕНЬ' : 'НОЧЬ');
-    }
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    function renderLines() {
-      document.getElementById('lineButtons').innerHTML = PRIMATEK_LINES.map(num => `
-        <button onclick="selectLine(${num})" class="line-sel-btn py-2 text-xs font-black rounded-xl border border-[#233152] ${num === state.line ? 'bg-[#0072ce] text-white border-[#38bdf8]' : 'bg-[#080d1a] text-[#cbd5e1]'}">${num}</button>
-      `).join('');
-    }
+// ===== Локальное состояние: только настройки телефона, НЕ правда о партии =====
+let local = JSON.parse(localStorage.getItem('primatek_local_v2')) || {
+  line: 6, operator: '', shiftAccepted: false, handoverStatus: null,
+  lineStatus: 'В РАБОТЕ', repairReason: '', defects: [], dust: [], planKg: 0,
+  shiftKey: null, shiftStartISO: null
+};
+function saveLocal() { localStorage.setItem('primatek_local_v2', JSON.stringify(local)); }
 
-    function selectLine(num) {
-      state.line = num;
-      saveState();
-      renderLines();
-      loadPreviousShiftData();
-      loadPlanFromCloud();
-      checkHandoverReady();
-    }
+// ===== Серверная правда =====
+let batch = null;          // открытая партия линии из таблицы batches
+let myBaseline = null;     // последние номера на момент моей приёмки (для "вы за смену")
+let sentSnapshot = null;   // номера на момент последней отправки (для дельт)
+let activeComp = 'comp1';
+let newBatchPack = 'box';
+let busy = false;
 
-    function selectHandoverStatus(status, btn) {
-      state.handoverStatus = status;
-      saveState();
-      document.querySelectorAll('.hand-btn').forEach(b => {
-        const type = b.innerText === 'В РАБОТЕ' ? 'work' : b.innerText === 'ЧИСТКА' ? 'clean' : b.innerText === 'ПРОБЫ' ? 'sample' : 'repair';
-        b.className = `hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-${type}`;
-      });
-      const type = status === 'В РАБОТЕ' ? 'work' : status === 'ЧИСТКА' ? 'clean' : status === 'ПРОБЫ' ? 'sample' : 'repair';
-      btn.className = `hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-${type} active`;
-      
-      document.getElementById('handoverStartNumberWrap').classList.toggle('hidden', status !== 'В РАБОТЕ');
-      if (status !== 'В РАБОТЕ') document.getElementById('handoverStartNumber').value = '';
-      checkHandoverReady();
-    }
+// ===== Окно смены =====
+function getShiftInfo() {
+  const now = new Date(); const h = now.getHours();
+  let start = new Date(now), end = new Date(now), name = 'ДЕНЬ';
+  if (h >= 8 && h < 20) { start.setHours(8,0,0,0); end.setHours(20,0,0,0); }
+  else if (h >= 20) { name='НОЧЬ'; start.setHours(20,0,0,0); end.setDate(end.getDate()+1); end.setHours(8,0,0,0); }
+  else { name='НОЧЬ'; start.setDate(start.getDate()-1); start.setHours(20,0,0,0); end.setHours(8,0,0,0); }
+  const d = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;
+  return { start, end, name, planDate: d, key: `${d}|${name}` };
+}
 
-    async function loadPreviousShiftData() {
-      try {
-        const { data } = await client.from('shift_reports')
-          .select('event_type, batch_number, ral_color, package_type, unit_to')
-          .eq('line_number', state.line)
-          .order('created_at', { ascending: false }).limit(5); // Берем последние 5 событий
+window.onload = async () => {
+  renderLines();
+  updateShiftBadge();
+  document.getElementById('operatorName').value = local.operator || '';
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('customDateFrom').value = today;
+  document.getElementById('customDateTo').value = today;
 
-        if (data && data.length > 0) {
-          // Ищем, есть ли открытая партия (если последнее событие не PARTY_CLOSE и не SHIFT_CLOSE без партии)
-          const lastPartyEvent = data.find(r => r.event_type === 'PARTY_CLOSE' || r.event_type === 'PRODUCTION' || r.event_type === 'SHIFT_CLOSE');
-          
-          if (lastPartyEvent && lastPartyEvent.event_type !== 'PARTY_CLOSE' && lastPartyEvent.batch_number) {
-            if (!state.shiftAccepted) {
-              state.isBatchOpen = true;
-              state.batchNumber = lastPartyEvent.batch_number;
-              state.ralColor = lastPartyEvent.ral_color || '—';
-              state.packageType = lastPartyEvent.package_type || 'box';
-              saveState();
-            }
-            if (lastPartyEvent.unit_to) {
-              document.getElementById('prevShiftHint').innerText = `Предыдущая смена закончила на №${lastPartyEvent.unit_to}`;
-              document.getElementById('prevShiftHint').classList.remove('hidden');
-            }
-          } else {
-            // Партия закрыта
-            if (!state.shiftAccepted) {
-              state.isBatchOpen = false;
-              saveState();
-            }
-            document.getElementById('prevShiftHint').classList.add('hidden');
-          }
-        } else {
-          if (!state.shiftAccepted) {
-            state.isBatchOpen = false;
-            saveState();
-          }
-          document.getElementById('prevShiftHint').classList.add('hidden');
-        }
-      } catch (e) { console.error(e); }
-    }
+  // Смена в localStorage устарела (пересекли границу 8/20)? Сбрасываем приёмку.
+  if (local.shiftAccepted && local.shiftKey !== getShiftInfo().key) {
+    local.shiftAccepted = false; local.defects = []; local.dust = []; saveLocal();
+  }
 
-    function checkHandoverReady() {
-      const nameInput = document.getElementById('operatorName').value.trim();
-      let isReady = nameInput && state.handoverStatus;
-      if (state.handoverStatus === 'В РАБОТЕ') {
-        const startNum = parseInt(document.getElementById('handoverStartNumber').value);
-        if (!startNum || startNum < 1) isReady = false;
-      }
-      document.getElementById('btnAcceptHandover').disabled = !isReady;
-    }
+  await refreshBatch();
 
+  if (local.shiftAccepted) {
+    enterWorkMode(false);
+  } else {
     document.getElementById('operatorName').addEventListener('input', checkHandoverReady);
-    document.getElementById('handoverStartNumber').addEventListener('input', checkHandoverReady);
+  }
+  loadPlanFromCloud();
+  setInterval(loadPlanFromCloud, 60000);
+  setInterval(updateShiftBadge, 60000);
+};
 
-    async function acceptHandover() {
-      const btn = document.getElementById('btnAcceptHandover');
-      btn.innerText = 'Отправка...';
-      btn.disabled = true;
+function updateShiftBadge() {
+  document.getElementById('shiftBadge').innerText = 'СМЕНА: ' + getShiftInfo().name;
+}
 
-      state.operator = document.getElementById('operatorName').value.trim();
-      state.lineStatus = state.handoverStatus;
-      state.startUnit = state.handoverStatus === 'В РАБОТЕ' ? parseInt(document.getElementById('handoverStartNumber').value) : null;
-      state.shiftAccepted = true;
-      saveState();
+function renderLines() {
+  document.getElementById('lineButtons').innerHTML = PRIMATEK_LINES.map(num => `
+    <button onclick="selectLine(${num})" class="py-2 text-xs font-black rounded-xl border border-[#233152] ${num === local.line ? 'bg-[#0072ce] text-white border-[#38bdf8]' : 'bg-[#080d1a] text-[#cbd5e1]'}">${num}</button>`).join('');
+}
 
-      try {
-        const payload = {
-          line_number: state.line, operator_name: state.operator, event_type: 'STATUS_CHANGE',
-          line_status: state.lineStatus, unit_from: state.startUnit
-        };
-        const { error } = await client.from('shift_reports').insert([payload]);
-        if (error) throw error;
+async function selectLine(num) {
+  local.line = num; saveLocal(); renderLines();
+  await refreshBatch();
+  checkHandoverReady();
+  loadPlanFromCloud();
+}
 
-        document.getElementById('handoverSection').classList.add('hidden');
-        document.getElementById('handoverCompact').classList.remove('hidden');
-        document.getElementById('gamificationBlock').classList.remove('hidden');
-        document.getElementById('workArea').classList.remove('hidden');
-        
-        updateCompactBar();
-        updateBatchUI(); 
-        renderMixLog();
-        calculateProduction();
-      } catch (err) {
-        alert('Ошибка приёма смены: ' + err.message);
-        btn.innerText = 'ПРИНЯТЬ СМЕНУ';
-        btn.disabled = false;
-        state.shiftAccepted = false;
-        saveState();
+// ===== Поиск открытой партии: ТОЛЬКО по статусу =====
+async function refreshBatch() {
+  try {
+    const { data, error } = await client.from('batches')
+      .select('*').eq('line_number', local.line).eq('status', 'open').limit(1);
+    if (error) throw error;
+    batch = (data && data.length) ? data[0] : null;
+  } catch (e) { console.error(e); batch = null; }
+  renderFoundBatch();
+  updateBatchUI();
+}
+
+function renderFoundBatch() {
+  const found = document.getElementById('foundBatchCard');
+  const none = document.getElementById('noBatchCard');
+  if (batch) {
+    found.classList.remove('hidden'); none.classList.add('hidden');
+    document.getElementById('foundBatchTitle').innerText =
+      `№ ${batch.batch_number} · ${batch.ral_color || '—'} · ${batch.package_type === 'mix' ? 'СМЕШЕНИЕ' : 'КОРОБКИ'}`;
+    document.getElementById('foundBatchNumbers').innerText = batch.package_type === 'mix'
+      ? `Последние: 1 п/ф — №${batch.last_comp1}, 2 п/ф — №${batch.last_comp2}, готовая — №${batch.last_finished}`
+      : `Последняя коробка: №${batch.last_unit}`;
+    document.getElementById('foundBatchOpened').innerText =
+      `Открыл: ${batch.opened_by || '—'} · ${new Date(batch.opened_at).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
+  } else {
+    found.classList.add('hidden'); none.classList.remove('hidden');
+  }
+}
+
+function selectHandoverStatus(status, btn) {
+  local.handoverStatus = status; saveLocal();
+  document.querySelectorAll('.hand-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('handoverRepairWrap').classList.toggle('hidden', status !== 'РЕМОНТ');
+  checkHandoverReady();
+}
+
+function checkHandoverReady() {
+  const name = document.getElementById('operatorName').value.trim();
+  let ok = name && local.handoverStatus;
+  if (local.handoverStatus === 'РЕМОНТ' && !document.getElementById('handoverRepairReason').value) ok = false;
+  document.getElementById('btnAcceptHandover').disabled = !ok;
+}
+
+async function acceptHandover() {
+  if (busy) return; busy = true;
+  const btn = document.getElementById('btnAcceptHandover');
+  btn.innerText = 'Отправка...'; btn.disabled = true;
+  try {
+    await refreshBatch(); // ещё раз проверяем сервер прямо перед приёмкой
+    const si = getShiftInfo();
+    local.operator = document.getElementById('operatorName').value.trim().toUpperCase();
+    local.lineStatus = local.handoverStatus;
+    local.repairReason = local.handoverStatus === 'РЕМОНТ' ? document.getElementById('handoverRepairReason').value : '';
+    local.shiftAccepted = true;
+    local.shiftKey = si.key;
+    local.shiftStartISO = si.start.toISOString();
+    local.defects = []; local.dust = [];
+    saveLocal();
+
+    // База: последние номера на момент приёмки = моя отправная точка
+    myBaseline = batch ? snapshotOf(batch) : null;
+    sentSnapshot = batch ? snapshotOf(batch) : null;
+    if (batch) activeComp = batch.active_component || 'comp1';
+
+    const { error } = await client.from('shift_reports').insert([{
+      line_number: local.line, operator_name: local.operator, event_type: 'STATUS_CHANGE',
+      line_status: local.lineStatus, repair_reason: local.repairReason || null,
+      batch_id: batch ? batch.id : null, batch_number: batch ? batch.batch_number : null,
+      ral_color: batch ? batch.ral_color : null, package_type: batch ? batch.package_type : null,
+      shift_key: si.key
+    }]);
+    if (error) throw error;
+
+    enterWorkMode(true);
+  } catch (err) {
+    alert('Ошибка приёма смены: ' + err.message);
+    local.shiftAccepted = false; saveLocal();
+    btn.innerText = 'ПРИНЯТЬ СМЕНУ'; btn.disabled = false;
+  } finally { busy = false; }
+}
+
+function snapshotOf(b) {
+  return { last_unit: b.last_unit||0, last_comp1: b.last_comp1||0, last_comp2: b.last_comp2||0, last_finished: b.last_finished||0 };
+}
+
+function enterWorkMode(fromAccept) {
+  document.getElementById('handoverSection').classList.add('hidden');
+  document.getElementById('handoverCompact').classList.remove('hidden');
+  document.getElementById('gamificationBlock').classList.remove('hidden');
+  document.getElementById('workArea').classList.remove('hidden');
+  if (!fromAccept && batch) {
+    // Восстановление после перезагрузки: база = последние отправленные мной номера из журнала
+    restoreMySession();
+  }
+  updateCompactBar(); updateBatchUI(); renderDefects(); renderDust(); calculateProduction();
+  highlightStatusButtons();
+}
+
+async function restoreMySession() {
+  try {
+    const { data } = await client.from('shift_reports')
+      .select('*').eq('line_number', local.line).eq('operator_name', local.operator)
+      .eq('shift_key', local.shiftKey).order('created_at', { ascending: false }).limit(20);
+    const rows = data || [];
+    const withNums = rows.find(r => r.comp1_to !== null || r.unit_to !== null);
+    if (withNums && batch) {
+      sentSnapshot = { last_unit: withNums.unit_to||0, last_comp1: withNums.comp1_to||0, last_comp2: withNums.comp2_to||0, last_finished: withNums.finished_to||0 };
+    } else if (batch) { sentSnapshot = snapshotOf(batch); }
+    // baseline: самая ранняя запись приёмки за смену — берём из первой STATUS_CHANGE или из снапшота
+    myBaseline = sentSnapshot ? {...sentSnapshot} : (batch ? snapshotOf(batch) : null);
+    // пересчитываем "мои кг" из дельт журнала
+    myDeltaKg = rows.filter(r=>r.event_type==='PRODUCTION'||r.event_type==='PARTY_CLOSE')
+      .reduce((s,r)=> s+(+r.delta_comp1_kg||0)+(+r.delta_comp2_kg||0)+(+r.delta_finished_kg||0)+(+r.delta_boxes_kg||0), 0);
+    calculateProduction();
+  } catch(e){ console.error(e); }
+}
+
+function reopenHandover() {
+  document.getElementById('handoverSection').classList.remove('hidden');
+  document.getElementById('handoverCompact').classList.add('hidden');
+  refreshBatch();
+}
+
+function updateCompactBar() {
+  const colors = { 'В РАБОТЕ':'bg-[#10b981]','ЧИСТКА':'bg-[#f59e0b]','ПРОБЫ':'bg-[#38bdf8]','РЕМОНТ':'bg-[#ef4444]' };
+  document.getElementById('compactDot').className = `w-2.5 h-2.5 rounded-full animate-pulse ${colors[local.lineStatus]||'bg-[#10b981]'}`;
+  document.getElementById('compactInfo').innerText = `Линия №${local.line} • ${local.operator} • ${local.lineStatus}`;
+}
+
+function highlightStatusButtons() {
+  document.querySelectorAll('.st-btn').forEach(b => b.classList.toggle('active', b.innerText === local.lineStatus));
+  const map = { 'В РАБОТЕ':'#34d399','ЧИСТКА':'#fbbf24','ПРОБЫ':'#38bdf8','РЕМОНТ':'#f87171' };
+  const t = document.getElementById('statusTimer');
+  t.innerText = local.lineStatus; t.style.color = map[local.lineStatus] || '#34d399';
+  document.getElementById('repairReasonWrap').classList.toggle('hidden', local.lineStatus !== 'РЕМОНТ');
+  if (local.repairReason) document.getElementById('repairReasonSelect').value = local.repairReason;
+}
+
+async function setLineStatus(status, btn) {
+  local.lineStatus = status; saveLocal();
+  highlightStatusButtons(); updateCompactBar();
+  if (status !== 'РЕМОНТ') {
+    local.repairReason = ''; saveLocal();
+    await insertStatusEvent(status, null);
+  }
+}
+
+async function submitRepairReason() {
+  const reason = document.getElementById('repairReasonSelect').value;
+  if (!reason) return;
+  local.repairReason = reason; saveLocal();
+  await insertStatusEvent('РЕМОНТ', reason);
+}
+
+async function insertStatusEvent(status, reason) {
+  try {
+    await client.from('shift_reports').insert([{
+      line_number: local.line, operator_name: local.operator, event_type: 'STATUS_CHANGE',
+      line_status: status, repair_reason: reason,
+      batch_id: batch ? batch.id : null, shift_key: getShiftInfo().key
+    }]);
+  } catch(e){ console.error(e); }
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+// ===== Открытие партии =====
+function openNewBatchModal() {
+  if (batch) { alert('На линии уже есть открытая партия!'); refreshBatch(); return; }
+  newBatchPack = 'box';
+  document.querySelectorAll('.new-pack-btn').forEach((t,i)=> t.className = `new-pack-btn py-1.5 text-xs font-extrabold rounded-lg ${i===0?'tab-active':'tab-idle'}`);
+  document.getElementById('newBatchNum').value = '';
+  document.getElementById('newRal').value = '';
+  openModal('modalOpenBatch');
+}
+function setNewBatchPack(type, btn) {
+  newBatchPack = type;
+  document.querySelectorAll('.new-pack-btn').forEach(t=>t.className='new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle');
+  btn.className='new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active';
+}
+
+async function confirmOpenBatch() {
+  if (busy) return;
+  const bNum = document.getElementById('newBatchNum').value.trim();
+  const ral = document.getElementById('newRal').value.trim();
+  if (!bNum || !ral) { alert('Заполните № партии и RAL!'); return; }
+  busy = true;
+  const btn = document.getElementById('btnConfirmOpenBatch'); btn.innerText = 'Создание...';
+  try {
+    const { data, error } = await client.from('batches').insert([{
+      line_number: local.line, batch_number: bNum, ral_color: 'RAL ' + ral,
+      package_type: newBatchPack, status: 'open', opened_by: local.operator,
+      active_component: 'comp1'
+    }]).select();
+    if (error) {
+      if (String(error.message).includes('one_open_batch_per_line')) {
+        alert('На линии уже есть открытая партия (возможно, открыл другой оператор). Обновляю...');
+        await refreshBatch(); closeModal('modalOpenBatch'); return;
       }
+      throw error;
     }
+    batch = data[0];
+    myBaseline = snapshotOf(batch); sentSnapshot = snapshotOf(batch); myDeltaKg = 0;
+    activeComp = 'comp1';
+    if (local.lineStatus !== 'В РАБОТЕ') { local.lineStatus = 'В РАБОТЕ'; saveLocal(); highlightStatusButtons(); updateCompactBar(); await insertStatusEvent('В РАБОТЕ', null); }
+    closeModal('modalOpenBatch'); updateBatchUI(); calculateProduction();
+  } catch (err) { alert('Ошибка открытия партии: ' + err.message); }
+  finally { busy = false; btn.innerText = 'Начать работу'; }
+}
 
-    function reopenHandover() {
-      document.getElementById('handoverSection').classList.remove('hidden');
-      document.getElementById('handoverCompact').classList.add('hidden');
+// ===== UI партии =====
+function updateBatchUI() {
+  const openSec = document.getElementById('openBatchSection');
+  const actSec = document.getElementById('activeBatchSection');
+  if (!batch) { openSec.classList.remove('hidden'); actSec.classList.add('hidden'); return; }
+  openSec.classList.add('hidden'); actSec.classList.remove('hidden');
+  document.getElementById('displayBatchNum').innerText = batch.batch_number;
+  document.getElementById('displayRal').innerText = batch.ral_color || '—';
+  document.getElementById('displayPackType').innerText = batch.package_type === 'mix' ? 'СМЕШЕНИЕ' : 'КОРОБКИ';
+
+  if (batch.package_type === 'mix') {
+    document.getElementById('boxInputWrap').classList.add('hidden');
+    document.getElementById('mixInputWrap').classList.remove('hidden');
+    activeComp = batch.active_component || activeComp;
+    highlightCompButtons();
+    fillUnitInputs();
+    renderMixTotals();
+  } else {
+    document.getElementById('boxInputWrap').classList.remove('hidden');
+    document.getElementById('mixInputWrap').classList.add('hidden');
+    fillUnitInputs();
+  }
+  onUnitInput();
+}
+
+function fillUnitInputs() {
+  if (!batch) return;
+  if (batch.package_type === 'mix') {
+    const last = batch['last_' + activeComp] || 0;
+    document.getElementById('mixUnitInput').value = last > 0 ? last : '';
+    document.getElementById('mixUnitLabel').innerText =
+      activeComp === 'finished' ? 'Номер последней коробки готовой краски' : `Номер последнего мешка ${COMP_NAMES[activeComp]}`;
+  } else {
+    document.getElementById('boxUnitInput').value = batch.last_unit > 0 ? batch.last_unit : '';
+  }
+}
+
+function highlightCompButtons() {
+  document.querySelectorAll('.comp-btn').forEach((b,i)=>{
+    const key = ['comp1','comp2','finished'][i];
+    b.classList.toggle('active', key === activeComp);
+  });
+}
+
+async function setComponent(comp, btn) {
+  if (!batch || batch.package_type !== 'mix') return;
+  // Перед переключением сохраняем введённый номер текущего компонента, если он больше серверного
+  await flushCurrentInputIfNeeded();
+  activeComp = comp;
+  highlightCompButtons();
+  fillUnitInputs();
+  onUnitInput();
+  try { await client.from('batches').update({ active_component: comp }).eq('id', batch.id); batch.active_component = comp; } catch(e){}
+}
+
+async function flushCurrentInputIfNeeded() {
+  const val = getCurrentInputValue();
+  const serverLast = batch['last_' + activeComp] || 0;
+  if (val > serverLast) await sendCheckpoint(true); // тихая отправка дельты
+}
+
+function getCurrentInputValue() {
+  if (!batch) return 0;
+  const el = batch.package_type === 'mix' ? document.getElementById('mixUnitInput') : document.getElementById('boxUnitInput');
+  return parseInt(el.value) || 0;
+}
+
+let myDeltaKg = 0; // подтверждённые сервером кг за мою смену
+
+function pendingDelta() {
+  // сколько кг добавлено в поле, но ещё не отправлено
+  if (!batch || !sentSnapshot) return { kg: 0, count: 0, from: 0, to: 0 };
+  const val = getCurrentInputValue();
+  if (batch.package_type === 'mix') {
+    const base = sentSnapshot['last_' + activeComp] || 0;
+    if (val > base) return { kg: (val - base) * UNIT_WEIGHT, count: val - base, from: base + 1, to: val };
+    return { kg: 0, count: 0, from: 0, to: 0 };
+  } else {
+    const base = sentSnapshot.last_unit || 0;
+    if (val > base) return { kg: (val - base) * UNIT_WEIGHT, count: val - base, from: base + 1, to: val };
+    return { kg: 0, count: 0, from: 0, to: 0 };
+  }
+}
+
+function onUnitInput() {
+  const d = pendingDelta();
+  const txt = d.kg > 0 ? `+${d.count} шт (№${d.from}–${d.to}) = +${d.kg} кг к отправке` : 'Введите номер больше предыдущего';
+  if (batch && batch.package_type === 'mix') {
+    document.getElementById('mixDeltaText').innerText = txt;
+    renderMixTotals();
+  } else {
+    document.getElementById('boxDeltaText').innerText = txt;
+  }
+  calculateProduction();
+}
+
+function batchTotalKg() {
+  if (!batch) return 0;
+  return batch.package_type === 'mix'
+    ? ((batch.last_comp1||0)+(batch.last_comp2||0)+(batch.last_finished||0)) * UNIT_WEIGHT
+    : (batch.last_unit||0) * UNIT_WEIGHT;
+}
+
+function renderMixTotals() {
+  if (!batch || batch.package_type !== 'mix') return;
+  const base = myBaseline || { last_comp1:0, last_comp2:0, last_finished:0 };
+  const rows = ['comp1','comp2','finished'].map(k => {
+    const cur = batch['last_'+k]||0;
+    const mine = Math.max(0, cur - (base['last_'+k]||0));
+    const pend = (k === activeComp) ? pendingDelta().count : 0;
+    return `<div class="flex justify-between"><span class="text-[#8fa0c2]">${COMP_NAMES[k]}:</span>
+      <span><b class="text-white">${(cur+pend)*UNIT_WEIGHT} кг</b> <span class="text-[#34d399]">/ вы: ${(mine+pend)*UNIT_WEIGHT} кг</span></span></div>`;
+  }).join('');
+  const total = batchTotalKg() + pendingDelta().kg;
+  const mineTotal = myKgForDisplay();
+  document.getElementById('mixTotals').innerHTML = rows +
+    `<div class="border-t border-[#233152] pt-1 mt-1 flex justify-between"><span class="font-extrabold text-[#38bdf8]">ИТОГО:</span><span class="font-black text-white">${total} кг <span class="text-[#34d399] font-bold">/ вы: ${mineTotal} кг</span></span></div>`;
+}
+
+function myKgForDisplay() {
+  const defectKg = local.defects.reduce((s,d)=>s+d.kg,0);
+  return Math.max(0, myDeltaKg + pendingDelta().kg - defectKg);
+}
+
+function calculateProduction() {
+  const goodKg = myKgForDisplay();
+  const earned = (local.planKg > 0 && goodKg >= local.planKg)
+    ? (local.planKg*EARNING_RATES.base)+EARNING_RATES.bonus+((goodKg-local.planKg)*EARNING_RATES.overPlan)
+    : goodKg*EARNING_RATES.base;
+  document.getElementById('statMoney').innerText = Math.round(earned)+' ₽';
+  document.getElementById('statDonePlan').innerText = `${goodKg} / ${local.planKg>0?local.planKg+' кг':'—'}`;
+  if (local.planKg > 0) {
+    const pct = Math.min(100, Math.round(goodKg/local.planKg*100));
+    document.getElementById('progressBar').style.width = pct+'%';
+    document.getElementById('premiumLeftText').innerHTML = pct>=100
+      ? '🔥 <span class="text-[#fbbf24]">ПЛАН ВЫПОЛНЕН (+500 ₽)!</span>'
+      : `До премии осталось: ${local.planKg-goodKg} кг`;
+  } else {
+    document.getElementById('premiumLeftText').innerText = '⏳ Ожидание плана от начальника смены';
+  }
+}
+
+// ===== Отправка дельты (PRODUCTION / PARTY_CLOSE / SHIFT_CLOSE) =====
+async function pushDelta(eventType, closeOpts = null) {
+  if (!batch && eventType !== 'SHIFT_CLOSE') { alert('Нет открытой партии'); return false; }
+  const si = getShiftInfo();
+  const defectKg = local.defects.reduce((s,d)=>s+d.kg,0);
+  const dustKg = local.dust.reduce((s,d)=>s+d,0) + (closeOpts?.extraDust||0);
+
+  // целевые номера: из полей ввода (или из модалки закрытия)
+  let target = batch ? snapshotOf(batch) : {last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
+  if (closeOpts) {
+    target = closeOpts.target;
+  } else if (batch) {
+    const val = getCurrentInputValue();
+    if (batch.package_type === 'mix') target['last_'+activeComp] = Math.max(val, target['last_'+activeComp]);
+    else target.last_unit = Math.max(val, target.last_unit);
+  }
+
+  const snap = sentSnapshot || {last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
+  let dComp1=0,dComp2=0,dFin=0,dBox=0;
+  if (batch) {
+    if (batch.package_type === 'mix') {
+      dComp1 = Math.max(0,(target.last_comp1-(snap.last_comp1||0)))*UNIT_WEIGHT;
+      dComp2 = Math.max(0,(target.last_comp2-(snap.last_comp2||0)))*UNIT_WEIGHT;
+      dFin   = Math.max(0,(target.last_finished-(snap.last_finished||0)))*UNIT_WEIGHT;
+      // неполная последняя коробка при закрытии
+      if (eventType==='PARTY_CLOSE' && closeOpts?.lastWeight && closeOpts.lastWeight!==20 && dFin>0)
+        dFin = dFin - UNIT_WEIGHT + closeOpts.lastWeight;
+    } else {
+      dBox = Math.max(0,(target.last_unit-(snap.last_unit||0)))*UNIT_WEIGHT;
+      if (eventType==='PARTY_CLOSE' && closeOpts?.lastWeight && closeOpts.lastWeight!==20 && dBox>0)
+        dBox = dBox - UNIT_WEIGHT + closeOpts.lastWeight;
     }
+  }
+  const deltaKg = dComp1+dComp2+dFin+dBox;
+  const goodDelta = Math.max(0, deltaKg - defectKg);
 
-    function updateCompactBar() {
-      const dot = document.getElementById('compactDot');
-      const info = document.getElementById('compactInfo');
-      const colors = { 'В РАБОТЕ': 'bg-[#10b981]', 'ЧИСТКА': 'bg-[#f59e0b]', 'ПРОБЫ': 'bg-[#38bdf8]', 'РЕМОНТ': 'bg-[#ef4444]' };
-      dot.className = `w-2.5 h-2.5 rounded-full animate-pulse ${colors[state.lineStatus] || 'bg-[#10b981]'}`;
-      info.innerText = `Линия №${state.line} • ${state.operator} • ${state.lineStatus}`;
+  const payload = {
+    line_number: local.line, operator_name: local.operator, event_type: eventType,
+    line_status: local.lineStatus, repair_reason: local.repairReason || null,
+    batch_id: batch?batch.id:null, batch_number: batch?batch.batch_number:null,
+    ral_color: batch?batch.ral_color:null, package_type: batch?batch.package_type:null,
+    shift_key: si.key,
+    delta_comp1_kg: dComp1, delta_comp2_kg: dComp2, delta_finished_kg: dFin, delta_boxes_kg: dBox,
+    comp1_to: batch&&batch.package_type==='mix'?target.last_comp1:null,
+    comp2_to: batch&&batch.package_type==='mix'?target.last_comp2:null,
+    finished_to: batch&&batch.package_type==='mix'?target.last_finished:null,
+    unit_from: batch&&batch.package_type==='box'?(snap.last_unit||0)+1:null,
+    unit_to: batch&&batch.package_type==='box'?target.last_unit:null,
+    total_good_kg: goodDelta,
+    chips_kg: dComp1+dComp2,
+    defect_kg: defectKg, defect_boxes: local.defects.reduce((s,d)=>s+d.count,0),
+    dust_kg: dustKg, plan_kg: local.planKg>0?local.planKg:null
+  };
+
+  const { error } = await client.from('shift_reports').insert([payload]);
+  if (error) { alert('Ошибка отправки: '+error.message); return false; }
+
+  // обновляем счётчики партии на сервере
+  if (batch) {
+    const upd = batch.package_type==='mix'
+      ? { last_comp1: target.last_comp1, last_comp2: target.last_comp2, last_finished: target.last_finished, active_component: activeComp }
+      : { last_unit: target.last_unit };
+    if (eventType==='PARTY_CLOSE') {
+      upd.status='closed'; upd.closed_by=local.operator; upd.closed_at=new Date().toISOString();
+      upd.last_box_weight=closeOpts?.lastWeight||20; upd.dust_kg=dustKg;
     }
+    const { error: upErr } = await client.from('batches').update(upd).eq('id', batch.id);
+    if (upErr) { alert('Журнал записан, но не обновилась партия: '+upErr.message+' — нажмите "Отправить" ещё раз или сообщите начальнику.'); return false; }
+    Object.assign(batch, upd);
+    sentSnapshot = {...target};
+  }
+  myDeltaKg += goodDelta;
+  local.defects = []; local.dust = []; saveLocal();
+  renderDefects(); renderDust();
+  return true;
+}
 
-    async function setLineStatus(status, btn) {
-      state.lineStatus = status;
-      saveState();
-      document.querySelectorAll('.st-btn').forEach(b => {
-        const type = b.innerText === 'В РАБОТЕ' ? 'work' : b.innerText === 'ЧИСТКА' ? 'clean' : b.innerText === 'ПРОБЫ' ? 'sample' : 'repair';
-        b.className = `st-btn py-3 text-xs font-extrabold rounded-xl border st-${type}`;
-      });
-      const type = status === 'В РАБОТЕ' ? 'work' : status === 'ЧИСТКА' ? 'clean' : status === 'ПРОБЫ' ? 'sample' : 'repair';
-      btn.className = `st-btn py-3 text-xs font-extrabold rounded-xl border st-${type} active`;
-      
-      const statusMap = { 'В РАБОТЕ': '#34d399', 'ЧИСТКА': '#fbbf24', 'ПРОБЫ': '#38bdf8', 'РЕМОНТ': '#f87171' };
-      document.getElementById('statusTimer').innerText = status;
-      document.getElementById('statusTimer').style.color = statusMap[status] || '#34d399';
-      updateCompactBar();
-
-      const repairWrap = document.getElementById('repairReasonWrap');
-      if (status === 'РЕМОНТ') {
-        repairWrap.classList.remove('hidden');
-      } else {
-        repairWrap.classList.add('hidden');
-        state.repairReason = '';
-        saveState();
-        try {
-          await client.from('shift_reports').insert([{
-            line_number: state.line, operator_name: state.operator, event_type: 'STATUS_CHANGE', line_status: status
-          }]);
-        } catch(e) { console.error(e); }
+async function sendCheckpoint(silent = false) {
+  if (busy) return;
+  if (!batch) { alert('Сначала откройте партию!'); return; }
+  if (pendingDelta().kg === 0 && local.defects.length===0 && local.dust.length===0) {
+    if (!silent) alert('Нет новых данных для отправки'); return;
+  }
+  busy = true;
+  try {
+    if (await pushDelta('PRODUCTION')) {
+      if (!silent) {
+        const n = document.getElementById('lastSyncNotice');
+        n.classList.remove('hidden');
+        n.innerText = 'Отправлено в '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+        setTimeout(()=>n.classList.add('hidden'),5000);
       }
-    }
-
-    async function submitRepairReason() {
-      const reason = document.getElementById('repairReasonSelect').value;
-      if (!reason) return;
-      
-      state.repairReason = reason;
-      saveState();
-      try {
-        await client.from('shift_reports').insert([{
-          line_number: state.line, operator_name: state.operator, event_type: 'STATUS_CHANGE', 
-          line_status: 'РЕМОНТ', repair_reason: reason
-        }]);
-      } catch(e) { console.error(e); }
-    }
-
-    function openModal(id) { document.getElementById(id).classList.add('open'); }
-    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-    function setNewBatchPack(type, btn) {
-      state.newBatchPack = type;
-      saveState();
-      document.querySelectorAll('.new-pack-btn').forEach(t => t.className = "new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle");
-      btn.className = "new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active";
-    }
-
-    function editParty() {
-      state.isEditingBatch = true;
-      saveState();
-      document.getElementById('modalBatchTitle').innerText = 'Редактирование партии';
-      document.getElementById('newBatchNum').value = state.batchNumber;
-      document.getElementById('newRal').value = state.ralColor.replace('RAL ', '');
-      
-      document.querySelectorAll('.new-pack-btn').forEach(t => t.className = "new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle");
-      const activeBtn = state.packageType === 'box' ? 0 : 1;
-      document.querySelectorAll('.new-pack-btn')[activeBtn].className = "new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active";
-      state.newBatchPack = state.packageType;
-      openModal('modalOpenBatch');
-    }
-
-    function confirmOpenBatch() {
-      const bNum = document.getElementById('newBatchNum').value.trim();
-      const ral = document.getElementById('newRal').value.trim();
-      if (!bNum || !ral) { alert("Заполните № Партии и RAL!"); return; }
-
-      state.batchNumber = bNum;
-      state.ralColor = 'RAL ' + ral;
-      state.packageType = state.newBatchPack;
-      state.isBatchOpen = true;
-      
-      if (!state.isEditingBatch) {
-        state.startUnit = 1;
-        state.mixLog = []; // Очищаем журнал смешения для новой партии
-        state.defects = [];
-        state.dust = [];
-        document.getElementById('currentUnitInput').value = '';
-        const workBtn = document.querySelector('.st-btn');
-        if (workBtn) setLineStatus('В РАБОТЕ', workBtn);
-      }
-
-      state.isEditingBatch = false;
-      saveState();
-      document.getElementById('modalBatchTitle').innerText = 'Открытие партии';
-      closeModal('modalOpenBatch'); updateBatchUI(); renderMixLog(); calculateProduction();
-    }
-
-    function updateBatchUI() {
-      const openSec = document.getElementById('openBatchSection');
-      const activeSec = document.getElementById('activeBatchSection');
-      
-      if (state.isBatchOpen) {
-        openSec.classList.add('hidden');
-        activeSec.classList.remove('hidden');
-        document.getElementById('displayBatchNum').innerText = state.batchNumber || '—';
-        document.getElementById('displayRal').innerText = state.ralColor || '—';
-        
-        const hasProduction = document.getElementById('currentUnitInput').value && parseInt(document.getElementById('currentUnitInput').value) >= state.startUnit;
-        document.getElementById('editBatchBtn').style.display = hasProduction ? 'none' : 'inline-block';
-        
-        document.querySelectorAll('.pkg-tab').forEach(t => t.className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle");
-        const activeTabIdx = state.packageType === 'box' ? 0 : 1;
-        document.querySelectorAll('.pkg-tab')[activeTabIdx].className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-active";
-        
-        const unitLabel = document.getElementById('unitLabel');
-        if (state.packageType === 'box') unitLabel.innerText = 'Номер последней выпущенной коробки';
-        
-        if (state.packageType === 'mix') {
-          document.getElementById('standardInputWrap').classList.add('hidden');
-          document.getElementById('mixInputWrap').classList.remove('hidden');
-          renderMixLog();
-        } else {
-          document.getElementById('standardInputWrap').classList.remove('hidden');
-          document.getElementById('mixInputWrap').classList.add('hidden');
-        }
-      } else {
-        openSec.classList.remove('hidden');
-        activeSec.classList.add('hidden');
-      }
-    }
-
-    function switchPackage(type, btn) {
-      if (!state.isBatchOpen) return;
-      if (document.getElementById('currentUnitInput').value) { alert("Нельзя изменить тип выпуска после начала!"); return; }
-      
-      state.packageType = type;
-      saveState();
-      document.querySelectorAll('.pkg-tab').forEach(t => t.className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle");
-      btn.className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-active";
       updateBatchUI(); calculateProduction();
     }
+  } finally { busy = false; }
+}
 
-    // === ЖУРНАЛ СМЕШЕНИЯ ===
-    function openAddMixModal() {
-      document.getElementById('addMixType').value = 'comp1';
-      document.getElementById('addMixFrom').value = '';
-      document.getElementById('addMixTo').value = '';
-      openModal('modalAddMix');
+// ===== Закрытие партии =====
+function openClosePartyModal() {
+  if (!batch) return;
+  const isMix = batch.package_type==='mix';
+  document.getElementById('closeBoxFields').classList.toggle('hidden', isMix);
+  document.getElementById('closeMixFields').classList.toggle('hidden', !isMix);
+  if (isMix) {
+    document.getElementById('closeComp1').value = Math.max(batch.last_comp1||0, activeComp==='comp1'?getCurrentInputValue():0);
+    document.getElementById('closeComp2').value = Math.max(batch.last_comp2||0, activeComp==='comp2'?getCurrentInputValue():0);
+    document.getElementById('closeFinished').value = Math.max(batch.last_finished||0, activeComp==='finished'?getCurrentInputValue():0);
+  } else {
+    document.getElementById('closeUnitTo').value = Math.max(batch.last_unit||0, getCurrentInputValue());
+  }
+  document.getElementById('closeLastBoxWeight').value = '';
+  document.getElementById('closeDust').value = '';
+  updateClosePreview();
+  ['closeComp1','closeComp2','closeFinished','closeUnitTo','closeLastBoxWeight'].forEach(id=>{
+    document.getElementById(id).oninput = updateClosePreview;
+  });
+  openModal('modalCloseBatch');
+}
+
+function closeTargets() {
+  if (batch.package_type==='mix') {
+    return {
+      last_unit: 0,
+      last_comp1: parseInt(document.getElementById('closeComp1').value)||0,
+      last_comp2: parseInt(document.getElementById('closeComp2').value)||0,
+      last_finished: parseInt(document.getElementById('closeFinished').value)||0
+    };
+  }
+  return { last_unit: parseInt(document.getElementById('closeUnitTo').value)||0, last_comp1:0,last_comp2:0,last_finished:0 };
+}
+
+function updateClosePreview() {
+  if (!batch) return;
+  const t = closeTargets();
+  const lw = parseFloat(document.getElementById('closeLastBoxWeight').value)||20;
+  const snap = sentSnapshot||{last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
+  let kg = batch.package_type==='mix'
+    ? Math.max(0,t.last_comp1-(snap.last_comp1||0))*20 + Math.max(0,t.last_comp2-(snap.last_comp2||0))*20 + Math.max(0,t.last_finished-(snap.last_finished||0))*20
+    : Math.max(0,t.last_unit-(snap.last_unit||0))*20;
+  const hasNew = batch.package_type==='mix' ? t.last_finished>(snap.last_finished||0) : t.last_unit>(snap.last_unit||0);
+  if (lw!==20 && hasNew) kg = kg-20+lw;
+  const defectKg = local.defects.reduce((s,d)=>s+d.kg,0);
+  document.getElementById('closePreview').innerHTML =
+    `Будет засчитано вам за смену: <b class="text-[#34d399]">${Math.max(0,kg-defectKg)} кг</b>` +
+    (defectKg?` (минус брак ${defectKg} кг)`:'') +
+    `<br>Итог партии целиком: <b class="text-white">${batch.package_type==='mix'?(t.last_comp1+t.last_comp2+t.last_finished)*20:t.last_unit*20} кг</b>`;
+}
+
+async function closeBatch() {
+  if (busy) return;
+  const t = closeTargets();
+  const snap = sentSnapshot||{last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
+  if (batch.package_type==='mix') {
+    if (t.last_comp1<(batch.last_comp1||0)||t.last_comp2<(batch.last_comp2||0)||t.last_finished<(batch.last_finished||0)) {
+      alert('Номер не может быть меньше уже зафиксированного!'); return;
     }
+    if (t.last_comp1+t.last_comp2+t.last_finished===0) { alert('Партия пустая — укажите номера'); return; }
+  } else {
+    if (t.last_unit<(batch.last_unit||0)) { alert('Номер не может быть меньше уже зафиксированного!'); return; }
+    if (t.last_unit===0) { alert('Укажите номер последней коробки'); return; }
+  }
+  const lw = parseFloat(document.getElementById('closeLastBoxWeight').value)||20;
+  if (lw<=0||lw>20) { alert('Вес последней коробки: от 0 до 20 кг'); return; }
+  const extraDust = parseFloat(document.getElementById('closeDust').value)||0;
 
-    function confirmAddMix() {
-      const type = document.getElementById('addMixType').value;
-      const from = parseInt(document.getElementById('addMixFrom').value);
-      const to = parseInt(document.getElementById('addMixTo').value);
+  busy = true;
+  const btn = document.getElementById('btnCloseBatch'); btn.innerText='Закрытие...';
+  try {
+    if (await pushDelta('PARTY_CLOSE', { target: t, lastWeight: lw, extraDust })) {
+      alert('Партия закрыта! Выработка засчитана в вашу смену.');
+      batch = null; myBaseline = null; sentSnapshot = null;
+      closeModal('modalCloseBatch');
+      updateBatchUI(); calculateProduction(); renderFoundBatch();
+    }
+  } finally { busy = false; btn.innerText='Подтвердить закрытие'; }
+}
 
-      if (!from || !to || to < from) {
-        alert("Укажите корректный диапазон (с какого по какой)!");
-        return;
+// ===== Брак / пыль =====
+function addDefect() {
+  const s = parseInt(document.getElementById('defStart').value), e = parseInt(document.getElementById('defEnd').value);
+  if (s && e && e>=s) {
+    local.defects.push({from:s,to:e,count:e-s+1,kg:(e-s+1)*UNIT_WEIGHT});
+    document.getElementById('defStart').value=''; document.getElementById('defEnd').value='';
+    saveLocal(); renderDefects(); calculateProduction();
+  } else alert('Укажите корректный диапазон');
+}
+function renderDefects() {
+  document.getElementById('badgeDefect').innerText = local.defects.reduce((s,d)=>s+d.kg,0)+' кг';
+  document.getElementById('defectList').innerHTML = local.defects.map((d,i)=>
+    `<div class="flex justify-between text-[#fca5a5]"><span>#${d.from}-#${d.to} (${d.count} шт = ${d.kg} кг)</span><span class="cursor-pointer font-bold" onclick="removeDefect(${i})">✕</span></div>`).join('');
+}
+function removeDefect(i){ local.defects.splice(i,1); saveLocal(); renderDefects(); calculateProduction(); }
+
+function addDust() {
+  const v = parseFloat(document.getElementById('dustInput').value);
+  if (v && v>0) { local.dust.push(v); document.getElementById('dustInput').value=''; saveLocal(); renderDust(); }
+}
+function renderDust() {
+  document.getElementById('badgeDust').innerText = local.dust.reduce((s,d)=>s+d,0).toFixed(1)+' кг';
+  document.getElementById('dustList').innerHTML = local.dust.map((d,i)=>
+    `<div class="flex justify-between text-[#94a3b8]"><span>Мешок #${i+1}: ${d} кг</span><span class="cursor-pointer font-bold" onclick="removeDust(${i})">✕</span></div>`).join('');
+}
+function removeDust(i){ local.dust.splice(i,1); saveLocal(); renderDust(); }
+
+// ===== Сдача смены =====
+function openSummary() {
+  const si = getShiftInfo();
+  const goodKg = myKgForDisplay();
+  const earned = (local.planKg>0&&goodKg>=local.planKg)?(local.planKg*EARNING_RATES.base)+EARNING_RATES.bonus+((goodKg-local.planKg)*EARNING_RATES.overPlan):goodKg*EARNING_RATES.base;
+  const dustKg = local.dust.reduce((s,d)=>s+d,0);
+  document.getElementById('summaryRows').innerHTML = `
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Линия / Смена:</span><b>№${local.line} (${si.name})</b></div>
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Оператор:</span><b>${local.operator}</b></div>
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Партия:</span><b>${batch?batch.batch_number+' (останется открытой)':'нет открытой'}</b></div>
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Ваша выработка:</span><b class="text-[#34d399]">${goodKg} кг</b></div>
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Пыль:</span><b>${dustKg.toFixed(1)} кг</b></div>
+    <div class="flex justify-between py-1"><span class="text-gray-400">Заработано:</span><b class="text-[#38bdf8]">${Math.round(earned)} ₽</b></div>`;
+  openModal('modalSummary');
+}
+
+async function submitFinalShift() {
+  if (busy) return; busy = true;
+  const btn = document.getElementById('btnFinalShift'); btn.innerText='Отправка...';
+  try {
+    if (await pushDelta('SHIFT_CLOSE')) {
+      alert('Смена сдана!'+(batch?' Партия остаётся открытой для следующего оператора.':''));
+      closeModal('modalSummary');
+      local.shiftAccepted=false; local.defects=[]; local.dust=[]; local.handoverStatus=null;
+      saveLocal();
+      setTimeout(()=>location.reload(),1200);
+    }
+  } finally { busy=false; btn.innerText='Подтвердить и сдать'; }
+}
+
+// ===== Статистика =====
+function openStatsModal() {
+  const op = local.operator || document.getElementById('operatorName').value.trim();
+  if (!op) { alert('Сначала введите фамилию!'); return; }
+  document.getElementById('statsOperatorName').value = op;
+  openModal('statsModal'); loadStats();
+}
+
+async function loadStats() {
+  const op = document.getElementById('statsOperatorName').value;
+  const from = document.getElementById('customDateFrom').value, to = document.getElementById('customDateTo').value;
+  if (!op||!from||!to) return;
+  try {
+    const { data, error } = await client.from('shift_reports').select('*')
+      .eq('operator_name', op).in('event_type',['SHIFT_CLOSE','PARTY_CLOSE','PRODUCTION'])
+      .gte('created_at', from+'T00:00:00').lte('created_at', to+'T23:59:59');
+    if (error) throw error;
+    const rows = data||[];
+    const shifts = rows.filter(r=>r.event_type==='SHIFT_CLOSE');
+    let day=0,night=0;
+    shifts.forEach(r=>{ const h=new Date(r.created_at).getHours(); (h>=8&&h<20)?day++:night++; });
+    // кг: новые записи считаем по дельтам, старые (без shift_key) — по снимку SHIFT_CLOSE/PARTY_CLOSE
+    let kg=0, earned=0;
+    rows.forEach(r=>{
+      if (r.shift_key) {
+        kg += (+r.delta_comp1_kg||0)+(+r.delta_comp2_kg||0)+(+r.delta_finished_kg||0)+(+r.delta_boxes_kg||0)-(+r.defect_kg||0);
+      } else if (r.event_type!=='PRODUCTION') {
+        const k=+r.total_good_kg||0; kg+=k;
+        const p=+r.plan_kg||0;
+        earned += (p>0&&k>=p)?(p*EARNING_RATES.base)+EARNING_RATES.bonus+((k-p)*EARNING_RATES.overPlan):k*EARNING_RATES.base;
       }
+    });
+    // заработок по новым: по итогам смен (сумма дельт в рамках shift_key)
+    const byShift = {};
+    rows.filter(r=>r.shift_key&&r.event_type==='SHIFT_CLOSE').forEach(r=>{ byShift[r.shift_key]={plan:+r.plan_kg||0,kg:0}; });
+    rows.filter(r=>r.shift_key).forEach(r=>{
+      if (byShift[r.shift_key]) byShift[r.shift_key].kg += (+r.delta_comp1_kg||0)+(+r.delta_comp2_kg||0)+(+r.delta_finished_kg||0)+(+r.delta_boxes_kg||0)-(+r.defect_kg||0);
+    });
+    Object.values(byShift).forEach(s=>{
+      earned += (s.plan>0&&s.kg>=s.plan)?(s.plan*EARNING_RATES.base)+EARNING_RATES.bonus+((s.kg-s.plan)*EARNING_RATES.overPlan):s.kg*EARNING_RATES.base;
+    });
+    document.getElementById('stTotalShifts').innerText = shifts.length;
+    document.getElementById('stShiftTypes').innerText = `День: ${day} / Ночь: ${night}`;
+    document.getElementById('stPaintKg').innerText = Math.max(0,kg).toLocaleString('ru-RU')+' кг';
+    document.getElementById('stEarnedRub').innerText = Math.round(earned).toLocaleString('ru-RU')+' ₽';
+  } catch(e){ console.error(e); }
+}
 
-      const count = to - from + 1;
-      const kg = count * UNIT_WEIGHT;
-      
-      let typeName = '';
-      if (type === 'comp1') typeName = '1 п/ф';
-      if (type === 'comp2') typeName = '2 п/ф';
-      if (type === 'finished') typeName = 'Готовая краска';
-
-      const time = new Date().toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
-
-      state.mixLog.push({ id: Date.now(), type, typeName, from, to, count, kg, time });
-      saveState();
-      
-      closeModal('modalAddMix');
-      renderMixLog();
-      calculateProduction();
-    }
-
-    function deleteMixLogItem(id) {
-      state.mixLog = state.mixLog.filter(item => item.id !== id);
-      saveState();
-      renderMixLog();
-      calculateProduction();
-    }
-
-    function renderMixLog() {
-      const list = document.getElementById('mixLogList');
-      if (!state.mixLog || state.mixLog.length === 0) {
-        list.innerHTML = `<div class="text-xs text-[#64748b] italic text-center py-2">Записей пока нет. Нажмите "+ Добавить".</div>`;
-        document.getElementById('mixTotalText').innerText = `Итого смешение: 0 кг`;
-        return;
-      }
-
-      let total = 0;
-      list.innerHTML = state.mixLog.map(item => {
-        total += item.kg;
-        return `
-          <div class="log-item">
-            <div>
-              <div class="text-[#8fa0c2] mb-0.5">${item.time} — <b class="text-white">${item.typeName}</b></div>
-              <div class="text-[10px] text-[#64748b]">№${item.from} — №${item.to} <span class="text-[#34d399] ml-1">(${item.kg} кг)</span></div>
-            </div>
-            <div class="log-item-del" onclick="deleteMixLogItem(${item.id})">✕</div>
-          </div>
-        `;
-      }).join('');
-
-      document.getElementById('mixTotalText').innerText = `Итого смешение: ${total} кг`;
-    }
-    // =========================
-
-    function openClosePartyModal() {
-      document.getElementById('closeUnitTo').value = document.getElementById('currentUnitInput').value || '';
-      document.getElementById('closeLastBoxWeight').value = '';
-      openModal('modalCloseBatch');
-    }
-
-    async function closeBatch() {
-      let count = 0, kg = 0;
-      const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
-      const dustKg = state.dust.reduce((s, d) => s + d, 0);
-
-      if (state.packageType === 'mix') {
-        kg = state.mixLog.reduce((sum, item) => sum + item.kg, 0);
-        if (kg === 0) { alert("Добавьте записи по смешению!"); return; }
-      } else {
-        const endVal = parseInt(document.getElementById('closeUnitTo').value);
-        const lastWeight = parseFloat(document.getElementById('closeLastBoxWeight').value) || 20;
-        if (!endVal || endVal < state.startUnit) { alert("Укажите корректный номер!"); return; }
-        
-        count = (endVal - state.startUnit + 1);
-        kg = (count - 1) * UNIT_WEIGHT + lastWeight;
-        state.startUnit = endVal; 
-      }
-
-      const payload = {
-        line_number: state.line, operator_name: state.operator, event_type: 'PARTY_CLOSE',
-        line_status: state.lineStatus, batch_number: state.batchNumber, ral_color: state.ralColor, package_type: state.packageType,
-        total_good_kg: Math.max(0, kg - defectKg), 
-        good_boxes: state.packageType === 'box' ? count : 0,
-        chips_kg: state.packageType === 'mix' ? kg : 0,
-        defect_kg: defectKg, defect_boxes: state.defects.reduce((s, d) => s + d.count, 0),
-        dust_kg: dustKg, unit_from: state.packageType === 'mix' ? null : 1, unit_to: state.packageType === 'mix' ? null : state.startUnit, 
-        plan_kg: state.planKg > 0 ? state.planKg : null
-      };
-
-      try {
-        const { error } = await client.from('shift_reports').insert([payload]);
-        if (error) throw error;
-        
-        alert(`Партия закрыта! Засчитано: ${payload.total_good_kg} кг.`);
-        
-        state.closedBatchesKg += payload.total_good_kg;
-        state.isBatchOpen = false; state.batchNumber = ''; state.ralColor = ''; state.startUnit = null; state.defects = []; state.dust = []; state.mixLog = [];
-        document.getElementById('currentUnitInput').value = ''; document.getElementById('closeUnitTo').value = '';
-        
-        saveState();
-        closeModal('modalCloseBatch'); renderDefects(); renderDust(); updateBatchUI(); renderMixLog(); calculateProduction();
-      } catch (err) {
-        alert("Ошибка: " + err.message);
-      }
-    }
-
-    function calculateProduction() {
-      let currentBatchKg = 0;
-      
-      if (state.isBatchOpen) {
-        if (state.packageType === 'mix') {
-          currentBatchKg = state.mixLog.reduce((sum, item) => sum + item.kg, 0);
-        } else {
-          const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
-          if (endVal >= state.startUnit) {
-            const count = endVal - state.startUnit + 1;
-            currentBatchKg = count * UNIT_WEIGHT;
-          }
-        }
-      }
-
-      const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
-      const goodKg = Math.max(0, currentBatchKg - defectKg) + state.closedBatchesKg;
-
-      let earned = (state.planKg > 0 && goodKg >= state.planKg)
-        ? (state.planKg * EARNING_RATES.base) + EARNING_RATES.bonus + ((goodKg - state.planKg) * EARNING_RATES.overPlan)
-        : goodKg * EARNING_RATES.base;
-
-      document.getElementById('statMoney').innerText = Math.round(earned) + ' ₽';
-      document.getElementById('statDonePlan').innerText = `${goodKg} / ${state.planKg > 0 ? state.planKg + ' кг' : '—'}`;
-
-      if (state.planKg > 0) {
-        const pct = Math.min(100, Math.round((goodKg / state.planKg) * 100));
-        document.getElementById('progressBar').style.width = pct + '%';
-        document.getElementById('premiumLeftText').innerHTML = pct >= 100 
-          ? `🔥 <span class="text-[#fbbf24]">ПЛАН ВЫПОЛНЕН (+500 ₽)!</span>`
-          : `До премии осталось: ${state.planKg - goodKg} кг`;
-      } else {
-        document.getElementById('premiumLeftText').innerText = `⏳ Ожидание плана от начальника смены`;
-      }
-      
-      const hasData = currentBatchKg > 0 || state.closedBatchesKg > 0;
-      const btnSubmit = document.getElementById('btnSubmitShift');
-      const warning = document.getElementById('submitWarning');
-      
-      if (hasData) {
-        btnSubmit.disabled = false; btnSubmit.classList.remove('opacity-40', 'cursor-not-allowed'); warning.style.display = 'none';
-      } else {
-        btnSubmit.disabled = true; btnSubmit.classList.add('opacity-40', 'cursor-not-allowed'); warning.style.display = 'block';
-      }
-    }
-
-    async function sendToSupabase(eventType, extraData = {}) {
-      let currentBatchKg = 0;
-      if (state.isBatchOpen) {
-        if (state.packageType === 'mix') {
-          currentBatchKg = state.mixLog.reduce((sum, item) => sum + item.kg, 0);
-        } else {
-          const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
-          if (endVal >= state.startUnit) {
-            currentBatchKg = (endVal - state.startUnit + 1) * UNIT_WEIGHT;
-          }
-        }
-      }
-
-      const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
-      
-      const payload = {
-        line_number: state.line, operator_name: state.operator, event_type: eventType, line_status: state.lineStatus, package_type: state.packageType, ...extraData
-      };
-
-      if (eventType === 'PRODUCTION' || eventType === 'SHIFT_CLOSE') {
-        payload.total_good_kg = Math.max(0, currentBatchKg - defectKg) + state.closedBatchesKg;
-        payload.chips_kg = state.packageType === 'mix' ? currentBatchKg : 0;
-        payload.defect_kg = defectKg; 
-        payload.dust_kg = state.dust.reduce((s, d) => s + d, 0);
-        payload.plan_kg = state.planKg > 0 ? state.planKg : null;
-        if (state.isBatchOpen) { payload.batch_number = state.batchNumber; payload.ral_color = state.ralColor; }
-      }
-
-      try {
-        const { error } = await client.from('shift_reports').insert([payload]);
-        if (error) throw error;
-        
-        if (eventType === 'PRODUCTION') {
-          const notice = document.getElementById('lastSyncNotice');
-          notice.style.display = 'block'; notice.innerText = `Отправлено в ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}`;
-          setTimeout(() => { notice.style.display = 'none'; }, 5000);
-        }
-        return true;
-      } catch (err) { alert('Ошибка: ' + err.message); return false; }
-    }
-
-    async function sendCheckpoint() {
-      if (!state.isBatchOpen) { alert("Сначала откройте партию!"); return; }
-      if (await sendToSupabase('PRODUCTION')) alert('Результат отправлен на дашборд!');
-    }
-
-    function addDefect() {
-      const s = parseInt(document.getElementById('defStart').value), e = parseInt(document.getElementById('defEnd').value);
-      if (s && e && e >= s) {
-        state.defects.push({ from: s, to: e, count: (e - s + 1), kg: (e - s + 1) * UNIT_WEIGHT });
-        document.getElementById('defStart').value = ''; document.getElementById('defEnd').value = '';
-        saveState(); renderDefects(); calculateProduction();
-      } else alert('Укажите корректный диапазон');
-    }
-
-    function renderDefects() {
-      document.getElementById('badgeDefect').innerText = state.defects.reduce((s, d) => s + d.kg, 0) + ' кг';
-      document.getElementById('defectList').innerHTML = state.defects.map(d => `<div class="text-[#fca5a5]">#${d.from}-#${d.to} (${d.count} шт = ${d.kg} кг)</div>`).join('');
-    }
-
-    function addDust() {
-      const val = parseFloat(document.getElementById('dustInput').value);
-      if (val && val > 0) {
-        state.dust.push(val); document.getElementById('dustInput').value = '';
-        saveState(); renderDust(); calculateProduction();
-      }
-    }
-
-    function renderDust() {
-      document.getElementById('badgeDust').innerText = state.dust.reduce((s, d) => s + d, 0).toFixed(1) + ' кг';
-      document.getElementById('dustList').innerHTML = state.dust.map((d, i) => `<div class="text-[#94a3b8]">Мешок #${i+1}: ${d} кг</div>`).join('');
-    }
-
-    function openSummary() {
-      document.getElementById('sumLineShift').innerText = `Линия №${state.line} (${(new Date().getHours() >= 8 && new Date().getHours() < 20) ? 'День' : 'Ночь'})`;
-      document.getElementById('sumOperator').innerText = state.operator;
-      
-      let currentBatchKg = 0;
-      if (state.isBatchOpen) {
-        if (state.packageType === 'mix') {
-          currentBatchKg = state.mixLog.reduce((sum, item) => sum + item.kg, 0);
-        } else {
-          const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
-          if (endVal >= state.startUnit) {
-            currentBatchKg = (endVal - state.startUnit + 1) * UNIT_WEIGHT;
-          }
-        }
-      }
-      
-      const defectKg = state.defects.reduce((s, d) => s + d.kg, 0);
-      const goodKg = Math.max(0, currentBatchKg - defectKg) + state.closedBatchesKg;
-      
-      document.getElementById('sumPaintKg').innerText = goodKg + ' кг';
-      let earned = (state.planKg > 0 && goodKg >= state.planKg) ? (state.planKg * EARNING_RATES.base) + EARNING_RATES.bonus + ((goodKg - state.planKg) * EARNING_RATES.overPlan) : goodKg * EARNING_RATES.base;
-      document.getElementById('sumEarnedRub').innerText = Math.round(earned) + ' ₽';
-      openModal('modalSummary');
-    }
-
-    async function submitFinalShift() {
-      const success = await sendToSupabase('SHIFT_CLOSE');
-      if (success) {
-        alert("Смена успешно сдана! Партия остается открытой для следующего.");
-        closeModal('modalSummary');
-        state.closedBatchesKg = 0; state.defects = []; state.dust = []; state.mixLog = [];
-        document.getElementById('currentUnitInput').value = '';
-        state.shiftAccepted = false; 
-        saveState();
-        renderDefects(); renderDust(); renderMixLog(); calculateProduction();
-        setTimeout(() => location.reload(), 1500);
-      }
-    }
-
-    function openStatsModal() { 
-      const opName = document.getElementById('operatorName').value.trim() || state.operator;
-      if (!opName) { alert("Сначала введите вашу фамилию в шапке!"); return; }
-      document.getElementById('statsOperatorName').value = opName;
-      openModal('statsModal'); 
-      loadStats(); 
-    }
-
-    async function loadStats() {
-      const opName = document.getElementById('statsOperatorName').value;
-      if (!opName) return;
-      
-      const loading = document.getElementById('statsLoading');
-      loading.classList.remove('hidden');
-
-      const startStr = document.getElementById('customDateFrom').value; 
-      const endStr = document.getElementById('customDateTo').value;
-      
-      if (!startStr || !endStr) { loading.classList.add('hidden'); return; }
-
-      try {
-        const { data, error } = await client.from('shift_reports').select('*')
-          .eq('operator_name', opName).in('event_type', ['SHIFT_CLOSE', 'PARTY_CLOSE'])
-          .gte('created_at', startStr).lte('created_at', endStr + 'T23:59:59Z');
-        
-        if (error) throw error;
-
-        const shifts = (data || []).filter(r => r.event_type === 'SHIFT_CLOSE');
-        let totalShifts = shifts.length, dayShifts = 0, nightShifts = 0;
-        shifts.forEach(r => {
-          const isDay = (new Date(r.created_at).getHours() >= 8 && new Date(r.created_at).getHours() < 20);
-          if (isDay) dayShifts++; else nightShifts++;
-        });
-
-        let totalKg = 0, totalEarned = 0;
-        (data || []).forEach(r => {
-          const kg = Number(r.total_good_kg) || 0; totalKg += kg;
-          const plan = Number(r.plan_kg) || 0;
-          totalEarned += (plan > 0 && kg >= plan) ? (plan * EARNING_RATES.base) + EARNING_RATES.bonus + ((kg - plan) * EARNING_RATES.overPlan) : kg * EARNING_RATES.base;
-        });
-
-        document.getElementById('stTotalShifts').innerText = totalShifts;
-        document.getElementById('stShiftTypes').innerText = `День: ${dayShifts} / Ночь: ${nightShifts}`;
-        document.getElementById('stPaintKg').innerText = totalKg.toLocaleString('ru-RU') + ' кг';
-        document.getElementById('stEarnedRub').innerText = Math.round(totalEarned).toLocaleString('ru-RU') + ' ₽';
-      } catch (err) { console.error(err); } finally { loading.classList.add('hidden'); }
-    }
-
-    async function loadPlanFromCloud() {
-      try {
-        const today = new Date().toISOString().slice(0, 10);
-        const shiftName = (new Date().getHours() >= 8 && new Date().getHours() < 20) ? 'ДЕНЬ' : 'НОЧЬ';
-        const { data } = await client.from('shift_plans').select('plan_kg').eq('plan_date', today).eq('shift', shiftName).eq('line_number', state.line).limit(1);
-        state.planKg = (data && data.length > 0 && data[0].plan_kg) ? Number(data[0].plan_kg) : 0;
-        saveState();
-        calculateProduction();
-      } catch (e) {}
-    }
-  </script>
+async function loadPlanFromCloud() {
+  try {
+    const si = getShiftInfo();
+    const { data } = await client.from('shift_plans').select('plan_kg')
+      .eq('plan_date', si.planDate).eq('shift', si.name).eq('line_number', local.line).limit(1);
+    local.planKg = (data&&data.length&&data[0].plan_kg)?Number(data[0].plan_kg):0;
+    saveLocal(); calculateProduction();
+  } catch(e){}
+}
+</script>
 </body>
 </html>
