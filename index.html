@@ -28,6 +28,10 @@
     
     .tab-active { background:#0072ce; color:#fff; }
     .tab-idle { color:#8fa0c2; }
+
+    /* Стили для журнала операций */
+    .log-item { background: #080d1a; border: 1px solid #233152; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; }
+    .log-item-del { color: #ef4444; font-weight: bold; cursor: pointer; padding: 0 5px; font-size: 16px; }
   </style>
 </head>
 <body class="min-h-screen pb-24 select-none">
@@ -49,6 +53,7 @@
 
   <main class="p-3 max-w-md mx-auto space-y-3">
 
+    <!-- 1. ПРИЕМКА СМЕНЫ -->
     <div id="handoverSection" class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-3">
       <h2 class="text-xs font-extrabold text-[#38bdf8] uppercase tracking-wider">Приём смены и выбор линии</h2>
       <div class="grid grid-cols-4 gap-1.5" id="lineButtons"></div>
@@ -69,12 +74,12 @@
       <div id="handoverStartNumberWrap" class="hidden">
         <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">С какой коробки начинаете?</label>
         <input type="number" id="handoverStartNumber" placeholder="Введите номер" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-[#0072ce]">
-        <div id="prevShiftHint" class="text-[10px] text-[#64748b] mt-1 hidden">Предыдущая смена закончила на №...</div>
       </div>
 
       <button id="btnAcceptHandover" onclick="acceptHandover()" disabled class="w-full py-3 bg-[#10b981] disabled:opacity-40 font-black rounded-xl text-white text-xs uppercase tracking-wider btn-press">ПРИНЯТЬ СМЕНУ</button>
     </div>
 
+    <!-- 2. ПЛАШКА -->
     <div id="handoverCompact" class="hidden bg-[#131c31] border rounded-xl p-3 flex items-center justify-between shadow">
       <div class="flex items-center space-x-2">
         <span id="compactDot" class="w-2.5 h-2.5 rounded-full bg-[#10b981] animate-pulse"></span>
@@ -83,6 +88,7 @@
       <button onclick="reopenHandover()" class="text-[11px] font-bold text-[#38bdf8] underline btn-press">Изменить ✎</button>
     </div>
 
+    <!-- 3. ГЕЙМИФИКАЦИЯ -->
     <div id="gamificationBlock" class="hidden bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-2">
       <div class="flex justify-between items-end">
         <div>
@@ -102,6 +108,7 @@
       </div>
     </div>
 
+    <!-- 4. РАБОЧАЯ ЗОНА -->
     <div id="workArea" class="hidden space-y-3">
       <!-- СТАТУСЫ -->
       <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-3 shadow-lg space-y-2">
@@ -116,7 +123,6 @@
           <button onclick="setLineStatus('РЕМОНТ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-repair">РЕМОНТ</button>
         </div>
         
-        <!-- СПИСОК ПОЛОМОК -->
         <div id="repairReasonWrap" class="hidden mt-2">
           <select id="repairReasonSelect" class="w-full bg-[#080d1a] border border-[#ef4444] text-white text-xs rounded-lg p-2 outline-none" onchange="submitRepairReason()">
             <option value="">Выберите причину поломки...</option>
@@ -146,38 +152,30 @@
 
           <div class="flex bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
             <button onclick="switchPackage('box', this)" class="pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-active">Коробки</button>
-            <button onclick="switchPackage('bag', this)" class="pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle">Мешки (Чипсы)</button>
             <button onclick="switchPackage('mix', this)" class="pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle">Смешение</button>
           </div>
 
-          <!-- Ввод для коробок/мешков -->
+          <!-- Ввод для КОРОБОК -->
           <div id="standardInputWrap" class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-center space-y-1">
             <label id="unitLabel" class="text-[10px] font-extrabold text-[#8fa0c2] uppercase block">Номер последней выпущенной коробки</label>
             <input type="number" id="currentUnitInput" placeholder="Введите номер" oninput="calculateProduction()" class="w-full bg-[#131c31] border-2 border-[#0072ce] rounded-xl py-3 text-center text-3xl font-black text-white outline-none">
           </div>
 
-          <!-- Ввод для смешения -->
+          <!-- Ввод для СМЕШЕНИЯ (Журнал) -->
           <div id="mixInputWrap" class="hidden space-y-2">
-            <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-2.5 flex justify-between items-center">
-              <span class="text-xs text-[#8fa0c2]">1 п/ф (кг)</span>
-              <input type="number" id="mixComp1" oninput="calculateProduction()" class="bg-transparent text-right text-white font-black w-24 outline-none" placeholder="0">
+            <button onclick="openModal('modalAddMix')" class="w-full py-3 border border-[#38bdf8] text-[#38bdf8] rounded-xl font-bold text-xs uppercase btn-press mb-2 bg-[#1a2744]/50">
+              + Добавить операцию
+            </button>
+            <div id="mixLogList" class="space-y-1 max-h-48 overflow-y-auto">
+              <!-- Сюда падают записи -->
             </div>
-            <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-2.5 flex justify-between items-center">
-              <span class="text-xs text-[#8fa0c2]">2 п/ф (кг)</span>
-              <input type="number" id="mixComp2" oninput="calculateProduction()" class="bg-transparent text-right text-white font-black w-24 outline-none" placeholder="0">
-            </div>
-            <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-2.5 flex justify-between items-center">
-              <span class="text-xs text-[#8fa0c2]">Готовая краска (кор.)</span>
-              <input type="number" id="mixFinished" oninput="calculateProduction()" class="bg-transparent text-right text-white font-black w-24 outline-none" placeholder="0">
-            </div>
+            <div class="text-right text-xs text-[#8fa0c2] mt-1 pr-1" id="mixTotalText">Итого смешение: 0 кг</div>
           </div>
 
-          <div class="grid grid-cols-2 gap-2">
+          <div class="grid grid-cols-2 gap-2 mt-2">
             <button onclick="sendCheckpoint()" class="py-3 bg-[#1e1b4b] border border-[#4338ca] hover:bg-[#312e81] font-extrabold rounded-xl text-[#a5b4fc] text-xs uppercase btn-press">Отправить на дашборд</button>
             <button onclick="openClosePartyModal()" class="py-3 bg-[#1c2742] border border-[#ef4444] text-[#fca5a5] hover:bg-[#7f1d1d]/30 font-extrabold rounded-xl text-xs uppercase btn-press">Закрыть партию</button>
           </div>
-          
-          <div id="lastSyncNotice" class="text-[10px] text-[#64748b] text-center hidden"></div>
         </div>
       </div>
 
@@ -222,15 +220,44 @@
         </div>
       </div>
       <div>
-        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Тип выпуска</label>
-        <div class="grid grid-cols-3 gap-1 bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
+        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Режим работы</label>
+        <div class="grid grid-cols-2 gap-1 bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
           <button onclick="setNewBatchPack('box', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active">Коробки</button>
-          <button onclick="setNewBatchPack('bag', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle">Мешки</button>
           <button onclick="setNewBatchPack('mix', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle">Смешение</button>
         </div>
       </div>
-      <button onclick="confirmOpenBatch()" class="w-full py-3 bg-[#10b981] text-white font-bold rounded-xl text-xs uppercase btn-press mt-2">Начать выпуск с №1</button>
+      <button onclick="confirmOpenBatch()" class="w-full py-3 bg-[#10b981] text-white font-bold rounded-xl text-xs uppercase btn-press mt-2">Начать работу</button>
       <button onclick="closeModal('modalOpenBatch')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Отмена</button>
+    </div>
+  </div>
+
+  <!-- МОДАЛКА ДОБАВЛЕНИЯ ОПЕРАЦИИ СМЕШЕНИЯ -->
+  <div id="modalAddMix" class="modal-overlay">
+    <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
+      <h3 class="text-base font-black text-[#38bdf8]">Добавить операцию</h3>
+      
+      <div>
+        <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Что сделали?</label>
+        <select id="addMixType" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none" onchange="updateMixModalLabels()">
+          <option value="comp1">1 п/ф (мешки)</option>
+          <option value="comp2">2 п/ф (мешки)</option>
+          <option value="finished">Готовая краска (коробки)</option>
+        </select>
+      </div>
+
+      <div class="flex gap-2">
+        <div class="flex-1">
+          <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">С номера</label>
+          <input type="number" id="addMixFrom" placeholder="1" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
+        </div>
+        <div class="flex-1">
+          <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">По номер</label>
+          <input type="number" id="addMixTo" placeholder="10" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
+        </div>
+      </div>
+
+      <button onclick="confirmAddMix()" class="w-full py-3 bg-[#10b981] text-white font-bold rounded-xl text-xs uppercase btn-press mt-2">Добавить в журнал</button>
+      <button onclick="closeModal('modalAddMix')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Отмена</button>
     </div>
   </div>
 
@@ -334,11 +361,15 @@
 
     let state = JSON.parse(localStorage.getItem('primatek_state')) || {
       line: 6, operator: '', handoverStatus: null, lineStatus: 'В РАБОТЕ',
-      packageType: 'box', startUnit: null, closedBatchesKg: 0, 
-      defects: [], dust: [], planKg: 0, isBatchOpen: false, 
-      newBatchPack: 'box', batchNumber: '', ralColor: '', isEditingBatch: false, shiftAccepted: false,
-      repairReason: ''
+      packageType: 'box', startUnit: null, 
+      mixLog: [], // Журнал операций смешения
+      closedBatchesKg: 0, defects: [], dust: [], planKg: 0, 
+      isBatchOpen: false, newBatchPack: 'box', batchNumber: '', ralColor: '', 
+      isEditingBatch: false, shiftAccepted: false, repairReason: ''
     };
+
+    // Конвертация старых данных, если mixLog не было
+    if (!state.mixLog) state.mixLog = [];
 
     function saveState() { localStorage.setItem('primatek_state', JSON.stringify(state)); }
 
@@ -354,6 +385,7 @@
         document.getElementById('operatorName').value = state.operator;
         updateCompactBar();
         updateBatchUI(); 
+        renderMixLog();
         calculateProduction();
         if (state.lineStatus === 'РЕМОНТ') {
           document.getElementById('repairReasonWrap').classList.remove('hidden');
@@ -410,24 +442,33 @@
     async function loadPreviousShiftData() {
       try {
         const { data } = await client.from('shift_reports')
-          .select('unit_to, batch_number, ral_color, package_type')
+          .select('event_type, batch_number, ral_color, package_type, unit_to')
           .eq('line_number', state.line)
-          .not('batch_number', 'is', null) 
-          .order('created_at', { ascending: false }).limit(1);
+          .order('created_at', { ascending: false }).limit(5); // Берем последние 5 событий
 
         if (data && data.length > 0) {
-          const last = data[0];
-          if (last.unit_to) {
-            document.getElementById('prevShiftHint').innerText = `Предыдущая смена закончила на №${last.unit_to}`;
-            document.getElementById('prevShiftHint').classList.remove('hidden');
-          }
+          // Ищем, есть ли открытая партия (если последнее событие не PARTY_CLOSE и не SHIFT_CLOSE без партии)
+          const lastPartyEvent = data.find(r => r.event_type === 'PARTY_CLOSE' || r.event_type === 'PRODUCTION' || r.event_type === 'SHIFT_CLOSE');
           
-          if (!state.shiftAccepted) {
-            state.isBatchOpen = true;
-            state.batchNumber = last.batch_number;
-            state.ralColor = last.ral_color || '—';
-            state.packageType = last.package_type || 'box';
-            saveState();
+          if (lastPartyEvent && lastPartyEvent.event_type !== 'PARTY_CLOSE' && lastPartyEvent.batch_number) {
+            if (!state.shiftAccepted) {
+              state.isBatchOpen = true;
+              state.batchNumber = lastPartyEvent.batch_number;
+              state.ralColor = lastPartyEvent.ral_color || '—';
+              state.packageType = lastPartyEvent.package_type || 'box';
+              saveState();
+            }
+            if (lastPartyEvent.unit_to) {
+              document.getElementById('prevShiftHint').innerText = `Предыдущая смена закончила на №${lastPartyEvent.unit_to}`;
+              document.getElementById('prevShiftHint').classList.remove('hidden');
+            }
+          } else {
+            // Партия закрыта
+            if (!state.shiftAccepted) {
+              state.isBatchOpen = false;
+              saveState();
+            }
+            document.getElementById('prevShiftHint').classList.add('hidden');
           }
         } else {
           if (!state.shiftAccepted) {
@@ -478,6 +519,7 @@
         
         updateCompactBar();
         updateBatchUI(); 
+        renderMixLog();
         calculateProduction();
       } catch (err) {
         alert('Ошибка приёма смены: ' + err.message);
@@ -516,7 +558,6 @@
       document.getElementById('statusTimer').style.color = statusMap[status] || '#34d399';
       updateCompactBar();
 
-      // Показываем выбор причины только для РЕМОНТА
       const repairWrap = document.getElementById('repairReasonWrap');
       if (status === 'РЕМОНТ') {
         repairWrap.classList.remove('hidden');
@@ -524,7 +565,6 @@
         repairWrap.classList.add('hidden');
         state.repairReason = '';
         saveState();
-        // Отправляем просто статус
         try {
           await client.from('shift_reports').insert([{
             line_number: state.line, operator_name: state.operator, event_type: 'STATUS_CHANGE', line_status: status
@@ -565,7 +605,7 @@
       document.getElementById('newRal').value = state.ralColor.replace('RAL ', '');
       
       document.querySelectorAll('.new-pack-btn').forEach(t => t.className = "new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle");
-      const activeBtn = state.packageType === 'box' ? 0 : state.packageType === 'bag' ? 1 : 2;
+      const activeBtn = state.packageType === 'box' ? 0 : 1;
       document.querySelectorAll('.new-pack-btn')[activeBtn].className = "new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active";
       state.newBatchPack = state.packageType;
       openModal('modalOpenBatch');
@@ -583,12 +623,10 @@
       
       if (!state.isEditingBatch) {
         state.startUnit = 1;
+        state.mixLog = []; // Очищаем журнал смешения для новой партии
         state.defects = [];
         state.dust = [];
         document.getElementById('currentUnitInput').value = '';
-        document.getElementById('mixComp1').value = '';
-        document.getElementById('mixComp2').value = '';
-        document.getElementById('mixFinished').value = '';
         const workBtn = document.querySelector('.st-btn');
         if (workBtn) setLineStatus('В РАБОТЕ', workBtn);
       }
@@ -596,7 +634,7 @@
       state.isEditingBatch = false;
       saveState();
       document.getElementById('modalBatchTitle').innerText = 'Открытие партии';
-      closeModal('modalOpenBatch'); updateBatchUI(); calculateProduction();
+      closeModal('modalOpenBatch'); updateBatchUI(); renderMixLog(); calculateProduction();
     }
 
     function updateBatchUI() {
@@ -613,17 +651,16 @@
         document.getElementById('editBatchBtn').style.display = hasProduction ? 'none' : 'inline-block';
         
         document.querySelectorAll('.pkg-tab').forEach(t => t.className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-idle");
-        const activeTabIdx = state.packageType === 'box' ? 0 : (state.packageType === 'bag' ? 1 : 2);
+        const activeTabIdx = state.packageType === 'box' ? 0 : 1;
         document.querySelectorAll('.pkg-tab')[activeTabIdx].className = "pkg-tab flex-1 py-1.5 text-xs font-extrabold rounded-lg tab-active";
         
         const unitLabel = document.getElementById('unitLabel');
         if (state.packageType === 'box') unitLabel.innerText = 'Номер последней выпущенной коробки';
-        else if (state.packageType === 'bag') unitLabel.innerText = 'Номер последнего выпущенного мешка';
         
-        // Переключение полей ввода
         if (state.packageType === 'mix') {
           document.getElementById('standardInputWrap').classList.add('hidden');
           document.getElementById('mixInputWrap').classList.remove('hidden');
+          renderMixLog();
         } else {
           document.getElementById('standardInputWrap').classList.remove('hidden');
           document.getElementById('mixInputWrap').classList.add('hidden');
@@ -645,6 +682,75 @@
       updateBatchUI(); calculateProduction();
     }
 
+    // === ЖУРНАЛ СМЕШЕНИЯ ===
+    function openAddMixModal() {
+      document.getElementById('addMixType').value = 'comp1';
+      document.getElementById('addMixFrom').value = '';
+      document.getElementById('addMixTo').value = '';
+      openModal('modalAddMix');
+    }
+
+    function confirmAddMix() {
+      const type = document.getElementById('addMixType').value;
+      const from = parseInt(document.getElementById('addMixFrom').value);
+      const to = parseInt(document.getElementById('addMixTo').value);
+
+      if (!from || !to || to < from) {
+        alert("Укажите корректный диапазон (с какого по какой)!");
+        return;
+      }
+
+      const count = to - from + 1;
+      const kg = count * UNIT_WEIGHT;
+      
+      let typeName = '';
+      if (type === 'comp1') typeName = '1 п/ф';
+      if (type === 'comp2') typeName = '2 п/ф';
+      if (type === 'finished') typeName = 'Готовая краска';
+
+      const time = new Date().toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+
+      state.mixLog.push({ id: Date.now(), type, typeName, from, to, count, kg, time });
+      saveState();
+      
+      closeModal('modalAddMix');
+      renderMixLog();
+      calculateProduction();
+    }
+
+    function deleteMixLogItem(id) {
+      state.mixLog = state.mixLog.filter(item => item.id !== id);
+      saveState();
+      renderMixLog();
+      calculateProduction();
+    }
+
+    function renderMixLog() {
+      const list = document.getElementById('mixLogList');
+      if (!state.mixLog || state.mixLog.length === 0) {
+        list.innerHTML = `<div class="text-xs text-[#64748b] italic text-center py-2">Записей пока нет. Нажмите "+ Добавить".</div>`;
+        document.getElementById('mixTotalText').innerText = `Итого смешение: 0 кг`;
+        return;
+      }
+
+      let total = 0;
+      list.innerHTML = state.mixLog.map(item => {
+        total += item.kg;
+        return `
+          <div class="log-item">
+            <div>
+              <div class="text-[#8fa0c2] mb-0.5">${item.time} — <b class="text-white">${item.typeName}</b></div>
+              <div class="text-[10px] text-[#64748b]">№${item.from} — №${item.to} <span class="text-[#34d399] ml-1">(${item.kg} кг)</span></div>
+            </div>
+            <div class="log-item-del" onclick="deleteMixLogItem(${item.id})">✕</div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('mixTotalText').innerText = `Итого смешение: ${total} кг`;
+    }
+    // =========================
+
     function openClosePartyModal() {
       document.getElementById('closeUnitTo').value = document.getElementById('currentUnitInput').value || '';
       document.getElementById('closeLastBoxWeight').value = '';
@@ -657,12 +763,8 @@
       const dustKg = state.dust.reduce((s, d) => s + d, 0);
 
       if (state.packageType === 'mix') {
-        const c1 = parseFloat(document.getElementById('mixComp1').value) || 0;
-        const c2 = parseFloat(document.getElementById('mixComp2').value) || 0;
-        const fin = parseFloat(document.getElementById('mixFinished').value) || 0;
-        
-        if (c1 === 0 && c2 === 0 && fin === 0) { alert("Введите данные по смешению!"); return; }
-        kg = c1 + c2 + (fin * UNIT_WEIGHT);
+        kg = state.mixLog.reduce((sum, item) => sum + item.kg, 0);
+        if (kg === 0) { alert("Добавьте записи по смешению!"); return; }
       } else {
         const endVal = parseInt(document.getElementById('closeUnitTo').value);
         const lastWeight = parseFloat(document.getElementById('closeLastBoxWeight').value) || 20;
@@ -670,7 +772,7 @@
         
         count = (endVal - state.startUnit + 1);
         kg = (count - 1) * UNIT_WEIGHT + lastWeight;
-        state.startUnit = endVal; // Обновляем для корректного закрытия
+        state.startUnit = endVal; 
       }
 
       const payload = {
@@ -678,7 +780,6 @@
         line_status: state.lineStatus, batch_number: state.batchNumber, ral_color: state.ralColor, package_type: state.packageType,
         total_good_kg: Math.max(0, kg - defectKg), 
         good_boxes: state.packageType === 'box' ? count : 0,
-        good_bags: state.packageType === 'bag' ? count : 0, 
         chips_kg: state.packageType === 'mix' ? kg : 0,
         defect_kg: defectKg, defect_boxes: state.defects.reduce((s, d) => s + d.count, 0),
         dust_kg: dustKg, unit_from: state.packageType === 'mix' ? null : 1, unit_to: state.packageType === 'mix' ? null : state.startUnit, 
@@ -692,11 +793,11 @@
         alert(`Партия закрыта! Засчитано: ${payload.total_good_kg} кг.`);
         
         state.closedBatchesKg += payload.total_good_kg;
-        state.isBatchOpen = false; state.batchNumber = ''; state.ralColor = ''; state.startUnit = null; state.defects = []; state.dust = [];
+        state.isBatchOpen = false; state.batchNumber = ''; state.ralColor = ''; state.startUnit = null; state.defects = []; state.dust = []; state.mixLog = [];
         document.getElementById('currentUnitInput').value = ''; document.getElementById('closeUnitTo').value = '';
         
         saveState();
-        closeModal('modalCloseBatch'); renderDefects(); renderDust(); updateBatchUI(); calculateProduction();
+        closeModal('modalCloseBatch'); renderDefects(); renderDust(); updateBatchUI(); renderMixLog(); calculateProduction();
       } catch (err) {
         alert("Ошибка: " + err.message);
       }
@@ -707,10 +808,7 @@
       
       if (state.isBatchOpen) {
         if (state.packageType === 'mix') {
-          const c1 = parseFloat(document.getElementById('mixComp1').value) || 0;
-          const c2 = parseFloat(document.getElementById('mixComp2').value) || 0;
-          const fin = parseFloat(document.getElementById('mixFinished').value) || 0;
-          currentBatchKg = c1 + c2 + (fin * UNIT_WEIGHT);
+          currentBatchKg = state.mixLog.reduce((sum, item) => sum + item.kg, 0);
         } else {
           const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
           if (endVal >= state.startUnit) {
@@ -755,10 +853,7 @@
       let currentBatchKg = 0;
       if (state.isBatchOpen) {
         if (state.packageType === 'mix') {
-          const c1 = parseFloat(document.getElementById('mixComp1').value) || 0;
-          const c2 = parseFloat(document.getElementById('mixComp2').value) || 0;
-          const fin = parseFloat(document.getElementById('mixFinished').value) || 0;
-          currentBatchKg = c1 + c2 + (fin * UNIT_WEIGHT);
+          currentBatchKg = state.mixLog.reduce((sum, item) => sum + item.kg, 0);
         } else {
           const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
           if (endVal >= state.startUnit) {
@@ -834,10 +929,7 @@
       let currentBatchKg = 0;
       if (state.isBatchOpen) {
         if (state.packageType === 'mix') {
-          const c1 = parseFloat(document.getElementById('mixComp1').value) || 0;
-          const c2 = parseFloat(document.getElementById('mixComp2').value) || 0;
-          const fin = parseFloat(document.getElementById('mixFinished').value) || 0;
-          currentBatchKg = c1 + c2 + (fin * UNIT_WEIGHT);
+          currentBatchKg = state.mixLog.reduce((sum, item) => sum + item.kg, 0);
         } else {
           const endVal = parseInt(document.getElementById('currentUnitInput').value) || 0;
           if (endVal >= state.startUnit) {
@@ -860,11 +952,11 @@
       if (success) {
         alert("Смена успешно сдана! Партия остается открытой для следующего.");
         closeModal('modalSummary');
-        state.closedBatchesKg = 0; state.defects = []; state.dust = [];
+        state.closedBatchesKg = 0; state.defects = []; state.dust = []; state.mixLog = [];
         document.getElementById('currentUnitInput').value = '';
         state.shiftAccepted = false; 
         saveState();
-        renderDefects(); renderDust(); calculateProduction();
+        renderDefects(); renderDust(); renderMixLog(); calculateProduction();
         setTimeout(() => location.reload(), 1500);
       }
     }
