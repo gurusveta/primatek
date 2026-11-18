@@ -416,12 +416,10 @@
       
       if (error) throw error;
       
-      // Безопасно скрываем кнопку, если она существует
       const btn = document.getElementById(`savebtn-${lineNum}`);
       if (btn) btn.style.display = 'none';
 
       await loadDashboardData();
-      alert(`План для линии №${lineNum} (${val} кг) отправлен оператору!`);
     } catch (e) {
       alert("Ошибка сохранения плана линии: " + e.message);
     }
@@ -486,14 +484,14 @@
       let statusClass = 'st-idle';
       let statusText = 'НЕТ ДАННЫХ';
       let op = '—', batch = '—', ral = '—', boxText = '—', timeText = 'Замеров не было';
-      let currentKg = 0, chipsKg = 0;
+      let currentKg = 0, chipsKg = 0, repairReason = '';
 
       if (latestAny && new Date(latestAny.created_at) >= shiftStart) {
         statusText = latestAny.line_status || 'В РАБОТЕ';
         if (statusText === 'В РАБОТЕ') statusClass = 'st-work';
         else if (statusText === 'ЧИСТКА') statusClass = 'st-clean';
         else if (statusText === 'ПРОБЫ') statusClass = 'st-sample';
-        else if (statusText === 'РЕМОНТ') statusClass = 'st-repair';
+        else if (statusText === 'РЕМОНТ') { statusClass = 'st-repair'; repairReason = latestAny.repair_reason || ''; }
 
         op = latestAny.operator_name || 'Не указан';
         batch = latestAny.batch_number || '—';
@@ -510,7 +508,7 @@
         if (statusText === 'В РАБОТЕ') statusClass = 'st-work';
         else if (statusText === 'ЧИСТКА') statusClass = 'st-clean';
         else if (statusText === 'ПРОБЫ') statusClass = 'st-sample';
-        else if (statusText === 'РЕМОНТ') statusClass = 'st-repair';
+        else if (statusText === 'РЕМОНТ') { statusClass = 'st-repair'; repairReason = latestAny.repair_reason || ''; }
         
         boxText = 'Ожидание данных...';
         timeText = 'Нет данных за текущую смену';
@@ -522,6 +520,12 @@
       const isOverPlan = linePlan > 0 && currentKg > linePlan;
       const progressClass = isOverPlan ? 'line-progress-fill gold' : 'line-progress-fill';
 
+      // Плашка с причиной поломки
+      let repairHtml = '';
+      if (statusText === 'РЕМОНТ' && repairReason) {
+        repairHtml = `<div style="background: rgba(239,68,68,0.2); border: 1px solid #ef4444; border-radius: 6px; padding: 4px; font-size: 11px; color: #fca5a5; text-align: center; margin-top: 4px;">Причина: ${repairReason}</div>`;
+      }
+
       const card = document.createElement('div');
       card.className = 'line-card';
       card.innerHTML = `
@@ -529,6 +533,8 @@
           <span class="line-num">Линия №${lineNum}</span>
           <span class="status-badge ${statusClass}"><span class="status-dot"></span>${statusText}</span>
         </div>
+
+        ${repairHtml}
 
         <div class="line-details">
           <div>Оператор: <b>${op}</b></div>
@@ -539,7 +545,7 @@
           <div class="output-label">Текущий результат</div>
           <div class="output-val">${currentKg.toLocaleString('ru-RU')} кг</div>
           <div class="output-sub">${boxText}</div>
-          ${chipsKg > 0 ? `<div class="output-chips">+ ${chipsKg} кг чипсы</div>` : ''}
+          ${chipsKg > 0 ? `<div class="output-chips">+ ${chipsKg} кг чипсы/смешение</div>` : ''}
           <div class="output-time">${timeText}</div>
         </div>
 
