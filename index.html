@@ -72,7 +72,7 @@
     <button id="pinSubmitButton" type="submit" class="w-full py-3 bg-[#0072ce] font-black rounded-xl text-white text-sm uppercase tracking-wider">Войти</button>
   </form>
 </div>
-<div id="primatekNotice" class="hidden" role="status" aria-live="polite"><div id="primatekNoticeCard"><div id="primatekNoticeMascot" aria-hidden="true"><img src="assets/primatek-mascot.webp" alt="Маскот PRIMATEK"></div><div class="min-w-0 flex-1"><div id="primatekNoticeContent"><div id="primatekNoticeMark" aria-hidden="true">✓</div><div id="primatekNoticeTitle">PRIMATEK</div><div id="primatekNoticeText"></div><button id="primatekNoticeClose" onclick="hideNotice()">ПОНЯТНО</button></div></div></div></div>
+<div id="primatekNotice" class="hidden" role="status" aria-live="polite"><div id="primatekNoticeCard"><div id="primatekNoticeMascot" aria-hidden="true"><img src="assets/mascot-neutral.png" alt="Маскот PRIMATEK"></div><div class="min-w-0 flex-1"><div id="primatekNoticeContent"><div id="primatekNoticeMark" aria-hidden="true">✓</div><div id="primatekNoticeTitle">PRIMATEK</div><div id="primatekNoticeText"></div><button id="primatekNoticeClose" onclick="hideNotice()">ПОНЯТНО</button></div></div></div></div>
 <div class="px-3 py-2 text-center text-[10px] font-bold tracking-wide bg-amber-500/15 text-amber-200 border-b border-amber-500/30">ПРЕДПРОСМОТР PRIMATEK · ДЛЯ ПРОВЕРКИ ИНТЕРФЕЙСА</div>
 
 
@@ -494,6 +494,19 @@ window.onload = async () => {
 
 
 let noticeTimer = null;
+function getMascotAsset(message, kind) {
+  const value = String(message || '').toLowerCase();
+  if (/проб|образц|качеств|лаборатор|провер.*краск/.test(value)) return 'assets/mascot-quality-check.png';
+  if (/пыл|уборк|чистк|салфет|очист/.test(value)) return 'assets/mascot-cleaning.png';
+  if (/ремонт|неисправ|оборудован|поломк|инструмент/.test(value)) return 'assets/mascot-repair.png';
+  if (/поздрав|отличн|ура|побед|превосход/.test(value)) return 'assets/mascot-celebration.png';
+  if (kind === 'success') return 'assets/mascot-success.png';
+  if (kind === 'warning') return 'assets/mascot-warning.png';
+  if (kind === 'error') return 'assets/mascot-error.png';
+  if (kind === 'info') return 'assets/mascot-info.png';
+  return 'assets/mascot-neutral.png';
+}
+
 function showNotice(message, type) {
   const text = String(message || 'Готово');
   const inferred = type || (/не удалось|ошибка|не подтверждены|не обновил|не повторяйте/i.test(text) ? 'error' :
@@ -509,6 +522,8 @@ function showNotice(message, type) {
   title.textContent = inferred === 'success' ? 'Данные сохранены!' : inferred === 'warning' ? 'Обрати внимание' : inferred === 'error' ? 'Не удалось выполнить действие' : 'Сообщение PRIMATEK';
   document.getElementById('primatekNoticeMark').textContent = inferred === 'success' ? '✓' : inferred === 'warning' ? '!' : inferred === 'error' ? '×' : 'i';
   mascot.dataset.mood = inferred;
+  const mascotImage = mascot.querySelector('img');
+  if (mascotImage) mascotImage.src = getMascotAsset(text, inferred);
   body.textContent = text;
   root.classList.remove('hidden');
   requestAnimationFrame(() => root.classList.add('show'));
