@@ -274,6 +274,7 @@
             <th>Линия</th>
             <th>Оператор</th>
             <th>Партия</th>
+            <th>Код продукта</th>
             <th>Цвет RAL</th>
             <th>Диапазон</th>
             <th>Краска (кг)</th>
@@ -286,7 +287,7 @@
           </tr>
         </thead>
         <tbody id="shiftsTableBody">
-          <tr><td colspan="13" style="text-align: center; color: #64748b; padding: 25px;">Загрузка истории...</td></tr>
+          <tr><td colspan="14" style="text-align: center; color: #64748b; padding: 25px;">Загрузка истории...</td></tr>
         </tbody>
       </table>
     </div>
@@ -328,6 +329,14 @@
     const savedSup = localStorage.getItem('primatek_supervisor');
     if (savedSup) document.getElementById('supervisorSelect').value = savedSup;
   };
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      updateDateAndShiftDisplay();
+      loadDashboardData();
+    }
+  });
+  window.addEventListener("focus", () => loadDashboardData());
 
   function saveSupervisor() {
     const val = document.getElementById('supervisorSelect').value;
@@ -708,8 +717,9 @@
       if (r.event_type !== 'SHIFT_CLOSE') return false;
       const op = (r.operator_name || '').toLowerCase();
       const batch = (r.batch_number || '').toLowerCase();
+      const product = (r.product_code || '').toLowerCase();
       const ral = (r.ral_color || '').toLowerCase();
-      const matchSearch = !searchVal || op.includes(searchVal) || batch.includes(searchVal) || ral.includes(searchVal);
+      const matchSearch = !searchVal || op.includes(searchVal) || batch.includes(searchVal) || product.includes(searchVal) || ral.includes(searchVal);
       const matchLine = (lineVal === 'all') || (String(r.line_number) === String(lineVal));
       return matchSearch && matchLine;
     });
@@ -719,7 +729,7 @@
   function renderPartyArchive(batches) {
     const tbody = document.getElementById('shiftsTableBody');
     if (!batches.length) {
-      tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:#64748b;padding:25px;">Закрытых партий не найдено</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;color:#64748b;padding:25px;">Закрытых партий не найдено</td></tr>`;
       return;
     }
     tbody.innerHTML = batches.map(b => {
@@ -734,6 +744,7 @@
         <td><b>№${b.line_number}</b></td>
         <td><b>${b.closed_by || b.opened_by || '—'}</b></td>
         <td>${b.batch_number || '—'}</td>
+        <td><b>${b.product_code || '—'}</b></td>
         <td><span class="ral-tag">${b.ral_color || '—'}</span></td>
         <td>${b.package_type === 'mix' ? 'СМЕШЕНИЕ' : 'ПК'}</td>
         <td><b style="color:#34d399;font-size:14px;">${kg.toLocaleString('ru-RU')} кг</b></td>
@@ -747,7 +758,7 @@
   function renderShiftsTable(reports) {
     const tbody = document.getElementById('shiftsTableBody');
     if (!reports.length) {
-      tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; color: #64748b; padding: 25px;">Записей не найдено</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="14" style="text-align: center; color: #64748b; padding: 25px;">Записей не найдено</td></tr>`;
       return;
     }
 
@@ -765,6 +776,7 @@
           <td><b>№${r.line_number}</b></td>
           <td><b>${r.operator_name || '—'}</b></td>
           <td>${r.batch_number || '—'}</td>
+          <td><b>${r.product_code || '—'}</b></td>
           <td><span class="ral-tag">${r.ral_color || '—'}</span></td>
           <td>${boxHtml}</td>
           <td><b style="color: #34d399; font-size:14px;">${r.total_good_kg || 0} кг</b></td>
@@ -785,7 +797,7 @@
       return {
         "Дата и время": new Date(r.created_at).toLocaleString('ru-RU'),
         "Тип записи": r.event_type === 'SHIFT_CLOSE' ? 'Сдача смены' : 'Закрытие партии',
-        "Линия": "№" + r.line_number, "Оператор": r.operator_name || "", "Партия": r.batch_number || "", "Цвет RAL": r.ral_color || "",
+        "Линия": "№" + r.line_number, "Оператор": r.operator_name || "", "Партия": r.batch_number || "", "Код продукта": r.product_code || "", "Цвет RAL": r.ral_color || "",
         "Диапазон": (r.unit_from && r.unit_to) ? `№ ${r.unit_from} — № ${r.unit_to}` : "",
         "Краска (кг)": r.total_good_kg || 0, "Чипсы / П-ф (кг)": r.chips_kg || 0, "Брак (кг)": r.defect_kg || 0,
         "Пыль (кг)": r.dust_kg || 0, "План (кг)": r.plan_kg || "",
