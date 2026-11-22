@@ -408,8 +408,6 @@ function getMascotAsset(message, kind) {
   if (kind === 'info') return 'assets/mascot-info.png';
   return 'assets/mascot-neutral.png';
 }
-
-  let noticeTimer = null;
   function showNotice(message, type) {
     const root=document.getElementById('primatekNotice');
     if(!root)return;
@@ -421,13 +419,12 @@ function getMascotAsset(message, kind) {
     const mascotImage=mascotBox.querySelector('img');
     if(mascotImage) mascotImage.src=getMascotAsset(message,kind);
     document.getElementById('primatekNoticeText').textContent=String(message);
-    root.className=kind; clearTimeout(noticeTimer); root.classList.remove('hidden');
+    root.className=kind; root.classList.remove('hidden');
     requestAnimationFrame(()=>root.classList.add('show'));
-    noticeTimer=setTimeout(hideNotice,kind==='error'?9000:6500);
   }
   function hideNotice(){
     const root=document.getElementById('primatekNotice'); if(!root)return;
-    root.classList.remove('show'); clearTimeout(noticeTimer);
+    root.classList.remove('show');
     setTimeout(()=>{if(!root.classList.contains('show'))root.classList.add('hidden');},220);
   }
 
