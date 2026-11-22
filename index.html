@@ -19,9 +19,23 @@
     .tab-active{background:#0072ce;color:#fff;} .tab-idle{color:#8fa0c2;}
     .comp-btn{border:1px solid #29385c;background:#080d1a;color:#8fa0c2;}
     .comp-btn.active{background:#0072ce;color:#fff;border-color:#38bdf8;box-shadow:0 0 10px rgba(0,114,206,.4);}
+
+    /* Уведомления PRIMATEK */
+    #primatekNotice{position:fixed;left:12px;right:12px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:100;display:flex;justify-content:center;pointer-events:none}
+    #primatekNoticeCard{width:100%;max-width:440px;display:flex;align-items:center;gap:12px;padding:13px 15px;border:1px solid #31507b;border-radius:18px;background:rgba(15,23,42,.97);box-shadow:0 14px 40px rgba(0,0,0,.45);opacity:0;transform:translateY(18px);transition:opacity .2s ease,transform .2s ease;pointer-events:auto}
+    #primatekNotice.show #primatekNoticeCard{opacity:1;transform:translateY(0)}
+    #primatekNotice.success #primatekNoticeCard{border-color:#059669}
+    #primatekNotice.warning #primatekNoticeCard{border-color:#d97706}
+    #primatekNotice.error #primatekNoticeCard{border-color:#dc2626}
+    #primatekNoticeMascot{width:54px;height:54px;flex:0 0 54px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(145deg,#1d4ed8,#0c4a6e);font-size:31px}
+    #primatekNoticeTitle{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#7dd3fc;margin-bottom:3px}
+    #primatekNoticeText{font-size:13px;line-height:1.35;color:#f8fafc}
+    #primatekNoticeClose{margin-left:auto;align-self:flex-start;border:0;background:transparent;color:#94a3b8;font-size:22px;line-height:1;padding:0 0 0 6px}
+    @media(min-width:600px){#primatekNotice{left:auto;right:20px;bottom:20px}#primatekNoticeCard{width:390px}}
+
   </style>
 </head>
-<body class="min-h-screen pb-24 select-none">
+<body class="min-h-screen pb-24 select-none">\n<div id="primatekNotice" class="hidden" role="status" aria-live="polite"><div id="primatekNoticeCard"><div id="primatekNoticeMascot" aria-hidden="true">👷🏻‍♂️</div><div class="min-w-0 flex-1"><div id="primatekNoticeTitle">PRIMATEK</div><div id="primatekNoticeText"></div></div><button id="primatekNoticeClose" onclick="hideNotice()" aria-label="Закрыть">×</button></div></div>
 <div class="px-3 py-2 text-center text-[10px] font-bold tracking-wide bg-amber-500/15 text-amber-200 border-b border-amber-500/30">ПРЕДПРОСМОТР PRIMATEK · ДЛЯ ПРОВЕРКИ ИНТЕРФЕЙСА</div>
 
 
@@ -369,6 +383,35 @@ window.onload = async () => {
   setInterval(updateShiftBadge, 60000);
 };
 
+
+let noticeTimer = null;
+function showNotice(message, type) {
+  const text = String(message || 'Готово');
+  const inferred = type || (/не удалось|ошибка|не подтверждены|не обновил|не повторяйте/i.test(text) ? 'error' :
+    (/проверьте|уже есть|нет новых|не может|укажите|заполните|пустая|сначала/i.test(text) ? 'warning' :
+    (/сохран|отправ|закрыта|сдана|принять смену/i.test(text) ? 'success' : 'info')));
+  const root = document.getElementById('primatekNotice');
+  const title = document.getElementById('primatekNoticeTitle');
+  const mascot = document.getElementById('primatekNoticeMascot');
+  const body = document.getElementById('primatekNoticeText');
+  if (!root || !title || !mascot || !body) return;
+  clearTimeout(noticeTimer);
+  root.className = inferred;
+  title.textContent = inferred === 'success' ? 'Всё получилось' : inferred === 'warning' ? 'Обрати внимание' : inferred === 'error' ? 'Нужна помощь' : 'Сообщение PRIMATEK';
+  mascot.textContent = inferred === 'success' ? '👷🏻‍♂️' : inferred === 'warning' ? '👷🏻‍♂️' : inferred === 'error' ? '😟' : '👷🏻‍♂️';
+  body.textContent = text;
+  root.classList.remove('hidden');
+  requestAnimationFrame(() => root.classList.add('show'));
+  noticeTimer = setTimeout(hideNotice, inferred === 'error' ? 7000 : 4200);
+}
+function hideNotice() {
+  const root = document.getElementById('primatekNotice');
+  if (!root) return;
+  root.classList.remove('show');
+  clearTimeout(noticeTimer);
+  setTimeout(() => { if (!root.classList.contains('show')) root.classList.add('hidden'); }, 220);
+}
+
 function updateShiftBadge() {
   document.getElementById('shiftBadge').innerText = 'СМЕНА: ' + getShiftInfo().name;
 }
@@ -462,7 +505,7 @@ async function acceptHandover() {
     enterWorkMode(true);
   } catch (err) {
     console.error('Ошибка приёма смены:', err);
-    alert('Не удалось принять смену. Проверьте соединение и попробуйте ещё раз.');
+    showNotice('Не удалось принять смену. Проверьте соединение и попробуйте ещё раз.');
     local.shiftAccepted = false; saveLocal();
     btn.innerText = 'ПРИНЯТЬ СМЕНУ'; btn.disabled = false;
   } finally { busy = false; }
@@ -556,7 +599,7 @@ function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 
 // ===== Открытие партии =====
 function openNewBatchModal() {
-  if (batch) { alert('На линии уже есть открытая партия!'); refreshBatch(); return; }
+  if (batch) { showNotice('На линии уже есть открытая партия!'); refreshBatch(); return; }
   newBatchPack = 'box';
   document.querySelectorAll('.new-pack-btn').forEach((t,i)=> t.className = `new-pack-btn py-1.5 text-xs font-extrabold rounded-lg ${i===0?'tab-active':'tab-idle'}`);
   document.getElementById('newBatchNum').value = '';
@@ -575,7 +618,7 @@ async function confirmOpenBatch() {
   const bNum = document.getElementById('newBatchNum').value.trim();
   const productCode = document.getElementById('newProductCode').value.trim();
   const ral = document.getElementById('newRal').value.trim();
-  if (!bNum || !productCode || !ral) { alert('Заполните номер партии, код продукта и RAL!'); return; }
+  if (!bNum || !productCode || !ral) { showNotice('Заполните номер партии, код продукта и RAL!'); return; }
   busy = true;
   const btn = document.getElementById('btnConfirmOpenBatch'); btn.innerText = 'Создание...';
   try {
@@ -586,7 +629,7 @@ async function confirmOpenBatch() {
     }]).select();
     if (error) {
       if (String(error.message).includes('one_open_batch_per_line')) {
-        alert('На линии уже есть открытая партия (возможно, открыл другой оператор). Обновляю...');
+        showNotice('На линии уже есть открытая партия (возможно, открыл другой оператор). Обновляю...');
         await refreshBatch(); closeModal('modalOpenBatch'); return;
       }
       throw error;
@@ -596,7 +639,7 @@ async function confirmOpenBatch() {
     activeComp = 'comp1';
     if (local.lineStatus !== 'В РАБОТЕ') { local.lineStatus = 'В РАБОТЕ'; saveLocal(); highlightStatusButtons(); updateCompactBar(); await insertStatusEvent('В РАБОТЕ', null); }
     closeModal('modalOpenBatch'); updateBatchUI(); calculateProduction();
-  } catch (err) { console.error('Ошибка открытия партии:', err); alert('Не удалось открыть партию. Попробуйте ещё раз.'); }
+  } catch (err) { console.error('Ошибка открытия партии:', err); showNotice('Не удалось открыть партию. Попробуйте ещё раз.'); }
   finally { busy = false; btn.innerText = 'Начать работу'; }
 }
 
@@ -735,7 +778,7 @@ function calculateProduction() {
 
 // ===== Отправка дельты (PRODUCTION / PARTY_CLOSE / SHIFT_CLOSE) =====
 async function pushDelta(eventType, closeOpts = null) {
-  if (!batch && eventType !== 'SHIFT_CLOSE') { alert('Нет открытой партии'); return false; }
+  if (!batch && eventType !== 'SHIFT_CLOSE') { showNotice('Нет открытой партии'); return false; }
   const si = getShiftInfo();
   const defectKg = local.defects.reduce((s,d)=>s+d.kg,0);
   const dustKg = local.dust.reduce((s,d)=>s+d,0) + (closeOpts?.extraDust||0);
@@ -788,7 +831,7 @@ async function pushDelta(eventType, closeOpts = null) {
   };
 
   const { error } = await client.from('shift_reports').insert([payload]);
-  if (error) { console.error('Ошибка отправки данных:', error); alert('Не удалось отправить данные. Они пока не подтверждены сервером. Попробуйте ещё раз.'); return false; }
+  if (error) { console.error('Ошибка отправки данных:', error); showNotice('Не удалось отправить данные. Они пока не подтверждены сервером. Попробуйте ещё раз.'); return false; }
 
   // обновляем счётчики партии на сервере
   if (batch) {
@@ -800,7 +843,7 @@ async function pushDelta(eventType, closeOpts = null) {
       upd.last_box_weight=closeOpts?.lastWeight||20; upd.dust_kg=dustKg;
     }
     const { error: upErr } = await client.from('batches').update(upd).eq('id', batch.id);
-    if (upErr) { console.error('Журнал записан, но не обновилась партия:', upErr); alert('Запись сохранена, но счётчики партии не обновились. Не повторяйте ввод — сообщите начальнику смены.'); return false; }
+    if (upErr) { console.error('Журнал записан, но не обновилась партия:', upErr); showNotice('Запись сохранена, но счётчики партии не обновились. Не повторяйте ввод — сообщите начальнику смены.'); return false; }
     Object.assign(batch, upd);
     sentSnapshot = {...target};
   }
@@ -812,9 +855,9 @@ async function pushDelta(eventType, closeOpts = null) {
 
 async function sendCheckpoint(silent = false) {
   if (busy) return;
-  if (!batch) { alert('Сначала откройте партию!'); return; }
+  if (!batch) { showNotice('Сначала откройте партию!'); return; }
   if (pendingDelta().kg === 0 && local.defects.length===0 && local.dust.length===0) {
-    if (!silent) alert('Нет новых данных для отправки'); return;
+    if (!silent) showNotice('Нет новых данных для отправки'); return;
   }
   busy = true;
   try {
@@ -883,22 +926,22 @@ async function closeBatch() {
   const snap = sentSnapshot||{last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
   if (batch.package_type==='mix') {
     if (t.last_comp1<(batch.last_comp1||0)||t.last_comp2<(batch.last_comp2||0)||t.last_finished<(batch.last_finished||0)) {
-      alert('Номер не может быть меньше уже зафиксированного!'); return;
+      showNotice('Номер не может быть меньше уже зафиксированного!'); return;
     }
-    if (t.last_comp1+t.last_comp2+t.last_finished===0) { alert('Партия пустая — укажите номера'); return; }
+    if (t.last_comp1+t.last_comp2+t.last_finished===0) { showNotice('Партия пустая — укажите номера'); return; }
   } else {
-    if (t.last_unit<(batch.last_unit||0)) { alert('Номер не может быть меньше уже зафиксированного!'); return; }
-    if (t.last_unit===0) { alert('Укажите номер последней коробки'); return; }
+    if (t.last_unit<(batch.last_unit||0)) { showNotice('Номер не может быть меньше уже зафиксированного!'); return; }
+    if (t.last_unit===0) { showNotice('Укажите номер последней коробки'); return; }
   }
   const lw = parseFloat(document.getElementById('closeLastBoxWeight').value)||20;
-  if (lw<=0||lw>20) { alert('Вес последней коробки: от 0 до 20 кг'); return; }
+  if (lw<=0||lw>20) { showNotice('Вес последней коробки: от 0 до 20 кг'); return; }
   const extraDust = parseFloat(document.getElementById('closeDust').value)||0;
 
   busy = true;
   const btn = document.getElementById('btnCloseBatch'); btn.innerText='Закрытие...';
   try {
     if (await pushDelta('PARTY_CLOSE', { target: t, lastWeight: lw, extraDust })) {
-      alert('Партия закрыта! Выработка засчитана в вашу смену.');
+      showNotice('Партия закрыта! Выработка засчитана в вашу смену.');
       batch = null; myBaseline = null; sentSnapshot = null;
       closeModal('modalCloseBatch');
       updateBatchUI(); calculateProduction(); renderFoundBatch();
@@ -913,7 +956,7 @@ function addDefect() {
     local.defects.push({from:s,to:e,count:e-s+1,kg:(e-s+1)*UNIT_WEIGHT});
     document.getElementById('defStart').value=''; document.getElementById('defEnd').value='';
     saveLocal(); renderDefects(); calculateProduction();
-  } else alert('Укажите корректный диапазон');
+  } else showNotice('Укажите корректный диапазон');
 }
 function renderDefects() {
   document.getElementById('badgeDefect').innerText = local.defects.reduce((s,d)=>s+d.kg,0)+' кг';
@@ -954,7 +997,7 @@ async function submitFinalShift() {
   const btn = document.getElementById('btnFinalShift'); btn.innerText='Отправка...';
   try {
     if (await pushDelta('SHIFT_CLOSE')) {
-      alert('Смена сдана!'+(batch?' Партия остаётся открытой для следующего оператора.':''));
+      showNotice('Смена сдана!'+(batch?' Партия остаётся открытой для следующего оператора.':''));
       closeModal('modalSummary');
       local.shiftAccepted=false; local.defects=[]; local.dust=[]; local.handoverStatus=null;
       saveLocal();
@@ -966,7 +1009,7 @@ async function submitFinalShift() {
 // ===== Статистика =====
 function openStatsModal() {
   const op = local.operator || document.getElementById('operatorName').value.trim();
-  if (!op) { alert('Сначала введите фамилию!'); return; }
+  if (!op) { showNotice('Сначала введите фамилию!'); return; }
   document.getElementById('statsOperatorName').value = op;
   openModal('statsModal'); loadStats();
 }
