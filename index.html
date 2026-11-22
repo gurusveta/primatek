@@ -446,7 +446,7 @@ async function acceptHandover() {
 
     const { error } = await client.from('shift_reports').insert([{
       line_number: local.line, operator_name: local.operator, event_type: 'STATUS_CHANGE',
-      line_status: local.lineStatus, repair_reason: local.repairReason || null,
+      line_status: local.lineStatus,
       batch_id: batch ? batch.id : null, batch_number: batch ? batch.batch_number : null,
       ral_color: batch ? batch.ral_color : null, package_type: batch ? batch.package_type : null,
       shift_key: si.key
@@ -455,7 +455,8 @@ async function acceptHandover() {
 
     enterWorkMode(true);
   } catch (err) {
-    alert('Ошибка приёма смены: ' + err.message);
+    console.error('Ошибка приёма смены:', err);
+    alert('Не удалось принять смену. Проверьте соединение и попробуйте ещё раз.');
     local.shiftAccepted = false; saveLocal();
     btn.innerText = 'ПРИНЯТЬ СМЕНУ'; btn.disabled = false;
   } finally { busy = false; }
@@ -538,7 +539,7 @@ async function insertStatusEvent(status, reason) {
   try {
     await client.from('shift_reports').insert([{
       line_number: local.line, operator_name: local.operator, event_type: 'STATUS_CHANGE',
-      line_status: status, repair_reason: reason,
+      line_status: status,
       batch_id: batch ? batch.id : null, shift_key: getShiftInfo().key
     }]);
   } catch(e){ console.error(e); }
@@ -587,7 +588,7 @@ async function confirmOpenBatch() {
     activeComp = 'comp1';
     if (local.lineStatus !== 'В РАБОТЕ') { local.lineStatus = 'В РАБОТЕ'; saveLocal(); highlightStatusButtons(); updateCompactBar(); await insertStatusEvent('В РАБОТЕ', null); }
     closeModal('modalOpenBatch'); updateBatchUI(); calculateProduction();
-  } catch (err) { alert('Ошибка открытия партии: ' + err.message); }
+  } catch (err) { console.error('Ошибка открытия партии:', err); alert('Не удалось открыть партию. Попробуйте ещё раз.'); }
   finally { busy = false; btn.innerText = 'Начать работу'; }
 }
 
@@ -762,7 +763,7 @@ async function pushDelta(eventType, closeOpts = null) {
 
   const payload = {
     line_number: local.line, operator_name: local.operator, event_type: eventType,
-    line_status: local.lineStatus, repair_reason: local.repairReason || null,
+    line_status: local.lineStatus,
     batch_id: batch?batch.id:null, batch_number: batch?batch.batch_number:null,
     ral_color: batch?batch.ral_color:null, package_type: batch?batch.package_type:null,
     shift_key: si.key,
@@ -779,7 +780,7 @@ async function pushDelta(eventType, closeOpts = null) {
   };
 
   const { error } = await client.from('shift_reports').insert([payload]);
-  if (error) { alert('Ошибка отправки: '+error.message); return false; }
+  if (error) { console.error('Ошибка отправки данных:', error); alert('Не удалось отправить данные. Они пока не подтверждены сервером. Попробуйте ещё раз.'); return false; }
 
   // обновляем счётчики партии на сервере
   if (batch) {
@@ -791,7 +792,7 @@ async function pushDelta(eventType, closeOpts = null) {
       upd.last_box_weight=closeOpts?.lastWeight||20; upd.dust_kg=dustKg;
     }
     const { error: upErr } = await client.from('batches').update(upd).eq('id', batch.id);
-    if (upErr) { alert('Журнал записан, но не обновилась партия: '+upErr.message+' — нажмите "Отправить" ещё раз или сообщите начальнику.'); return false; }
+    if (upErr) { console.error('Журнал записан, но не обновилась партия:', upErr); alert('Запись сохранена, но счётчики партии не обновились. Не повторяйте ввод — сообщите начальнику смены.'); return false; }
     Object.assign(batch, upd);
     sentSnapshot = {...target};
   }
