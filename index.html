@@ -59,6 +59,9 @@
   <div class="flex items-center space-x-2">
     <div id="shiftBadge" class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-[#1a2744] text-[#38bdf8] border border-[#2c4270]">СМЕНА: —</div>
     <button onclick="openStatsModal()" class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-[#172554] text-[#38bdf8] border border-[#1e40af] btn-press">Выработка</button>
+    <select id="languageSelect" aria-label="Язык интерфейса" class="text-[11px] font-bold px-1.5 py-1.5 rounded-lg bg-[#172554] text-white border border-[#1e40af] outline-none" onchange="setPrimatekLanguage(this.value)">
+      <option value="ru">RU</option><option value="uz">UZ</option><option value="tg">TJ</option>
+    </select>
   </div>
 </header>
 
@@ -1135,6 +1138,121 @@ async function loadPlanFromCloud() {
     saveLocal(); calculateProduction();
   } catch(e){}
 }
+
+/* ===== PRIMATEK interface language =====
+   UI-only translation. Operational values stored in Supabase remain canonical Russian. */
+const PRIMATEK_I18N = {
+  uz: {
+    "ПОНЯТНО":"TUSHUNARLI","СМЕНА: —":"SMENA: —","Выработка":"Ishlab chiqarish",
+    "Приём смены и выбор линии":"Smenani qabul qilish va liniyani tanlash",
+    "ФИО Оператора":"Operatorning F.I.Sh.","ВВЕДИТЕ ФАМИЛИЮ И ИМЯ":"Familiya va ismni kiriting",
+    "Открытая партия на линии":"Liniyadagi ochiq partiya","Открытой партии нет — после приёмки откройте новую.":"Ochiq partiya yo‘q — smenani qabul qilgach, yangi partiya oching.",
+    "Статус линии при приёмке":"Smenani qabul qilishdagi liniya holati",
+    "В РАБОТЕ":"ISHLAMOQDA","ЧИСТКА":"TOZALASH","ПРОБЫ":"SINOV","РЕМОНТ":"TA’MIR",
+    "Причина ремонта":"Ta’mirlash sababi","Выберите причину...":"Sababni tanlang...",
+    "Замена сита":"Elakni almashtirish","Фасовка":"Qadoqlash","Нижний дозатор":"Pastki dozator","Кулер":"Sovitgich","Фидер":"Ta’minlagich","Остановка шнеков":"Shneklarning to‘xtashi","Ошибка на пульте":"Boshqaruv panelidagi xato",
+    "ПРИНЯТЬ СМЕНУ":"SMENANI QABUL QILISH","Выберите линию, введите ФИО и статус":"Liniyani tanlang, F.I.Sh. va holatni kiriting",
+    "Изменить ✎":"O‘zgartirish ✎","ВЫРАБОТКА ЗА СМЕНУ":"SMENADAGI ISHLAB CHIQARISH","СТИМУЛИРУЮЩИЕ ВЫПЛАТЫ":"RAG‘BATLANTIRISH TO‘LOVLARI",
+    "Расчёт: произведённые килограммы × 0,5 ₽":"Hisob: ishlab chiqarilgan kilogramm × 0,5 ₽",
+    "Текущий статус линии":"Liniyaning joriy holati","+ Открыть новую партию":"+ Yangi partiya ochish",
+    "Партия:":"Partiya:","RAL:":"RAL:","Номер последней выпущенной коробки":"Oxirgi ishlab chiqarilgan quti raqami",
+    "Сейчас делаю:":"Hozir ishlab chiqarilmoqda:","Готовая":"Tayyor mahsulot","Номер последнего мешка":"Oxirgi qop raqami",
+    "Отправить на дашборд":"Boshqaruv paneliga yuborish","Закрыть партию":"Partiyani yopish",
+    "Пыль":"Chang","СДАТЬ СМЕНУ И ОТПРАВИТЬ ОТЧЁТ":"SMENANI TOPSHIRISH VA HISOBOT YUBORISH",
+    "Открытие партии":"Partiyani ochish","№ Партии":"Partiya №","Код продукта":"Mahsulot kodi","Введите код продукта":"Mahsulot kodini kiriting",
+    "Цвет RAL":"RAL rangi","Тип партии":"Partiya turi","Смешение":"Aralashtirish","Начать работу":"Ishni boshlash","Отмена":"Bekor qilish",
+    "Закрытие партии":"Partiyani yopish","Номер последней коробки":"Oxirgi quti raqami","Последний мешок 1 п/ф":"1-yarim mahsulotning oxirgi qopi",
+    "Последний мешок 2 п/ф":"2-yarim mahsulotning oxirgi qopi","Последняя коробка готовой краски":"Tayyor bo‘yoqning oxirgi qutisi",
+    "Вес последней коробки (если не 20 кг)":"Oxirgi qutining vazni (20 kg bo‘lmasa)","Пыль при закрытии, кг (необязательно)":"Yopishda chang, kg (ixtiyoriy)",
+    "Подтвердить закрытие":"Yopishni tasdiqlash","Сброс пыли":"Changni tushirish","Вес мешка (кг)":"Qop vazni (kg)","Добавить мешок":"Qopni qo‘shish","Готово":"Tayyor",
+    "Сводка сдачи смены":"Smenani topshirish hisoboti","Партия останется открытой для следующего оператора.":"Partiya keyingi operator uchun ochiq qoladi.",
+    "Подтвердить и сдать":"Tasdiqlash va topshirish","Назад":"Orqaga","Моя выработка":"Mening ishlab chiqarishim",
+    "С даты":"Boshlanish sanasi","По дату":"Tugash sanasi","Дневные смены":"Kunduzgi smenalar","Ночные смены":"Tungi smenalar",
+    "Произведено краски":"Ishlab chiqarilgan bo‘yoq","Закрыть":"Yopish","Ваша выработка:":"Sizning ishlab chiqarishingiz:",
+    "нет открытой":"ochiq partiya yo‘q","Смена сдана!":"Smena topshirildi!","Отправка...":"Yuborilmoqda...",
+    "Сначала введите фамилию!":"Avval familiyangizni kiriting!","Выберите причину поломки...":"Nosozlik sababini tanlang...",
+    "Причина:":"Sabab:","Начало:":"Boshlanishi:","Понятно":"Tushunarli",
+    "Не удалось сохранить статус линии. Проверьте соединение и попробуйте ещё раз.":"Liniya holatini saqlab bo‘lmadi. Internet aloqasini tekshirib, qayta urinib ko‘ring.",
+    "Не удалось зафиксировать начало ремонта. Проверьте соединение.":"Ta’mirlash boshlanishini qayd etib bo‘lmadi. Internet aloqasini tekshiring.",
+    "Не удалось сохранить причину ремонта. Попробуйте ещё раз.":"Ta’mirlash sababini saqlab bo‘lmadi. Qayta urinib ko‘ring."
+  },
+  tg: {
+    "ПОНЯТНО":"ФАҲМО","СМЕНА: —":"СМЕНА: —","Выработка":"Истеҳсол",
+    "Приём смены и выбор линии":"Қабули баст ва интихоби хат",
+    "ФИО Оператора":"Ному насаби оператор","ВВЕДИТЕ ФАМИЛИЮ И ИМЯ":"Насаб ва номро ворид кунед",
+    "Открытая партия на линии":"Партияи кушода дар хат","Открытой партии нет — после приёмки откройте новую.":"Партияи кушода нест — баъди қабули баст партияи нав кушоед.",
+    "Статус линии при приёмке":"Ҳолати хат ҳангоми қабули баст",
+    "В РАБОТЕ":"ДАР КОР","ЧИСТКА":"ТOЗАКУНӢ","ПРОБЫ":"САНҶИШ","РЕМОНТ":"ТАЪМИР",
+    "Причина ремонта":"Сабаби таъмир","Выберите причину...":"Сабабро интихоб кунед...",
+    "Замена сита":"Иваз кардани элак","Фасовка":"Бастабандӣ","Нижний дозатор":"Дозатори поёнӣ","Кулер":"Сардкунанда","Фидер":"Ғизодиҳанда","Остановка шнеков":"Қатъ шудани шнекҳо","Ошибка на пульте":"Хатои панели идоракунӣ",
+    "ПРИНЯТЬ СМЕНУ":"ҚАБУЛИ БАСТ","Выберите линию, введите ФИО и статус":"Хатро интихоб кунед, ному насаб ва ҳолатро ворид кунед",
+    "Изменить ✎":"Тағйир додан ✎","ВЫРАБОТКА ЗА СМЕНУ":"ИСТЕҲСОЛИ БАСТ","СТИМУЛИРУЮЩИЕ ВЫПЛАТЫ":"ПАРДОХТҲОИ ҲАВАСМАНДГАРДОНӢ",
+    "Расчёт: произведённые килограммы × 0,5 ₽":"Ҳисоб: килограммҳои истеҳсолшуда × 0,5 ₽",
+    "Текущий статус линии":"Ҳолати ҷории хат","+ Открыть новую партию":"+ Кушодани партияи нав",
+    "Партия:":"Партия:","RAL:":"RAL:","Номер последней выпущенной коробки":"Рақами қуттии охирини истеҳсолшуда",
+    "Сейчас делаю:":"Ҳоло истеҳсол мекунам:","Готовая":"Маҳсулоти тайёр","Номер последнего мешка":"Рақами халтаи охирин",
+    "Отправить на дашборд":"Ба панели идоракунӣ фиристодан","Закрыть партию":"Пӯшидани партия",
+    "Пыль":"Ғубор","СДАТЬ СМЕНУ И ОТПРАВИТЬ ОТЧЁТ":"СУПОРИДАНИ БАСТ ВА ФИРИСТОДАНИ ҲИСОБОТ",
+    "Открытие партии":"Кушодани партия","№ Партии":"№ партия","Код продукта":"Рамзи маҳсулот","Введите код продукта":"Рамзи маҳсулотро ворид кунед",
+    "Цвет RAL":"Ранги RAL","Тип партии":"Навъи партия","Смешение":"Омехта","Начать работу":"Оғози кор","Отмена":"Бекор кардан",
+    "Закрытие партии":"Пӯшидани партия","Номер последней коробки":"Рақами қуттии охирин","Последний мешок 1 п/ф":"Халтаи охирини ниммаҳсулоти 1",
+    "Последний мешок 2 п/ф":"Халтаи охирини ниммаҳсулоти 2","Последняя коробка готовой краски":"Қуттии охирини рангҳои тайёр",
+    "Вес последней коробки (если не 20 кг)":"Вазни қуттии охирин (агар 20 кг набошад)","Пыль при закрытии, кг (необязательно)":"Ғубор ҳангоми пӯшидан, кг (ихтиёрӣ)",
+    "Подтвердить закрытие":"Тасдиқи пӯшидан","Сброс пыли":"Холӣ кардани ғубор","Вес мешка (кг)":"Вазни халта (кг)","Добавить мешок":"Илова кардани халта","Готово":"Тайёр",
+    "Сводка сдачи смены":"Ҷамъбасти супоридани баст","Партия останется открытой для следующего оператора.":"Партия барои оператори навбатӣ кушода мемонад.",
+    "Подтвердить и сдать":"Тасдиқ ва супоридан","Назад":"Бозгашт","Моя выработка":"Истеҳсоли ман",
+    "С даты":"Аз санаи","По дату":"То санаи","Дневные смены":"Бастҳои рӯзона","Ночные смены":"Бастҳои шабона",
+    "Произведено краски":"Ранги истеҳсолшуда","Закрыть":"Пӯшидан","Ваша выработка:":"Истеҳсоли шумо:",
+    "нет открытой":"партияи кушода нест","Смена сдана!":"Баст супорида шуд!","Отправка...":"Фиристода мешавад...",
+    "Сначала введите фамилию!":"Аввал насаби худро ворид кунед!","Выберите причину поломки...":"Сабаби вайрониро интихоб кунед...",
+    "Причина:":"Сабаб:","Начало:":"Оғоз:","Понятно":"Фаҳмо",
+    "Не удалось сохранить статус линии. Проверьте соединение и попробуйте ещё раз.":"Ҳолати хат сабт нашуд. Пайвасти интернетро санҷида, бори дигар кӯшиш кунед.",
+    "Не удалось зафиксировать начало ремонта. Проверьте соединение.":"Оғози таъмир сабт нашуд. Пайвасти интернетро санҷед.",
+    "Не удалось сохранить причину ремонта. Попробуйте ещё раз.":"Сабаби таъмир сабт нашуд. Бори дигар кӯшиш кунед."
+  }
+};
+const PRIMATEK_LANG_KEY = 'primatek_language_v1';
+function getPrimatekLanguage() {
+  const saved = localStorage.getItem(PRIMATEK_LANG_KEY);
+  return ['ru','uz','tg'].includes(saved) ? saved : 'ru';
+}
+function setPrimatekLanguage(lang) {
+  if (!['ru','uz','tg'].includes(lang)) lang = 'ru';
+  localStorage.setItem(PRIMATEK_LANG_KEY, lang);
+  applyPrimatekLanguage();
+}
+function applyPrimatekLanguage() {
+  const lang = getPrimatekLanguage();
+  const dict = PRIMATEK_I18N[lang] || {};
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let node;
+  while ((node = walker.nextNode())) {
+    const original = node.nodeValue.trim();
+    if (!original) continue;
+    const translated = dict[original];
+    if (translated) {
+      const leading = node.nodeValue.match(/^\s*/)[0];
+      const trailing = node.nodeValue.match(/\s*$/)[0];
+      node.nodeValue = leading + translated + trailing;
+    }
+  }
+  document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
+    const original = el.getAttribute('data-primatek-placeholder') || el.placeholder;
+    if (!el.hasAttribute('data-primatek-placeholder')) el.setAttribute('data-primatek-placeholder', original);
+    el.placeholder = dict[original] || original;
+  });
+  const selector = document.getElementById('languageSelect');
+  if (selector && selector.value !== lang) selector.value = lang;
+}
+function initPrimatekLanguage() {
+  const selector = document.getElementById('languageSelect');
+  if (selector) selector.value = getPrimatekLanguage();
+  applyPrimatekLanguage();
+  const observer = new MutationObserver(() => applyPrimatekLanguage());
+  observer.observe(document.getElementById('handoverSection').parentNode, { childList:true, subtree:true, characterData:true });
+}
+initPrimatekLanguage();
+
 </script>
 </body>
 </html>
