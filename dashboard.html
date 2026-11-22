@@ -272,6 +272,7 @@
   const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let rawReports = [];
+  let rawBatches = [];
   let rawPlans = [];
   let currentArchiveTab = 'shifts';
   let shiftPlanKg = 0;
@@ -349,6 +350,11 @@
       if (repErr) throw repErr;
       rawReports = reports || [];
 
+      const { data: batches, error: batchErr } = await client.from('batches')
+        .select('*').eq('status', 'open').order('opened_at', { ascending: false });
+      if (batchErr) throw batchErr;
+      rawBatches = batches || [];
+
       const { data: plans, error: planErr } = await client.from('shift_plans')
         .select('*').eq('plan_date', today).eq('shift', shiftName);
       
@@ -378,6 +384,7 @@
   function setupRealtime() {
     client.channel('schema-db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_reports' }, () => loadDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'batches' }, () => loadDashboardData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_plans' }, () => loadDashboardData())
       .subscribe();
   }
@@ -485,7 +492,8 @@
       let statusClass = 'st-idle';
       let statusText = 'НЕТ ДАННЫХ';
       let op = '—', batch = '—', ral = '—', boxText = '—', timeText = 'Замеров не было';
-      let currentKg = 0, chipsKg = 0;
+      let shiftKg = 0, partyKg = 0, chipsKg = 0;
+      const activeBatch = rawBatches.find(b => Number(b.line_number) === lineNum) || null;
 
       if (latestAny && new Date(latestAny.created_at) >= shiftStart) {
         statusText = latestAny.line_status || 'В РАБОТЕ';
@@ -495,15 +503,20 @@
         else if (statusText === 'РЕМОНТ') statusClass = 'st-repair';
 
         op = latestAny.operator_name || 'Не указан';
-        batch = latestAny.batch_number || '—';
-        ral = latestAny.ral_color || '—';
+        batch = activeBatch ? activeBatch.batch_number : '—';
+        ral = activeBatch ? activeBatch.ral_color : '—';
         const currentShiftEvents = rawReports.filter(r =>
           Number(r.line_number) === lineNum &&
           new Date(r.created_at) >= shiftStart &&
           ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type)
         );
-        currentKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
+        shiftKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
         chipsKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.chips_kg) || 0), 0);
+        if (activeBatch) {
+          partyKg = rawReports
+            .filter(r => r.batch_id === activeBatch.id && ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type))
+            .reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
+        }
 
         if (latestAny.unit_from && latestAny.unit_to) boxText = `№ ${latestAny.unit_from} — № ${latestAny.unit_to}`;
         
@@ -522,8 +535,8 @@
 
       const linePlanObj = rawPlans.find(p => Number(p.line_number) === lineNum);
       const linePlan = linePlanObj ? Number(linePlanObj.plan_kg) : 0;
-      const planPercent = linePlan > 0 ? Math.min(999, Math.round((currentKg / linePlan) * 100)) : 0;
-      const isOverPlan = linePlan > 0 && currentKg > linePlan;
+      const planPercent = linePlan > 0 ? Math.min(999, Math.round((shiftKg / linePlan) * 100)) : 0;
+      const isOverPlan = linePlan > 0 && shiftKg > linePlan;
       const progressClass = isOverPlan ? 'line-progress-fill gold' : 'line-progress-fill';
 
       const card = document.createElement('div');
@@ -541,11 +554,16 @@
         </div>
 
         <div class="line-output-box">
-          <div class="output-label">Текущий результат</div>
-          <div class="output-val">${currentKg.toLocaleString('ru-RU')} кг</div>
+          <div class="output-label">ВЫРАБОТКА ЗА СМЕНУ</div>
+          <div class="output-val">${shiftKg.toLocaleString('ru-RU')} кг</div>
           <div class="output-sub">${boxText}</div>
-          ${chipsKg > 0 ? `<div class="output-chips">+ ${chipsKg} кг чипсы/смешение</div>` : ''}
+          ${chipsKg > 0 ? `<div class="output-chips">Чипсы / п-ф: ${chipsKg.toLocaleString('ru-RU')} кг</div>` : ''}
           <div class="output-time">${timeText}</div>
+        </div>
+        <div class="line-output-box" style="margin-top:10px;">
+          <div class="output-label">ВЫРАБОТКА ТЕКУЩЕЙ ПАРТИИ</div>
+          <div class="output-val">${activeBatch ? partyKg.toLocaleString('ru-RU') + ' кг' : 'Нет открытой партии'}</div>
+          <div class="output-sub">${activeBatch ? 'Партия №' + activeBatch.batch_number + ' · ' + (activeBatch.ral_color || 'RAL не указан') : 'Откройте партию для начала учёта'}</div>
         </div>
 
         <div class="line-plan-block">
@@ -557,7 +575,7 @@
                <span style="font-size:10px; color:#64748b;">кг</span>
             </div>
           </div>
-          <div class="line-plan-row"><span class="line-plan-label">Факт:</span><span class="line-plan-fact">${currentKg.toLocaleString('ru-RU')} кг <span class="line-plan-percent">(${planPercent}%)</span></span></div>
+          <div class="line-plan-row"><span class="line-plan-label">Факт:</span><span class="line-plan-fact">${shiftKg.toLocaleString('ru-RU')} кг <span class="line-plan-percent">(${planPercent}%)</span></span></div>
           <div class="line-progress-bg"><div class="${progressClass}" style="width: ${Math.min(100, planPercent)}%"></div></div>
         </div>
       `;
