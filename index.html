@@ -22,6 +22,8 @@
   </style>
 </head>
 <body class="min-h-screen pb-24 select-none">
+<div class="px-3 py-2 text-center text-[10px] font-bold tracking-wide bg-amber-500/15 text-amber-200 border-b border-amber-500/30">ПРЕДПРОСМОТР PRIMATEK · ДЛЯ ПРОВЕРКИ ИНТЕРФЕЙСА</div>
+
 
 <header class="bg-[#0f172a] border-b border-[#1e293b] px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-md">
   <svg width="120" height="26" viewBox="0 0 230 50" fill="none"><circle cx="6" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.5"/><circle cx="16" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.8"/><circle cx="26" cy="11" r="3.2" fill="#0072ce"/><circle cx="6" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.6"/><circle cx="16" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.9"/><circle cx="26" cy="22" r="3.2" fill="#0072ce"/><circle cx="6" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.4"/><circle cx="16" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.7"/><circle cx="26" cy="33" r="3.2" fill="#0072ce"/><text x="36" y="34" font-family="'Arial Black',sans-serif" font-weight="900" font-size="31" fill="#0072ce">PRIMATEK</text></svg>
@@ -89,21 +91,18 @@
   </div>
 
   <!-- ГАМИФИКАЦИЯ -->
-  <div id="gamificationBlock" class="hidden bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-2">
-    <div class="flex justify-between items-end">
+  <div id="gamificationBlock" class="hidden bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg">
+    <div class="grid grid-cols-2 gap-3">
       <div>
-        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">СДЕЛАНО / ПЛАН (ВАША СМЕНА)</span>
-        <div class="text-xl font-black text-white" id="statDonePlan">0 / — кг</div>
+        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">ВЫРАБОТКА ЗА СМЕНУ</span>
+        <div class="text-xl font-black text-white" id="statDonePlan">0 кг</div>
       </div>
       <div class="text-right">
-        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">ЗАРАБОТАНО ₽</span>
+        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">СТИМУЛИРУЮЩИЕ ВЫПЛАТЫ</span>
         <div class="text-xl font-black text-[#34d399]" id="statMoney">0 ₽</div>
       </div>
     </div>
-    <div class="w-full bg-[#080d1a] h-3 rounded-full overflow-hidden border border-[#233152]">
-      <div id="progressBar" class="h-full bg-gradient-to-r from-[#0072ce] to-[#38bdf8] w-0 transition-all duration-500"></div>
-    </div>
-    <div class="text-[11px] font-bold text-[#cbd5e1] text-center" id="premiumLeftText">⏳ Ожидание плана от начальника смены...</div>
+    <div class="text-[11px] text-[#8fa0c2] text-center mt-2" id="premiumLeftText">Расчёт: произведённые килограммы × 0,5 ₽</div>
   </div>
 
   <!-- РАБОЧАЯ ЗОНА -->
@@ -295,9 +294,10 @@
       <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">По дату</label><input type="date" id="customDateTo" onchange="loadStats()" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-2 py-2 text-xs text-white outline-none"></div>
     </div>
     <div class="grid grid-cols-2 gap-2">
-      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Смены</div><div class="text-xl font-black text-white" id="stTotalShifts">0</div><div class="text-[10px] text-[#64748b]" id="stShiftTypes">День: 0 / Ночь: 0</div></div>
-      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Продукция</div><div class="text-xl font-black text-[#34d399]" id="stPaintKg">0 кг</div></div>
-      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 col-span-2"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Заработано</div><div class="text-xl font-black text-[#fbbf24]" id="stEarnedRub">0 ₽</div></div>
+      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Дневные смены</div><div class="text-xl font-black text-white" id="stDayShifts">0</div></div>
+      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Ночные смены</div><div class="text-xl font-black text-white" id="stNightShifts">0</div></div>
+      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Произведено краски</div><div class="text-xl font-black text-[#34d399]" id="stPaintKg">0 кг</div></div>
+      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Стимулирующие выплаты</div><div class="text-xl font-black text-[#fbbf24]" id="stEarnedRub">0 ₽</div></div>
     </div>
     <button onclick="closeModal('statsModal')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Закрыть</button>
   </div>
@@ -307,7 +307,7 @@
 const SUPABASE_URL = "https://oqhrzruxubqthqyxmdcg.supabase.co";
 const SUPABASE_KEY = "sb_publishable_m5YmzYjW1BpotrbaRpCdgA__kYvilf3";
 const PRIMATEK_LINES = [1, 5, 6, 7, 8, 13, 14, 15];
-const EARNING_RATES = { base: 0.50, bonus: 500, overPlan: 1.00 };
+const EARNING_RATE = 0.5;
 const UNIT_WEIGHT = 20;
 const COMP_NAMES = { comp1: '1 п/ф', comp2: '2 п/ф', finished: 'Готовая краска' };
 
@@ -360,8 +360,6 @@ window.onload = async () => {
   } else {
     document.getElementById('operatorName').addEventListener('input', checkHandoverReady);
   }
-  loadPlanFromCloud();
-  setInterval(loadPlanFromCloud, 60000);
   setInterval(updateShiftBadge, 60000);
 };
 
@@ -719,20 +717,11 @@ function myKgForDisplay() {
 
 function calculateProduction() {
   const goodKg = myKgForDisplay();
-  const earned = (local.planKg > 0 && goodKg >= local.planKg)
-    ? (local.planKg*EARNING_RATES.base)+EARNING_RATES.bonus+((goodKg-local.planKg)*EARNING_RATES.overPlan)
-    : goodKg*EARNING_RATES.base;
-  document.getElementById('statMoney').innerText = Math.round(earned)+' ₽';
-  document.getElementById('statDonePlan').innerText = `${goodKg} / ${local.planKg>0?local.planKg+' кг':'—'}`;
-  if (local.planKg > 0) {
-    const pct = Math.min(100, Math.round(goodKg/local.planKg*100));
-    document.getElementById('progressBar').style.width = pct+'%';
-    document.getElementById('premiumLeftText').innerHTML = pct>=100
-      ? '🔥 <span class="text-[#fbbf24]">ПЛАН ВЫПОЛНЕН (+500 ₽)!</span>'
-      : `До премии осталось: ${local.planKg-goodKg} кг`;
-  } else {
-    document.getElementById('premiumLeftText').innerText = '⏳ Ожидание плана от начальника смены';
-  }
+  const incentive = goodKg * EARNING_RATE;
+  document.getElementById('statMoney').innerText = Math.round(incentive * 100) / 100 + ' ₽';
+  document.getElementById('statDonePlan').innerText = goodKg.toLocaleString('ru-RU') + ' кг';
+  document.getElementById('premiumLeftText').innerText = 'Стимулирующие выплаты: ' + goodKg.toLocaleString('ru-RU') + ' кг × 0,5 ₽';
+
 }
 
 // ===== Отправка дельты (PRODUCTION / PARTY_CLOSE / SHIFT_CLOSE) =====
@@ -943,7 +932,7 @@ function removeDust(i){ local.dust.splice(i,1); saveLocal(); renderDust(); }
 function openSummary() {
   const si = getShiftInfo();
   const goodKg = myKgForDisplay();
-  const earned = (local.planKg>0&&goodKg>=local.planKg)?(local.planKg*EARNING_RATES.base)+EARNING_RATES.bonus+((goodKg-local.planKg)*EARNING_RATES.overPlan):goodKg*EARNING_RATES.base;
+  const earned = goodKg * EARNING_RATE;
   const dustKg = local.dust.reduce((s,d)=>s+d,0);
   document.getElementById('summaryRows').innerHTML = `
     <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Линия / Смена:</span><b>№${local.line} (${si.name})</b></div>
@@ -951,7 +940,7 @@ function openSummary() {
     <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Партия:</span><b>${batch?batch.batch_number+' (останется открытой)':'нет открытой'}</b></div>
     <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Ваша выработка:</span><b class="text-[#34d399]">${goodKg} кг</b></div>
     <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Пыль:</span><b>${dustKg.toFixed(1)} кг</b></div>
-    <div class="flex justify-between py-1"><span class="text-gray-400">Заработано:</span><b class="text-[#38bdf8]">${Math.round(earned)} ₽</b></div>`;
+    <div class="flex justify-between py-1"><span class="text-gray-400">Стимулирующие выплаты:</span><b class="text-[#38bdf8]">${Math.round(earned)} ₽</b></div>`;
   openModal('modalSummary');
 }
 
@@ -991,29 +980,19 @@ async function loadStats() {
     let day=0,night=0;
     shifts.forEach(r=>{ const h=new Date(r.created_at).getHours(); (h>=8&&h<20)?day++:night++; });
     // кг: новые записи считаем по дельтам, старые (без shift_key) — по снимку SHIFT_CLOSE/PARTY_CLOSE
-    let kg=0, earned=0;
+    let kg=0;
     rows.forEach(r=>{
       if (r.shift_key) {
         kg += (+r.delta_comp1_kg||0)+(+r.delta_comp2_kg||0)+(+r.delta_finished_kg||0)+(+r.delta_boxes_kg||0)-(+r.defect_kg||0);
       } else if (r.event_type!=='PRODUCTION') {
         const k=+r.total_good_kg||0; kg+=k;
-        const p=+r.plan_kg||0;
-        earned += (p>0&&k>=p)?(p*EARNING_RATES.base)+EARNING_RATES.bonus+((k-p)*EARNING_RATES.overPlan):k*EARNING_RATES.base;
       }
     });
-    // заработок по новым: по итогам смен (сумма дельт в рамках shift_key)
-    const byShift = {};
-    rows.filter(r=>r.shift_key&&r.event_type==='SHIFT_CLOSE').forEach(r=>{ byShift[r.shift_key]={plan:+r.plan_kg||0,kg:0}; });
-    rows.filter(r=>r.shift_key).forEach(r=>{
-      if (byShift[r.shift_key]) byShift[r.shift_key].kg += (+r.delta_comp1_kg||0)+(+r.delta_comp2_kg||0)+(+r.delta_finished_kg||0)+(+r.delta_boxes_kg||0)-(+r.defect_kg||0);
-    });
-    Object.values(byShift).forEach(s=>{
-      earned += (s.plan>0&&s.kg>=s.plan)?(s.plan*EARNING_RATES.base)+EARNING_RATES.bonus+((s.kg-s.plan)*EARNING_RATES.overPlan):s.kg*EARNING_RATES.base;
-    });
-    document.getElementById('stTotalShifts').innerText = shifts.length;
-    document.getElementById('stShiftTypes').innerText = `День: ${day} / Ночь: ${night}`;
+    const earned = Math.max(0, kg) * EARNING_RATE;
+    document.getElementById('stDayShifts').innerText = day;
+    document.getElementById('stNightShifts').innerText = night;
     document.getElementById('stPaintKg').innerText = Math.max(0,kg).toLocaleString('ru-RU')+' кг';
-    document.getElementById('stEarnedRub').innerText = Math.round(earned).toLocaleString('ru-RU')+' ₽';
+    document.getElementById('stEarnedRub').innerText = (Math.round(earned*100)/100).toLocaleString('ru-RU')+' ₽';
   } catch(e){ console.error(e); }
 }
 
