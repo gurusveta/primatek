@@ -164,7 +164,7 @@
 </style>
 </head>
 <body>
-<div id="primatekNotice" class="hidden" role="status" aria-live="polite"><div id="primatekNoticeCard"><div id="primatekNoticeMascot" aria-hidden="true"><img src="assets/primatek-mascot.webp" alt="Маскот PRIMATEK"></div><div class="min-w-0 flex-1"><div id="primatekNoticeContent"><div id="primatekNoticeMark" aria-hidden="true">✓</div><div id="primatekNoticeTitle">PRIMATEK</div><div id="primatekNoticeText"></div><button id="primatekNoticeClose" onclick="hideNotice()">ПОНЯТНО</button></div></div></div></div>
+<div id="primatekNotice" class="hidden" role="status" aria-live="polite"><div id="primatekNoticeCard"><div id="primatekNoticeMascot" aria-hidden="true"><img src="assets/mascot-neutral.png" alt="Маскот PRIMATEK"></div><div class="min-w-0 flex-1"><div id="primatekNoticeContent"><div id="primatekNoticeMark" aria-hidden="true">✓</div><div id="primatekNoticeTitle">PRIMATEK</div><div id="primatekNoticeText"></div><button id="primatekNoticeClose" onclick="hideNotice()">ПОНЯТНО</button></div></div></div></div>
 
 <div class="container">
   
@@ -396,6 +396,19 @@
   }
 
 
+function getMascotAsset(message, kind) {
+  const value = String(message || '').toLowerCase();
+  if (/проб|образц|качеств|лаборатор|провер.*краск/.test(value)) return 'assets/mascot-quality-check.png';
+  if (/пыл|уборк|чистк|салфет|очист/.test(value)) return 'assets/mascot-cleaning.png';
+  if (/ремонт|неисправ|оборудован|поломк|инструмент/.test(value)) return 'assets/mascot-repair.png';
+  if (/поздрав|отличн|ура|побед|превосход/.test(value)) return 'assets/mascot-celebration.png';
+  if (kind === 'success') return 'assets/mascot-success.png';
+  if (kind === 'warning') return 'assets/mascot-warning.png';
+  if (kind === 'error') return 'assets/mascot-error.png';
+  if (kind === 'info') return 'assets/mascot-info.png';
+  return 'assets/mascot-neutral.png';
+}
+
   let noticeTimer = null;
   function showNotice(message, type) {
     const root=document.getElementById('primatekNotice');
@@ -403,7 +416,10 @@
     const kind=type||(/ошибка|не удалось|нет данных/i.test(String(message))?'error':(/нет данных|проверьте/i.test(String(message))?'warning':'success'));
     document.getElementById('primatekNoticeTitle').textContent=kind==='error'?'Не удалось выполнить действие':kind==='warning'?'Обрати внимание':kind==='success'?'Данные сохранены!':'Сообщение PRIMATEK';
     document.getElementById('primatekNoticeMark').textContent=kind==='success'?'✓':kind==='warning'?'!':kind==='error'?'×':'i';
-    document.getElementById('primatekNoticeMascot').dataset.mood=kind;
+    const mascotBox=document.getElementById('primatekNoticeMascot');
+    mascotBox.dataset.mood=kind;
+    const mascotImage=mascotBox.querySelector('img');
+    if(mascotImage) mascotImage.src=getMascotAsset(message,kind);
     document.getElementById('primatekNoticeText').textContent=String(message);
     root.className=kind; clearTimeout(noticeTimer); root.classList.remove('hidden');
     requestAnimationFrame(()=>root.classList.add('show'));
