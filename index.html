@@ -620,7 +620,8 @@ async function setLineStatus(status, btn) {
   highlightStatusButtons(); updateCompactBar();
   if (status !== 'РЕМОНТ') {
     local.repairReason = ''; saveLocal();
-    await insertStatusEvent(status, null);
+    try { await insertStatusEvent(status, null); }
+    catch (e) { console.error(e); }
   }
 }
 
@@ -628,7 +629,8 @@ async function submitRepairReason() {
   const reason = document.getElementById('repairReasonSelect').value;
   if (!reason) return;
   local.repairReason = reason; saveLocal();
-  await insertStatusEvent('РЕМОНТ', reason);
+  try { await insertStatusEvent('РЕМОНТ', reason); }
+  catch (e) { console.error(e); }
 }
 
 async function insertStatusEvent(status, reason) {
