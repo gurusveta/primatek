@@ -313,6 +313,10 @@
     updateDateAndShiftDisplay();
     loadDashboardData();
     setupRealtime();
+    // Длительность активного ремонта обновляется на карточках каждую минуту.
+    setInterval(() => {
+      if (rawReports.length) renderLiveLineCards();
+    }, 60000);
     
     const savedSup = localStorage.getItem('primatek_supervisor');
     if (savedSup) document.getElementById('supervisorSelect').value = savedSup;
@@ -592,11 +596,12 @@
 
       let repairInfoHtml = '';
       if (statusText === 'РЕМОНТ') {
-        const repairEvent = rawReports.find(r =>
+        const latestStatusEvent = rawReports.find(r =>
           Number(r.line_number) === lineNum &&
-          r.event_type === 'STATUS_CHANGE' &&
-          r.line_status === 'РЕМОНТ'
+          r.event_type === 'STATUS_CHANGE'
         );
+        const repairEvent = latestStatusEvent && latestStatusEvent.line_status === 'РЕМОНТ'
+          ? latestStatusEvent : null;
         if (repairEvent) {
           const repairStart = new Date(repairEvent.created_at);
           const elapsedMinutes = Math.max(0, Math.floor((Date.now() - repairStart.getTime()) / 60000));
