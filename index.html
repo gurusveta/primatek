@@ -151,6 +151,20 @@
     <div class="text-[11px] text-[#8fa0c2] text-center mt-2" id="premiumLeftText">Расчёт: произведённые килограммы × 0,5 ₽</div>
   </div>
 
+  <!-- ПРОГРЕСС ПЛАНА ЛИНИИ -->
+  <div id="linePlanProgressBlock" class="hidden bg-[#131c31] border border-[#315b91] rounded-2xl p-4 shadow-lg space-y-3">
+    <div class="flex items-center justify-between">
+      <span class="text-[11px] font-black text-[#38bdf8] uppercase tracking-wider">ПЛАН ВЫПОЛНЕНИЯ</span>
+      <span id="linePlanPercent" class="text-lg font-black text-white">—</span>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">План линии</div><div id="linePlanTarget" class="text-lg font-black text-white">—</div></div>
+      <div class="text-right"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Факт линии</div><div id="linePlanFact" class="text-lg font-black text-[#34d399]">—</div></div>
+    </div>
+    <div class="w-full h-2 rounded-full bg-[#080d1a] overflow-hidden"><div id="linePlanProgressBar" class="h-full rounded-full bg-[#10b981] transition-all duration-500" style="width:0%"></div></div>
+    <div id="linePlanRemaining" class="text-[11px] text-center text-[#8fa0c2]">План на эту смену ещё не задан</div>
+  </div>
+
   <!-- РАБОЧАЯ ЗОНА -->
   <div id="workArea" class="hidden space-y-3">
 
@@ -460,6 +474,8 @@ window.onload = async () => {
     document.getElementById('operatorName').addEventListener('input', checkHandoverReady);
   }
   setInterval(updateShiftBadge, 60000);
+  startOperatorRealtime();
+  setInterval(() => { if (local.shiftAccepted) loadPlanFromCloud(); }, 60000);
 };
 
 
@@ -606,7 +622,9 @@ function enterWorkMode(fromAccept) {
   document.getElementById('handoverSection').classList.add('hidden');
   document.getElementById('handoverCompact').classList.remove('hidden');
   document.getElementById('gamificationBlock').classList.remove('hidden');
+  document.getElementById('linePlanProgressBlock').classList.remove('hidden');
   document.getElementById('workArea').classList.remove('hidden');
+  loadPlanFromCloud();
   if (!fromAccept && batch) {
     // Восстановление после перезагрузки: база = последние отправленные мной номера из журнала
     restoreMySession();
@@ -1191,11 +1209,53 @@ async function loadStats() {
 async function loadPlanFromCloud() {
   try {
     const si = getShiftInfo();
-    const { data } = await client.from('shift_plans').select('plan_kg')
+    const { data, error } = await client.from('shift_plans').select('plan_kg')
       .eq('plan_date', si.planDate).eq('shift', si.name).eq('line_number', local.line).limit(1);
-    local.planKg = (data&&data.length&&data[0].plan_kg)?Number(data[0].plan_kg):0;
-    saveLocal(); calculateProduction();
-  } catch(e){}
+    if (error) throw error;
+    local.planKg = (data && data.length && data[0].plan_kg) ? Number(data[0].plan_kg) : 0;
+    saveLocal();
+    await loadLineProgressFromCloud();
+  } catch(e) {
+    console.error('Не удалось загрузить план линии:', e);
+  }
+}
+
+async function loadLineProgressFromCloud() {
+  const si = getShiftInfo();
+  const { data, error } = await client.from('shift_reports').select('total_good_kg')
+    .eq('line_number', local.line).eq('shift_key', si.key)
+    .in('event_type', ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE']);
+  if (error) throw error;
+  const lineKg = (data || []).reduce((sum, row) => sum + (Number(row.total_good_kg) || 0), 0);
+  const planKg = Number(local.planKg) || 0;
+  const percent = planKg > 0 ? Math.round(lineKg / planKg * 100) : 0;
+  const remaining = Math.max(0, planKg - lineKg);
+
+  document.getElementById('linePlanTarget').innerText = planKg.toLocaleString('ru-RU') + ' кг';
+  document.getElementById('linePlanFact').innerText = lineKg.toLocaleString('ru-RU') + ' кг';
+  document.getElementById('linePlanPercent').innerText = planKg > 0 ? percent + '%' : '—';
+  document.getElementById('linePlanProgressBar').style.width = Math.min(100, percent) + '%';
+  document.getElementById('linePlanProgressBar').style.background = percent >= 100 ? '#fbbf24' : '#10b981';
+  const lang = getPrimatekLanguage();
+  const remainingLabel = lang === 'uz' ? 'Qoldi:' : lang === 'tg' ? 'Боқӣ монд:' : 'Осталось:';
+  document.getElementById('linePlanRemaining').innerText = planKg > 0
+    ? (remaining > 0 ? remainingLabel + ' ' + remaining.toLocaleString('ru-RU') + ' кг' : 'План выполнен!')
+    : 'План на эту смену ещё не задан';
+}
+
+let operatorRealtimeChannel = null;
+function startOperatorRealtime() {
+  if (operatorRealtimeChannel) return;
+  operatorRealtimeChannel = client.channel('operator-line-plan-progress')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_plans' }, () => {
+      if (local.shiftAccepted) loadPlanFromCloud();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_reports' }, payload => {
+      if (local.shiftAccepted && payload.new && Number(payload.new.line_number) === Number(local.line)) {
+        loadLineProgressFromCloud().catch(e => console.error('Не удалось обновить прогресс линии:', e));
+      }
+    })
+    .subscribe();
 }
 
 /* ===== PRIMATEK interface language =====
@@ -1213,6 +1273,7 @@ const PRIMATEK_I18N = {
     "ПРИНЯТЬ СМЕНУ":"SMENANI QABUL QILISH","Выберите линию, введите ФИО и статус":"Liniyani tanlang, F.I.Sh. va holatni kiriting",
     "Изменить ✎":"O‘zgartirish ✎","ВЫРАБОТКА ЗА СМЕНУ":"SMENADAGI ISHLAB CHIQARISH","СТИМУЛИРУЮЩИЕ ВЫПЛАТЫ":"RAG‘BATLANTIRISH TO‘LOVLARI",
     "Расчёт: произведённые килограммы × 0,5 ₽":"Hisob: ishlab chiqarilgan kilogramm × 0,5 ₽",
+    "ПЛАН ВЫПОЛНЕНИЯ":"REJA BAJARILISHI","План линии":"Liniya rejasi","Факт линии":"Liniya bo‘yicha amaldagi ishlab chiqarish","План на эту смену ещё не задан":"Bu smena uchun reja hali belgilanmagan","План выполнен!":"Reja bajarildi!",
     "Текущий статус линии":"Liniyaning joriy holati","+ Открыть новую партию":"+ Yangi partiya ochish",
     "Партия:":"Partiya:","RAL:":"RAL:","Номер последней выпущенной коробки":"Oxirgi ishlab chiqarilgan quti raqami",
     "Сейчас делаю:":"Hozir ishlab chiqarilmoqda:","Готовая":"Tayyor mahsulot","Номер последнего мешка":"Oxirgi qop raqami",
@@ -1265,6 +1326,7 @@ const PRIMATEK_I18N = {
     "нет открытой":"партияи кушода нест","Смена сдана!":"Баст супорида шуд!","Отправка...":"Фиристода мешавад...",
     "Сначала введите фамилию!":"Аввал насаби худро ворид кунед!","Выберите причину поломки...":"Сабаби вайрониро интихоб кунед...",
     "Причина:":"Сабаб:","Начало:":"Оғоз:","Понятно":"Фаҳмо",
+    "ПЛАН ВЫПОЛНЕНИЯ":"ИҶРОИ НАҚША","План линии":"Нақшаи хат","Факт линии":"Истеҳсоли воқеии хат","План на эту смену ещё не задан":"Нақша барои ин баст ҳанӯз муқаррар нашудааст","План выполнен!":"Нақша иҷро шуд!",
     "Не удалось сохранить статус линии. Проверьте соединение и попробуйте ещё раз.":"Ҳолати хат сабт нашуд. Пайвасти интернетро санҷида, бори дигар кӯшиш кунед.",
     "Не удалось зафиксировать начало ремонта. Проверьте соединение.":"Оғози таъмир сабт нашуд. Пайвасти интернетро санҷед.",
     "Не удалось сохранить причину ремонта. Попробуйте ещё раз.":"Сабаби таъмир сабт нашуд. Бори дигар кӯшиш кунед."
