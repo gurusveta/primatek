@@ -132,8 +132,9 @@
     #primatekNotice.warning #primatekNoticeCard{border-color:#f59e0b}
     #primatekNotice.error #primatekNoticeCard{border-color:#ef4444}
     #primatekNotice.info #primatekNoticeCard{border-color:#38bdf8}
-    #primatekNoticeMascot{width:100%;max-width:210px;align-self:end;display:flex;align-items:flex-end;justify-content:center;background:transparent}
-    #primatekNoticeMascot img{display:block;width:100%;height:auto;max-height:260px;object-fit:contain;object-position:bottom}
+    #primatekNoticeCard{align-items:center}
+    #primatekNoticeMascot{width:100%;max-width:210px;align-self:center;display:flex;align-items:center;justify-content:center;background:transparent}
+    #primatekNoticeMascot img{display:block;width:100%;height:auto;max-height:260px;object-fit:contain;object-position:center}
     #primatekNoticeContent{min-width:0;text-align:left;padding:16px 0}
     #primatekNoticeMark{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:32px;font-weight:900;margin-bottom:14px;background:#064e3b;color:#6ee7b7}
     #primatekNotice.warning #primatekNoticeMark{background:#78350f;color:#fde68a}
@@ -307,6 +308,7 @@
   let currentArchiveTab = 'shifts';
   let shiftPlanKg = 0;
   let totalGeneralPlanKg = 0;
+  let dashboardRefreshInProgress = false;
 
   window.onload = () => {
     populateLineFilter();
@@ -314,6 +316,11 @@
     loadDashboardData();
     setupRealtime();
     // Длительность активного ремонта обновляется на карточках каждую минуту.
+    // Realtime остаётся основным каналом; таймер — резервная синхронизация раз в 30 секунд.
+    setInterval(() => {
+      updateDateAndShiftDisplay();
+      loadDashboardData();
+    }, 30000);
     setInterval(() => {
       if (rawReports.length) renderLiveLineCards();
     }, 60000);
@@ -390,6 +397,8 @@
   }
 
   async function loadDashboardData() {
+    if (dashboardRefreshInProgress) return;
+    dashboardRefreshInProgress = true;
     const syncText = document.getElementById('lastSyncTime');
     const syncErr = document.getElementById('syncErrorMsg');
     syncErr.classList.add('hidden');
@@ -427,12 +436,14 @@
       renderLiveLineCards();
       filterShiftsTable();
       
-      syncText.innerHTML = `<div><span class="live-dot"></span> Онлайн (Realtime) • ${new Date().toLocaleTimeString('ru-RU')}</div>`;
+      syncText.innerHTML = `<div><span class="live-dot"></span> Онлайн • автообновление 30 сек • ${new Date().toLocaleTimeString('ru-RU')}</div>`;
     } catch (e) {
       console.error(e);
       syncText.innerHTML = `<div style="color:#ef4444; font-weight:bold;">Ошибка связи</div>`;
       syncErr.innerText = 'Не удалось обновить данные. Проверьте соединение и попробуйте ещё раз.';
       syncErr.classList.remove('hidden');
+    } finally {
+      dashboardRefreshInProgress = false;
     }
   }
 
@@ -465,25 +476,33 @@
   }
 
   async function saveLinePlan(lineNum, inputId) {
-    const val = Number(document.getElementById(inputId).value) || 0;
+    const val = Number(document.getElementById(inputId).value);
     const { planDate: today, shiftName } = getCurrentShiftInfo();
+    if (!Number.isFinite(val) || val < 0) {
+      showNotice("Введите корректный план в килограммах.", "warning");
+      return;
+    }
 
     try {
       const { error } = await client.from('shift_plans').upsert({
         plan_date: today,
         shift: shiftName,
-        line_number: lineNum,
+        line_number: Number(lineNum),
         plan_kg: val
       }, { onConflict: 'plan_date,shift,line_number' });
-      
+
       if (error) throw error;
-      
+
       const btn = document.getElementById(`savebtn-${lineNum}`);
       if (btn) btn.style.display = 'none';
 
+      // Успех записи и обновление остальных данных — разные операции.
+      // Ошибка последующей загрузки не должна сообщать, будто сам план не сохранился.
+      showNotice(`План линии №${lineNum} на ${val.toLocaleString('ru-RU')} кг сохранён.`, "success");
       await loadDashboardData();
     } catch (e) {
-      showNotice("Не удалось сохранить план линии. Проверьте соединение и попробуйте ещё раз.", "error");
+      console.error('Ошибка сохранения плана линии:', e);
+      showNotice(`Не удалось сохранить план линии. ${e && e.message ? e.message : 'Проверьте соединение и попробуйте ещё раз.'}`, "error");
     }
   }
 
