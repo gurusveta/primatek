@@ -485,33 +485,61 @@
   }
 
   async function saveLinePlan(lineNum, inputId) {
-    const val = Number(document.getElementById(inputId).value);
+    const input = document.getElementById(inputId);
+    const val = input ? Number(input.value) : NaN;
+    const line = Number(lineNum);
     const { planDate: today, shiftName } = getCurrentShiftInfo();
-    if (!Number.isFinite(val) || val < 0) {
+
+    if (!Number.isInteger(line) || !Number.isFinite(val) || val < 0) {
       showNotice("Введите корректный план в килограммах.", "warning");
       return;
     }
 
+    const planRecord = {
+      plan_date: today,
+      shift: shiftName,
+      line_number: line,
+      plan_kg: val
+    };
+
     try {
-      const { error } = await client.from('shift_plans').upsert({
-        plan_date: today,
-        shift: shiftName,
-        line_number: Number(lineNum),
-        plan_kg: val
-      }, { onConflict: 'plan_date,shift,line_number' });
+      const { error } = await client.from('shift_plans').upsert(
+        planRecord,
+        { onConflict: 'plan_date,shift,line_number' }
+      );
 
-      if (error) throw error;
+      if (error) {
+        // Иногда соединение обрывается уже после того, как сервер успел записать строку.
+        // Перепроверяем запись, чтобы не показывать ложную ошибку при успешном сохранении.
+        const { data: saved, error: verifyError } = await client.from('shift_plans')
+          .select('plan_kg')
+          .eq('plan_date', today)
+          .eq('shift', shiftName)
+          .eq('line_number', line)
+          .maybeSingle();
 
-      const btn = document.getElementById(`savebtn-${lineNum}`);
-      if (btn) btn.style.display = 'none';
-
-      // Успех записи и обновление остальных данных — разные операции.
-      // Ошибка последующей загрузки не должна сообщать, будто сам план не сохранился.
-      showNotice(`План линии №${lineNum} на ${val.toLocaleString('ru-RU')} кг сохранён.`, "success");
-      await loadDashboardData();
+        if (verifyError || !saved || Number(saved.plan_kg) !== val) throw error;
+      }
     } catch (e) {
       console.error('Ошибка сохранения плана линии:', e);
-      showNotice(`Не удалось сохранить план линии. ${e && e.message ? e.message : 'Проверьте соединение и попробуйте ещё раз.'}`, "error");
+      showNotice(
+        `Не удалось сохранить план линии №${line}. ${e && e.message ? e.message : 'Проверьте соединение и попробуйте ещё раз.'}`,
+        "error"
+      );
+      return;
+    }
+
+    const btn = document.getElementById(`savebtn-${line}`);
+    if (btn) btn.style.display = 'none';
+
+    // Сохранение подтверждено. Обновление дашборда — отдельная операция.
+    showNotice(`План линии №${line} на ${val.toLocaleString('ru-RU')} кг сохранён.`, "success");
+
+    try {
+      await loadDashboardData();
+    } catch (e) {
+      console.error('План сохранён, но обновить дашборд не удалось:', e);
+      showNotice("План сохранён. Не удалось обновить данные на экране — они обновятся при следующей синхронизации.", "warning");
     }
   }
 
