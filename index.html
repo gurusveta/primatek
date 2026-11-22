@@ -1221,20 +1221,28 @@ function setPrimatekLanguage(lang) {
   localStorage.setItem(PRIMATEK_LANG_KEY, lang);
   applyPrimatekLanguage();
 }
+const PRIMATEK_TEXT_STATE = new WeakMap();
 function applyPrimatekLanguage() {
   const lang = getPrimatekLanguage();
   const dict = PRIMATEK_I18N[lang] || {};
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   let node;
   while ((node = walker.nextNode())) {
-    const original = node.nodeValue.trim();
-    if (!original) continue;
-    const translated = dict[original];
-    if (translated) {
-      const leading = node.nodeValue.match(/^\s*/)[0];
-      const trailing = node.nodeValue.match(/\s*$/)[0];
-      node.nodeValue = leading + translated + trailing;
+    const current = node.nodeValue;
+    if (!current.trim()) continue;
+    let state = PRIMATEK_TEXT_STATE.get(node);
+    if (!state) {
+      state = { original: current, lastTranslated: current };
+      PRIMATEK_TEXT_STATE.set(node, state);
+    } else if (current !== state.lastTranslated) {
+      // The application may have replaced this text during a live update.
+      state.original = current;
     }
+    const leading = state.original.match(/^\s*/)[0];
+    const trailing = state.original.match(/\s*$/)[0];
+    const key = state.original.trim();
+    node.nodeValue = leading + (dict[key] || key) + trailing;
+    state.lastTranslated = node.nodeValue;
   }
   document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
     const original = el.getAttribute('data-primatek-placeholder') || el.placeholder;
@@ -1249,7 +1257,7 @@ function initPrimatekLanguage() {
   if (selector) selector.value = getPrimatekLanguage();
   applyPrimatekLanguage();
   const observer = new MutationObserver(() => applyPrimatekLanguage());
-  observer.observe(document.getElementById('handoverSection').parentNode, { childList:true, subtree:true, characterData:true });
+  observer.observe(document.body, { childList:true, subtree:true, characterData:true });
 }
 initPrimatekLanguage();
 
