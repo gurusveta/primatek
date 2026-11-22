@@ -420,7 +420,7 @@ function showNotice(message, type) {
   body.textContent = text;
   root.classList.remove('hidden');
   requestAnimationFrame(() => root.classList.add('show'));
-  noticeTimer = setTimeout(hideNotice, inferred === 'error' ? 9000 : 6500);
+  noticeTimer = setTimeout(hideNotice, inferred === 'error' ? 15000 : inferred === 'success' ? 15000 : inferred === 'warning' ? 12000 : 10000);
 }
 function hideNotice() {
   const root = document.getElementById('primatekNotice');
