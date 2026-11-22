@@ -619,6 +619,30 @@
       const isOverPlan = linePlan > 0 && shiftKg > linePlan;
       const progressClass = isOverPlan ? 'line-progress-fill gold' : 'line-progress-fill';
 
+      let repairInfoHtml = '';
+      if (statusText === 'РЕМОНТ') {
+        const repairEvent = rawReports.find(r =>
+          Number(r.line_number) === lineNum &&
+          r.event_type === 'STATUS_CHANGE' &&
+          r.line_status === 'РЕМОНТ'
+        );
+        if (repairEvent) {
+          const repairStart = new Date(repairEvent.created_at);
+          const elapsedMinutes = Math.max(0, Math.floor((Date.now() - repairStart.getTime()) / 60000));
+          const elapsedHours = Math.floor(elapsedMinutes / 60);
+          const elapsedRemainder = elapsedMinutes % 60;
+          const elapsedText = elapsedHours > 0 ? `${elapsedHours} ч ${elapsedRemainder} мин` : `${elapsedRemainder} мин`;
+          const startText = repairStart.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+          const reasonText = repairEvent.repair_reason || 'Причина не указана';
+          repairInfoHtml = `
+            <div class="line-output-box" style="margin-top:10px;border-color:rgba(239,68,68,.45);">
+              <div class="output-label" style="color:#f87171;">РЕМОНТ · ${elapsedText}</div>
+              <div class="output-sub">Причина: <b>${reasonText}</b></div>
+              <div class="output-time">Начало: ${startText}</div>
+            </div>`;
+        }
+      }
+
       const card = document.createElement('div');
       card.className = 'line-card';
       card.innerHTML = `
@@ -632,6 +656,7 @@
           <div>Оператор: <b>${op}</b></div>
           <div>Партия: <b>${batch}</b> | <span class="ral-tag">${ral}</span></div>
         </div>
+        ${repairInfoHtml}
 
         <div class="line-output-box">
           <div class="output-label">ВЫРАБОТКА ЗА СМЕНУ</div>
