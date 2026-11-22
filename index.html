@@ -1341,6 +1341,7 @@ function setPrimatekLanguage(lang) {
   if (!['ru','uz','tg'].includes(lang)) lang = 'ru';
   localStorage.setItem(PRIMATEK_LANG_KEY, lang);
   applyPrimatekLanguage();
+  if (local.shiftAccepted) loadLineProgressFromCloud().catch(e => console.error('Не удалось обновить перевод прогресса:', e));
 }
 const PRIMATEK_TEXT_STATE = new WeakMap();
 function applyPrimatekLanguage() {
