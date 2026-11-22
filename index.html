@@ -551,7 +551,7 @@ function renderFoundBatch() {
       ? `Последние: 1 п/ф — №${batch.last_comp1}, 2 п/ф — №${batch.last_comp2}, готовая — №${batch.last_finished}`
       : `Последняя коробка: №${batch.last_unit}`;
     document.getElementById('foundBatchOpened').innerText =
-      `Открыл: ${batch.opened_by || '—'} · ${new Date(batch.opened_at).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
+      `Код продукта: ${batch.product_code || '—'} · Открыл: ${batch.opened_by || '—'} · ${new Date(batch.opened_at).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
   } else {
     found.classList.add('hidden'); none.classList.remove('hidden');
   }
