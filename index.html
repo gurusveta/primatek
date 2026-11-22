@@ -493,7 +493,6 @@ window.onload = async () => {
 };
 
 
-let noticeTimer = null;
 function getMascotAsset(message, kind) {
   const value = String(message || '').toLowerCase();
   if (/проб|образц|качеств|лаборатор|провер.*краск/.test(value)) return 'assets/mascot-quality-check.png';
@@ -517,7 +516,6 @@ function showNotice(message, type) {
   const mascot = document.getElementById('primatekNoticeMascot');
   const body = document.getElementById('primatekNoticeText');
   if (!root || !title || !mascot || !body) return;
-  clearTimeout(noticeTimer);
   root.className = inferred;
   title.textContent = inferred === 'success' ? 'Данные сохранены!' : inferred === 'warning' ? 'Обрати внимание' : inferred === 'error' ? 'Не удалось выполнить действие' : 'Сообщение PRIMATEK';
   document.getElementById('primatekNoticeMark').textContent = inferred === 'success' ? '✓' : inferred === 'warning' ? '!' : inferred === 'error' ? '×' : 'i';
@@ -527,13 +525,11 @@ function showNotice(message, type) {
   body.textContent = text;
   root.classList.remove('hidden');
   requestAnimationFrame(() => root.classList.add('show'));
-  noticeTimer = setTimeout(hideNotice, inferred === 'error' ? 15000 : inferred === 'success' ? 15000 : inferred === 'warning' ? 12000 : 10000);
 }
 function hideNotice() {
   const root = document.getElementById('primatekNotice');
   if (!root) return;
   root.classList.remove('show');
-  clearTimeout(noticeTimer);
   setTimeout(() => { if (!root.classList.contains('show')) root.classList.add('hidden'); }, 220);
 }
 
