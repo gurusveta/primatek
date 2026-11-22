@@ -511,14 +511,21 @@ async function acceptHandover() {
     sentSnapshot = batch ? snapshotOf(batch) : null;
     if (batch) activeComp = batch.active_component || 'comp1';
 
-    const { error } = await client.from('shift_reports').insert([{
-      line_number: local.line, operator_name: local.operator, event_type: 'STATUS_CHANGE',
-      line_status: local.lineStatus,
-      batch_id: batch ? batch.id : null, batch_number: batch ? batch.batch_number : null,
-      ral_color: batch ? batch.ral_color : null, package_type: batch ? batch.package_type : null,
-      shift_key: si.key
-    }]);
-    if (error) throw error;
+    if (local.lineStatus === 'РЕМОНТ') {
+      local.repairEventId = await ensureRepairEvent(local.repairReason || null);
+      saveLocal();
+    } else {
+      const { error } = await client.from('shift_reports').insert([{
+        line_number: local.line, operator_name: local.operator, event_type: 'STATUS_CHANGE',
+        line_status: local.lineStatus,
+        batch_id: batch ? batch.id : null, batch_number: batch ? batch.batch_number : null,
+        ral_color: batch ? batch.ral_color : null, package_type: batch ? batch.package_type : null,
+        shift_key: si.key
+      }]);
+      if (error) throw error;
+      local.repairEventId = null;
+      saveLocal();
+    }
 
     enterWorkMode(true);
   } catch (err) {
@@ -587,10 +594,20 @@ function highlightStatusButtons() {
 }
 
 async function setLineStatus(status, btn) {
-  local.lineStatus = status; saveLocal();
+  local.lineStatus = status;
   highlightStatusButtons(); updateCompactBar();
-  if (status !== 'РЕМОНТ') {
-    local.repairReason = ''; saveLocal();
+  if (status === 'РЕМОНТ') {
+    try {
+      local.repairEventId = await ensureRepairEvent(null);
+      saveLocal();
+    } catch (e) {
+      console.error(e);
+      showNotice('Не удалось зафиксировать начало ремонта. Проверьте соединение.', 'error');
+    }
+  } else {
+    local.repairReason = '';
+    local.repairEventId = null;
+    saveLocal();
     try { await insertStatusEvent(status, null); }
     catch (e) { console.error(e); }
   }
@@ -599,9 +616,51 @@ async function setLineStatus(status, btn) {
 async function submitRepairReason() {
   const reason = document.getElementById('repairReasonSelect').value;
   if (!reason) return;
-  local.repairReason = reason; saveLocal();
-  try { await insertStatusEvent('РЕМОНТ', reason); }
-  catch (e) { console.error(e); }
+  try {
+    local.repairEventId = await ensureRepairEvent(reason);
+    local.repairReason = reason;
+    saveLocal();
+  } catch (e) {
+    console.error(e);
+    showNotice('Не удалось сохранить причину ремонта. Попробуйте ещё раз.', 'error');
+  }
+}
+
+async function ensureRepairEvent(reason) {
+  // Если ремонт уже начался до приёмки смены, сохраняем исходное время начала.
+  const { data: latest, error: latestError } = await client.from('shift_reports')
+    .select('id, line_status, repair_reason')
+    .eq('line_number', local.line)
+    .eq('event_type', 'STATUS_CHANGE')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (latestError) throw latestError;
+
+  if (latest && latest.line_status === 'РЕМОНТ') {
+    if (reason && latest.repair_reason !== reason) {
+      const { error } = await client.from('shift_reports')
+        .update({ repair_reason: reason })
+        .eq('id', latest.id);
+      if (error) throw error;
+    }
+    return latest.id;
+  }
+
+  const { data, error } = await client.from('shift_reports').insert([{
+    line_number: local.line,
+    operator_name: local.operator,
+    event_type: 'STATUS_CHANGE',
+    line_status: 'РЕМОНТ',
+    repair_reason: reason || null,
+    batch_id: batch ? batch.id : null,
+    batch_number: batch ? batch.batch_number : null,
+    ral_color: batch ? batch.ral_color : null,
+    package_type: batch ? batch.package_type : null,
+    shift_key: local.shiftKey || getShiftInfo().key
+  }]).select('id').single();
+  if (error) throw error;
+  return data.id;
 }
 
 async function insertStatusEvent(status, reason) {
