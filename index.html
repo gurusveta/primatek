@@ -1155,6 +1155,7 @@ function openSummary() {
     <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Линия / Смена:</span><b>№${local.line} (${si.name})</b></div>
     <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Оператор:</span><b>${local.operator}</b></div>
     <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Партия:</span><b>${batch?batch.batch_number+' (останется открытой)':'нет открытой'}</b></div>
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Код продукта:</span><b>${batch?(batch.product_code||'—'):'—'}</b></div>
     <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Ваша выработка:</span><b class="text-[#34d399]">${goodKg} кг</b></div>
     <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Пыль:</span><b>${dustKg.toFixed(1)} кг</b></div>
     <div class="flex justify-between py-1"><span class="text-gray-400">Стимулирующие выплаты:</span><b class="text-[#38bdf8]">${Math.round(earned)} ₽</b></div>`;
