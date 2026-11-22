@@ -122,9 +122,23 @@
     td { padding: 12px 14px; border-bottom: 1px solid #1e293b; color: #cbd5e1; white-space: nowrap; }
     tr:hover td { background: #172554; }
     .tag-range { color: #facc15; font-family: monospace; font-weight: 800; background: rgba(250, 204, 21, 0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(250, 204, 21, 0.2); }
+  
+    /* Уведомления PRIMATEK */
+    #primatekNotice{position:fixed;left:12px;right:12px;bottom:20px;z-index:100;display:flex;justify-content:center;pointer-events:none}
+    #primatekNoticeCard{width:100%;max-width:440px;display:flex;align-items:center;gap:12px;padding:13px 15px;border:1px solid #31507b;border-radius:18px;background:rgba(15,23,42,.98);box-shadow:0 14px 40px rgba(0,0,0,.45);opacity:0;transform:translateY(18px);transition:opacity .2s ease,transform .2s ease;pointer-events:auto}
+    #primatekNotice.show #primatekNoticeCard{opacity:1;transform:translateY(0)}
+    #primatekNotice.success #primatekNoticeCard{border-color:#059669}
+    #primatekNotice.warning #primatekNoticeCard{border-color:#d97706}
+    #primatekNotice.error #primatekNoticeCard{border-color:#dc2626}
+    #primatekNoticeMascot{width:54px;height:54px;flex:0 0 54px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(145deg,#1d4ed8,#0c4a6e);font-size:31px}
+    #primatekNoticeTitle{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#7dd3fc;margin-bottom:3px}
+    #primatekNoticeText{font-size:13px;line-height:1.35;color:#f8fafc}
+    #primatekNoticeClose{margin-left:auto;align-self:flex-start;border:0;background:transparent;color:#94a3b8;font-size:22px;line-height:1;padding:0 0 0 6px}
+
   </style>
 </head>
 <body>
+<div id="primatekNotice" class="hidden" role="status" aria-live="polite"><div id="primatekNoticeCard"><div id="primatekNoticeMascot" aria-hidden="true">👷🏻‍♂️</div><div class="min-w-0 flex-1"><div id="primatekNoticeTitle">PRIMATEK</div><div id="primatekNoticeText"></div></div><button id="primatekNoticeClose" onclick="hideNotice()" aria-label="Закрыть">×</button></div></div>
 
 <div class="container">
   
@@ -336,6 +350,25 @@
     document.getElementById('currentShiftBadge').innerText = 'СМЕНА: ' + (shiftName === 'ДЕНЬ' ? 'ДЕНЬ (08:00 – 20:00)' : 'НОЧЬ (20:00 – 08:00)');
   }
 
+
+  let noticeTimer = null;
+  function showNotice(message, type) {
+    const root=document.getElementById('primatekNotice');
+    if(!root)return;
+    const kind=type||(/ошибка|не удалось|нет данных/i.test(String(message))?'error':(/нет данных|проверьте/i.test(String(message))?'warning':'success'));
+    document.getElementById('primatekNoticeTitle').textContent=kind==='error'?'Нужна помощь':kind==='warning'?'Обрати внимание':'PRIMATEK';
+    document.getElementById('primatekNoticeMascot').textContent=kind==='error'?'😟':'👷🏻‍♂️';
+    document.getElementById('primatekNoticeText').textContent=String(message);
+    root.className=kind; clearTimeout(noticeTimer); root.classList.remove('hidden');
+    requestAnimationFrame(()=>root.classList.add('show'));
+    noticeTimer=setTimeout(hideNotice,kind==='error'?7000:4200);
+  }
+  function hideNotice(){
+    const root=document.getElementById('primatekNotice'); if(!root)return;
+    root.classList.remove('show'); clearTimeout(noticeTimer);
+    setTimeout(()=>{if(!root.classList.contains('show'))root.classList.add('hidden');},220);
+  }
+
   async function loadDashboardData() {
     const syncText = document.getElementById('lastSyncTime');
     const syncErr = document.getElementById('syncErrorMsg');
@@ -378,7 +411,7 @@
     } catch (e) {
       console.error(e);
       syncText.innerHTML = `<div style="color:#ef4444; font-weight:bold;">Ошибка связи</div>`;
-      syncErr.innerText = e.message || String(e);
+      syncErr.innerText = 'Не удалось обновить данные. Проверьте соединение и попробуйте ещё раз.';
       syncErr.classList.remove('hidden');
     }
   }
@@ -404,10 +437,10 @@
       }, { onConflict: 'plan_date,shift,line_number' });
       
       if (error) throw error;
-      alert(`Общий план ${val} кг сохранен (для отчетности цеха).`);
+      showNotice(`Общий план ${val} кг сохранен (для отчетности цеха).`);
       loadDashboardData();
     } catch (e) {
-      alert("Ошибка сохранения общего плана: " + e.message);
+      showNotice("Не удалось сохранить общий план. Проверьте соединение и попробуйте ещё раз.", "error");
     }
   }
 
@@ -430,7 +463,7 @@
 
       await loadDashboardData();
     } catch (e) {
-      alert("Ошибка сохранения плана линии: " + e.message);
+      showNotice("Не удалось сохранить план линии. Проверьте соединение и попробуйте ещё раз.", "error");
     }
   }
 
@@ -682,7 +715,7 @@
   }
 
   function exportToExcel() {
-    if (!rawReports.length) { alert("Нет данных для выгрузки"); return; }
+    if (!rawReports.length) { showNotice("Нет данных для выгрузки"); return; }
     const excelData = rawReports.filter(r => r.event_type === 'SHIFT_CLOSE' || r.event_type === 'PARTY_CLOSE').map(r => {
       return {
         "Дата и время": new Date(r.created_at).toLocaleString('ru-RU'),
