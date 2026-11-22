@@ -15,6 +15,8 @@
     .st-sample { border-color:#38bdf8; color:#38bdf8; background:rgba(2,132,199,.1);} .st-sample.active{background:#0284c7;color:#fff;border-color:#38bdf8;}
     .st-repair { border-color:#ef4444; color:#f87171; background:rgba(239,68,68,.1);} .st-repair.active{background:#ef4444;color:#fff;border-color:#f87171;}
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(5,9,20,.9);z-index:50;justify-content:center;align-items:center;padding:16px;backdrop-filter:blur(2px);}
+    #pinGate{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(3,7,18,.97);backdrop-filter:blur(8px)}
+    #pinGate.hidden{display:none}
     .modal-overlay.open{display:flex;}
     .tab-active{background:#0072ce;color:#fff;} .tab-idle{color:#8fa0c2;}
     .comp-btn{border:1px solid #29385c;background:#080d1a;color:#8fa0c2;}
@@ -50,6 +52,16 @@
 </style>
 </head>
 <body class="min-h-screen pb-24 select-none">
+<div id="pinGate" role="dialog" aria-modal="true" aria-labelledby="pinGateTitle">
+  <form onsubmit="verifyOperatorPin(event)" class="w-full max-w-sm bg-[#131c31] border border-[#2d3e66] rounded-3xl p-6 shadow-2xl text-center space-y-4">
+    <div class="text-[#38bdf8] text-xs font-black tracking-[.25em]">PRIMATEK</div>
+    <h1 id="pinGateTitle" class="text-xl font-black text-white">Введите PIN-код</h1>
+    <p class="text-xs text-[#8fa0c2]">Для входа в приложение оператора</p>
+    <input id="operatorPinInput" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="••••" aria-label="PIN-код" class="w-full bg-[#080d1a] border-2 border-[#29385c] focus:border-[#38bdf8] rounded-2xl px-4 py-4 text-center text-3xl font-black tracking-[.6em] text-white outline-none">
+    <div id="pinError" class="min-h-5 text-xs text-[#fca5a5]" aria-live="polite"></div>
+    <button id="pinSubmitButton" type="submit" class="w-full py-3 bg-[#0072ce] font-black rounded-xl text-white text-sm uppercase tracking-wider">Войти</button>
+  </form>
+</div>
 <div id="primatekNotice" class="hidden" role="status" aria-live="polite"><div id="primatekNoticeCard"><div id="primatekNoticeMascot" aria-hidden="true"><img src="assets/primatek-mascot.webp" alt="Маскот PRIMATEK"></div><div class="min-w-0 flex-1"><div id="primatekNoticeContent"><div id="primatekNoticeMark" aria-hidden="true">✓</div><div id="primatekNoticeTitle">PRIMATEK</div><div id="primatekNoticeText"></div><button id="primatekNoticeClose" onclick="hideNotice()">ПОНЯТНО</button></div></div></div></div>
 <div class="px-3 py-2 text-center text-[10px] font-bold tracking-wide bg-amber-500/15 text-amber-200 border-b border-amber-500/30">ПРЕДПРОСМОТР PRIMATEK · ДЛЯ ПРОВЕРКИ ИНТЕРФЕЙСА</div>
 
@@ -352,6 +364,53 @@ const UNIT_WEIGHT = 20;
 const COMP_NAMES = { comp1: '1 п/ф', comp2: '2 п/ф', finished: 'Готовая краска' };
 
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const PRIMATEK_PIN_SESSION_KEY = 'primatek_pin_verified_v1';
+function initPinGate() {
+  const gate = document.getElementById('pinGate');
+  if (sessionStorage.getItem(PRIMATEK_PIN_SESSION_KEY) === '1') gate.classList.add('hidden');
+  else gate.classList.remove('hidden');
+  setTimeout(() => document.getElementById('operatorPinInput')?.focus(), 100);
+}
+async function verifyOperatorPin(event) {
+  event.preventDefault();
+  const input = document.getElementById('operatorPinInput');
+  const button = document.getElementById('pinSubmitButton');
+  const errorBox = document.getElementById('pinError');
+  const pin = input.value.trim();
+  if (!/^\\d{4}$/.test(pin)) {
+    errorBox.textContent = 'Введите четыре цифры.';
+    input.focus();
+    return;
+  }
+  button.disabled = true;
+  button.textContent = 'Проверка...';
+  errorBox.textContent = '';
+  try {
+    const { data, error } = await client.functions.invoke('verify-operator-pin', { body: { pin } });
+    if (error) {
+      if (error.context?.status === 429) throw new Error('Слишком много попыток. Подождите 10 минут.');
+      throw error;
+    }
+    if (!data?.valid) {
+      errorBox.textContent = data?.error === 'too_many_attempts'
+        ? 'Слишком много попыток. Подождите 10 минут.'
+        : 'Неверный PIN-код. Попробуйте ещё раз.';
+      input.value = '';
+      input.focus();
+      return;
+    }
+    sessionStorage.setItem(PRIMATEK_PIN_SESSION_KEY, '1');
+    document.getElementById('pinGate').classList.add('hidden');
+  } catch (err) {
+    console.error('PIN verification failed:', err);
+    errorBox.textContent = err.message || 'Не удалось проверить PIN. Проверьте соединение.';
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Войти';
+  }
+}
+initPinGate();
 
 // ===== Локальное состояние: только настройки телефона, НЕ правда о партии =====
 let local = JSON.parse(localStorage.getItem('primatek_local_v2')) || {
@@ -1143,7 +1202,7 @@ async function loadPlanFromCloud() {
    UI-only translation. Operational values stored in Supabase remain canonical Russian. */
 const PRIMATEK_I18N = {
   uz: {
-    "ПОНЯТНО":"TUSHUNARLI","СМЕНА: —":"SMENA: —","Выработка":"Ishlab chiqarish",
+    "Введите PIN-код":"PIN-kodni kiriting","Для входа в приложение оператора":"Operator ilovasiga kirish uchun","Войти":"Kirish","Проверка...":"Tekshirilmoqda...","Введите четыре цифры.":"To‘rtta raqamni kiriting.","Неверный PIN-код. Попробуйте ещё раз.":"PIN-kod noto‘g‘ri. Qayta urinib ko‘ring.","Слишком много попыток. Подождите 10 минут.":"Urinishlar soni oshib ketdi. 10 daqiqa kuting.","Не удалось проверить PIN. Проверьте соединение.":"PIN-kodni tekshirib bo‘lmadi. Internet aloqasini tekshiring.","ПОНЯТНО":"TUSHUNARLI","СМЕНА: —":"SMENA: —","Выработка":"Ishlab chiqarish",
     "Приём смены и выбор линии":"Smenani qabul qilish va liniyani tanlash",
     "ФИО Оператора":"Operatorning F.I.Sh.","ВВЕДИТЕ ФАМИЛИЮ И ИМЯ":"Familiya va ismni kiriting",
     "Открытая партия на линии":"Liniyadagi ochiq partiya","Открытой партии нет — после приёмки откройте новую.":"Ochiq partiya yo‘q — smenani qabul qilgach, yangi partiya oching.",
@@ -1177,7 +1236,7 @@ const PRIMATEK_I18N = {
     "Не удалось сохранить причину ремонта. Попробуйте ещё раз.":"Ta’mirlash sababini saqlab bo‘lmadi. Qayta urinib ko‘ring."
   },
   tg: {
-    "ПОНЯТНО":"ФАҲМО","СМЕНА: —":"СМЕНА: —","Выработка":"Истеҳсол",
+    "Введите PIN-код":"Рамзи PIN-ро ворид кунед","Для входа в приложение оператора":"Барои ворид шудан ба барномаи оператор","Войти":"Ворид шудан","Проверка...":"Санҷиш...","Введите четыре цифры.":"Чор рақамро ворид кунед.","Неверный PIN-код. Попробуйте ещё раз.":"Рамзи PIN нодуруст аст. Бори дигар кӯшиш кунед.","Слишком много попыток. Подождите 10 минут.":"Шумораи кӯшишҳо зиёд шуд. 10 дақиқа интизор шавед.","Не удалось проверить PIN. Проверьте соединение.":"PIN санҷида нашуд. Пайвасти интернетро санҷед.","ПОНЯТНО":"ФАҲМО","СМЕНА: —":"СМЕНА: —","Выработка":"Истеҳсол",
     "Приём смены и выбор линии":"Қабули баст ва интихоби хат",
     "ФИО Оператора":"Ному насаби оператор","ВВЕДИТЕ ФАМИЛИЮ И ИМЯ":"Насаб ва номро ворид кунед",
     "Открытая партия на линии":"Партияи кушода дар хат","Открытой партии нет — после приёмки откройте новую.":"Партияи кушода нест — баъди қабули баст партияи нав кушоед.",
