@@ -127,11 +127,13 @@
       <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Причина ремонта</label>
       <select id="handoverRepairReason" onchange="checkHandoverReady()" class="w-full bg-[#080d1a] border border-[#ef4444] text-white text-xs rounded-lg p-2 outline-none">
         <option value="">Выберите причину...</option>
-        <option>Поломка основного оборудования</option>
-        <option>Поломка вспомогательного оборудования</option>
-        <option>Разрыв/замена сетки</option>
-        <option>Отсутствие персонала (СГИ)</option>
-        <option>Другое (Остановка)</option>
+        <option>Замена сита</option>
+        <option>Фасовка</option>
+        <option>Нижний дозатор</option>
+        <option>Кулер</option>
+        <option>Фидер</option>
+        <option>Остановка шнеков</option>
+        <option>Ошибка на пульте</option>
       </select>
     </div>
 
@@ -630,13 +632,16 @@ async function submitRepairReason() {
 }
 
 async function insertStatusEvent(status, reason) {
-  try {
-    await client.from('shift_reports').insert([{
-      line_number: local.line, operator_name: local.operator, event_type: 'STATUS_CHANGE',
-      line_status: status,
-      batch_id: batch ? batch.id : null, shift_key: getShiftInfo().key
-    }]);
-  } catch(e){ console.error(e); }
+  const { error } = await client.from('shift_reports').insert([{
+    line_number: local.line, operator_name: local.operator, event_type: 'STATUS_CHANGE',
+    line_status: status, repair_reason: status === 'РЕМОНТ' ? (reason || null) : null,
+    batch_id: batch ? batch.id : null, shift_key: getShiftInfo().key
+  }]);
+  if (error) {
+    console.error('Не удалось записать статус линии:', error);
+    showNotice('Не удалось сохранить статус линии. Проверьте соединение и попробуйте ещё раз.', 'error');
+    throw error;
+  }
 }
 
 function openModal(id){ document.getElementById(id).classList.add('open'); }
