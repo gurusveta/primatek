@@ -273,6 +273,7 @@
 
   let rawReports = [];
   let rawBatches = [];
+  let allBatches = [];
   let rawPlans = [];
   let currentArchiveTab = 'shifts';
   let shiftPlanKg = 0;
@@ -351,9 +352,10 @@
       rawReports = reports || [];
 
       const { data: batches, error: batchErr } = await client.from('batches')
-        .select('*').eq('status', 'open').order('opened_at', { ascending: false });
+        .select('*').order('opened_at', { ascending: false }).limit(500);
       if (batchErr) throw batchErr;
-      rawBatches = batches || [];
+      allBatches = batches || [];
+      rawBatches = allBatches.filter(b => b.status === 'open');
 
       const { data: plans, error: planErr } = await client.from('shift_plans')
         .select('*').eq('plan_date', today).eq('shift', shiftName);
@@ -593,10 +595,19 @@
   function filterShiftsTable() {
     const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
     const lineVal = document.getElementById('filterLine').value;
-    const targetEvent = currentArchiveTab === 'shifts' ? 'SHIFT_CLOSE' : 'PARTY_CLOSE';
-    
+    if (currentArchiveTab === 'parties') {
+      const filteredBatches = allBatches.filter(b => {
+        if (b.status !== 'closed') return false;
+        const searchText = [b.batch_number, b.ral_color, b.product_code, b.closed_by, b.opened_by].join(' ').toLowerCase();
+        return (!searchVal || searchText.includes(searchVal)) &&
+          (lineVal === 'all' || String(b.line_number) === String(lineVal));
+      });
+      renderPartyArchive(filteredBatches);
+      return;
+    }
+
     const filtered = rawReports.filter(r => {
-      if (r.event_type !== targetEvent) return false;
+      if (r.event_type !== 'SHIFT_CLOSE') return false;
       const op = (r.operator_name || '').toLowerCase();
       const batch = (r.batch_number || '').toLowerCase();
       const ral = (r.ral_color || '').toLowerCase();
@@ -604,8 +615,35 @@
       const matchLine = (lineVal === 'all') || (String(r.line_number) === String(lineVal));
       return matchSearch && matchLine;
     });
-
     renderShiftsTable(filtered);
+  }
+
+  function renderPartyArchive(batches) {
+    const tbody = document.getElementById('shiftsTableBody');
+    if (!batches.length) {
+      tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:#64748b;padding:25px;">Закрытых партий не найдено</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = batches.map(b => {
+      const events = rawReports.filter(r => r.batch_id === b.id &&
+        ['PRODUCTION','PARTY_CLOSE','SHIFT_CLOSE'].includes(r.event_type));
+      const kg = events.reduce((sum,r) => sum + (Number(r.total_good_kg)||0),0);
+      const chips = events.reduce((sum,r) => sum + (Number(r.chips_kg)||0),0);
+      const dt = b.closed_at ? new Date(b.closed_at) : new Date(b.opened_at);
+      const time = dt.toLocaleDateString('ru-RU') + ' ' + dt.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+      return `<tr>
+        <td style="color:#94a3b8;font-family:monospace;">${time}</td>
+        <td><b>№${b.line_number}</b></td>
+        <td><b>${b.closed_by || b.opened_by || '—'}</b></td>
+        <td>${b.batch_number || '—'}</td>
+        <td><span class="ral-tag">${b.ral_color || '—'}</span></td>
+        <td>${b.package_type === 'mix' ? 'СМЕШЕНИЕ' : 'ПК'}</td>
+        <td><b style="color:#34d399;font-size:14px;">${kg.toLocaleString('ru-RU')} кг</b></td>
+        <td style="color:#fbbf24;font-weight:700;">${chips.toLocaleString('ru-RU')} кг</td>
+        <td>—</td><td>${Number(b.dust_kg||0).toFixed(1)} кг</td>
+        <td>—</td><td>—</td><td>—</td>
+      </tr>`;
+    }).join('');
   }
 
   function renderShiftsTable(reports) {
