@@ -1241,8 +1241,9 @@ function applyPrimatekLanguage() {
     const leading = state.original.match(/^\s*/)[0];
     const trailing = state.original.match(/\s*$/)[0];
     const key = state.original.trim();
-    node.nodeValue = leading + (dict[key] || key) + trailing;
-    state.lastTranslated = node.nodeValue;
+    const nextValue = leading + (dict[key] || key) + trailing;
+    if (node.nodeValue !== nextValue) node.nodeValue = nextValue;
+    state.lastTranslated = nextValue;
   }
   document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
     const original = el.getAttribute('data-primatek-placeholder') || el.placeholder;
