@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PRIMATEK — Приложение оператора</title>
+  <meta name="theme-color" content="#0b132b">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { -webkit-tap-highlight-color: transparent; background-color: #070c18; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .btn-press:active { transform: scale(0.97); }
+    .st-work { border-color:#10b981; color:#34d399; background:rgba(16,185,129,.1);} .st-work.active{background:#10b981;color:#fff;border-color:#34d399;}
+    .st-clean { border-color:#f59e0b; color:#fbbf24; background:rgba(245,158,11,.1);} .st-clean.active{background:#f59e0b;color:#fff;border-color:#fbbf24;}
+    .st-sample { border-color:#38bdf8; color:#38bdf8; background:rgba(2,132,199,.1);} .st-sample.active{background:#0284c7;color:#fff;border-color:#38bdf8;}
+    .st-repair { border-color:#ef4444; color:#f87171; background:rgba(239,68,68,.1);} .st-repair.active{background:#ef4444;color:#fff;border-color:#f87171;}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(5,9,20,.9);z-index:50;justify-content:center;align-items:center;padding:16px;backdrop-filter:blur(2px);}
+    .modal-overlay.open{display:flex;}
+    .tab-active{background:#0072ce;color:#fff;} .tab-idle{color:#8fa0c2;}
+    .comp-btn{border:1px solid #29385c;background:#080d1a;color:#8fa0c2;}
+    .comp-btn.active{background:#0072ce;color:#fff;border-color:#38bdf8;box-shadow:0 0 10px rgba(0,114,206,.4);}
+
+    /* Единый стиль уведомлений PRIMATEK */
+    #primatekNotice{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(2,6,23,.72);backdrop-filter:blur(5px);opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s ease}
+    #primatekNotice.show{opacity:1;visibility:visible}
+    #primatekNoticeCard{position:relative;width:min(100%,520px);min-height:280px;display:grid;grid-template-columns:minmax(115px,.9fr) 1.1fr;align-items:center;gap:16px;padding:26px 22px;border:2px solid #315b91;border-radius:26px;background:linear-gradient(145deg,#1a2944,#0b1426);box-shadow:0 24px 80px rgba(0,0,0,.72);transform:scale(.94) translateY(10px);transition:transform .22s ease;pointer-events:auto}
+    #primatekNotice.show #primatekNoticeCard{transform:scale(1) translateY(0)}
+    #primatekNotice.success #primatekNoticeCard{border-color:#10b981}
+    #primatekNotice.warning #primatekNoticeCard{border-color:#f59e0b}
+    #primatekNotice.error #primatekNoticeCard{border-color:#ef4444}
+    #primatekNotice.info #primatekNoticeCard{border-color:#38bdf8}
+    #primatekNoticeMascot{width:100%;max-width:210px;align-self:end;display:flex;align-items:flex-end;justify-content:center;background:transparent}
+    #primatekNoticeMascot img{display:block;width:100%;height:auto;max-height:260px;object-fit:contain;object-position:bottom}
+    #primatekNoticeContent{min-width:0;text-align:left;padding:16px 0}
+    #primatekNoticeMark{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:32px;font-weight:900;margin-bottom:14px;background:#064e3b;color:#6ee7b7}
+    #primatekNotice.warning #primatekNoticeMark{background:#78350f;color:#fde68a}
+    #primatekNotice.error #primatekNoticeMark{background:#7f1d1d;color:#fecaca}
+    #primatekNotice.info #primatekNoticeMark{background:#0c4a6e;color:#bae6fd}
+    #primatekNoticeTitle{font-size:clamp(17px,4vw,22px);font-weight:900;letter-spacing:.01em;color:#6ee7b7;margin:0 0 10px}
+    #primatekNotice.warning #primatekNoticeTitle{color:#fcd34d}
+    #primatekNotice.error #primatekNoticeTitle{color:#fca5a5}
+    #primatekNotice.info #primatekNoticeTitle{color:#7dd3fc}
+    #primatekNoticeText{font-size:clamp(14px,3.6vw,17px);line-height:1.45;color:#f8fafc;overflow-wrap:anywhere}
+    #primatekNoticeClose{margin-top:20px;min-width:130px;border:0;border-radius:12px;padding:12px 20px;background:#059669;color:#fff;font-size:14px;font-weight:900}
+    #primatekNotice.warning #primatekNoticeClose{background:#b45309}
+    #primatekNotice.error #primatekNoticeClose{background:#b91c1c}
+    #primatekNotice.info #primatekNoticeClose{background:#0369a1}
+    #primatekNotice.hidden{display:none}
+    @media(max-width:430px){#primatekNotice{padding:12px}#primatekNoticeCard{grid-template-columns:minmax(105px,.82fr) 1.18fr;gap:10px;padding:20px 14px;min-height:245px}#primatekNoticeMascot img{max-height:230px}#primatekNoticeMark{width:42px;height:42px;font-size:25px;margin-bottom:10px}#primatekNoticeClose{margin-top:14px;min-width:110px;padding:10px 12px}}
+</style>
+</head>
+<body class="min-h-screen pb-24 select-none">
+<div id="primatekNotice" class="hidden" role="status" aria-live="polite"><div id="primatekNoticeCard"><div id="primatekNoticeMascot" aria-hidden="true"><img src="data:image/jpeg;base64,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" alt="Маскот PRIMATEK"></div><div class="min-w-0 flex-1"><div id="primatekNoticeContent"><div id="primatekNoticeMark" aria-hidden="true">✓</div><div id="primatekNoticeTitle">PRIMATEK</div><div id="primatekNoticeText"></div><button id="primatekNoticeClose" onclick="hideNotice()">ПОНЯТНО</button></div></div></div></div>
+<div class="px-3 py-2 text-center text-[10px] font-bold tracking-wide bg-amber-500/15 text-amber-200 border-b border-amber-500/30">ПРЕДПРОСМОТР PRIMATEK · ДЛЯ ПРОВЕРКИ ИНТЕРФЕЙСА</div>
+
+
+<header class="bg-[#0f172a] border-b border-[#1e293b] px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-md">
+  <svg width="120" height="26" viewBox="0 0 230 50" fill="none"><circle cx="6" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.5"/><circle cx="16" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.8"/><circle cx="26" cy="11" r="3.2" fill="#0072ce"/><circle cx="6" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.6"/><circle cx="16" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.9"/><circle cx="26" cy="22" r="3.2" fill="#0072ce"/><circle cx="6" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.4"/><circle cx="16" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.7"/><circle cx="26" cy="33" r="3.2" fill="#0072ce"/><text x="36" y="34" font-family="'Arial Black',sans-serif" font-weight="900" font-size="31" fill="#0072ce">PRIMATEK</text></svg>
+  <div class="flex items-center space-x-2">
+    <div id="shiftBadge" class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-[#1a2744] text-[#38bdf8] border border-[#2c4270]">СМЕНА: —</div>
+    <button onclick="openStatsModal()" class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-[#172554] text-[#38bdf8] border border-[#1e40af] btn-press">Выработка</button>
+  </div>
+</header>
+
+<main class="p-3 max-w-md mx-auto space-y-3">
+
+  <!-- ПРИЁМКА -->
+  <div id="handoverSection" class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-3">
+    <h2 class="text-xs font-extrabold text-[#38bdf8] uppercase tracking-wider">Приём смены и выбор линии</h2>
+    <div class="grid grid-cols-4 gap-1.5" id="lineButtons"></div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">ФИО Оператора</label>
+      <input type="text" id="operatorName" placeholder="ВВЕДИТЕ ФАМИЛИЮ И ИМЯ" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-[#0072ce] uppercase">
+    </div>
+
+    <!-- Найденная открытая партия -->
+    <div id="foundBatchCard" class="hidden bg-[#080d1a] border border-[#10b981] rounded-xl p-3 space-y-1.5">
+      <div class="text-[10px] font-extrabold text-[#34d399] uppercase">Открытая партия на линии</div>
+      <div class="text-sm font-black text-white" id="foundBatchTitle">—</div>
+      <div class="text-[11px] text-[#8fa0c2]" id="foundBatchNumbers">—</div>
+      <div class="text-[10px] text-[#64748b]" id="foundBatchOpened">—</div>
+    </div>
+    <div id="noBatchCard" class="hidden bg-[#080d1a] border border-[#29385c] rounded-xl p-3 text-[11px] text-[#8fa0c2]">
+      Открытой партии нет — после приёмки откройте новую.
+    </div>
+
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Статус линии при приёмке</label>
+      <div class="grid grid-cols-2 gap-1.5">
+        <button onclick="selectHandoverStatus('В РАБОТЕ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-work">В РАБОТЕ</button>
+        <button onclick="selectHandoverStatus('ЧИСТКА', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-clean">ЧИСТКА</button>
+        <button onclick="selectHandoverStatus('ПРОБЫ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-sample">ПРОБЫ</button>
+        <button onclick="selectHandoverStatus('РЕМОНТ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-repair">РЕМОНТ</button>
+      </div>
+    </div>
+
+    <div id="handoverRepairWrap" class="hidden">
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Причина ремонта</label>
+      <select id="handoverRepairReason" onchange="checkHandoverReady()" class="w-full bg-[#080d1a] border border-[#ef4444] text-white text-xs rounded-lg p-2 outline-none">
+        <option value="">Выберите причину...</option>
+        <option>Замена сита</option>
+        <option>Фасовка</option>
+        <option>Нижний дозатор</option>
+        <option>Кулер</option>
+        <option>Фидер</option>
+        <option>Остановка шнеков</option>
+        <option>Ошибка на пульте</option>
+      </select>
+    </div>
+
+    <button id="btnAcceptHandover" onclick="acceptHandover()" disabled class="w-full py-3 bg-[#10b981] disabled:opacity-40 font-black rounded-xl text-white text-xs uppercase tracking-wider btn-press">ПРИНЯТЬ СМЕНУ</button>
+    <div id="handoverHint" class="text-[10px] text-center text-[#64748b]">Выберите линию, введите ФИО и статус</div>
+  </div>
+
+  <!-- ПЛАШКА -->
+  <div id="handoverCompact" class="hidden bg-[#131c31] border border-[#233152] rounded-xl p-3 flex items-center justify-between shadow">
+    <div class="flex items-center space-x-2">
+      <span id="compactDot" class="w-2.5 h-2.5 rounded-full bg-[#10b981] animate-pulse"></span>
+      <span id="compactInfo" class="text-xs font-bold text-white">—</span>
+    </div>
+    <button onclick="reopenHandover()" class="text-[11px] font-bold text-[#38bdf8] underline btn-press">Изменить ✎</button>
+  </div>
+
+  <!-- ГАМИФИКАЦИЯ -->
+  <div id="gamificationBlock" class="hidden bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg">
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">ВЫРАБОТКА ЗА СМЕНУ</span>
+        <div class="text-xl font-black text-white" id="statDonePlan">0 кг</div>
+      </div>
+      <div class="text-right">
+        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">СТИМУЛИРУЮЩИЕ ВЫПЛАТЫ</span>
+        <div class="text-xl font-black text-[#34d399]" id="statMoney">0 ₽</div>
+      </div>
+    </div>
+    <div class="text-[11px] text-[#8fa0c2] text-center mt-2" id="premiumLeftText">Расчёт: произведённые килограммы × 0,5 ₽</div>
+  </div>
+
+  <!-- РАБОЧАЯ ЗОНА -->
+  <div id="workArea" class="hidden space-y-3">
+
+    <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-3 shadow-lg space-y-2">
+      <div class="flex justify-between items-center px-1">
+        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider">Текущий статус линии</span>
+        <span id="statusTimer" class="text-[11px] font-bold text-[#34d399]">—</span>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="setLineStatus('В РАБОТЕ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-work">В РАБОТЕ</button>
+        <button onclick="setLineStatus('ЧИСТКА', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-clean">ЧИСТКА</button>
+        <button onclick="setLineStatus('ПРОБЫ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-sample">ПРОБЫ</button>
+        <button onclick="setLineStatus('РЕМОНТ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-repair">РЕМОНТ</button>
+      </div>
+      <div id="repairReasonWrap" class="hidden mt-2">
+        <select id="repairReasonSelect" class="w-full bg-[#080d1a] border border-[#ef4444] text-white text-xs rounded-lg p-2 outline-none" onchange="submitRepairReason()">
+          <option value="">Выберите причину поломки...</option>
+          <option>Замена сита</option>
+          <option>Фасовка</option>
+          <option>Нижний дозатор</option>
+          <option>Кулер</option>
+          <option>Фидер</option>
+          <option>Остановка шнеков</option>
+          <option>Ошибка на пульте</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ПАРТИЯ -->
+    <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-3">
+      <div id="openBatchSection">
+        <button onclick="openNewBatchModal()" class="w-full py-4 border-2 border-dashed border-[#38bdf8] rounded-xl bg-[#1a2744] text-[#38bdf8] font-black text-sm uppercase tracking-wider btn-press">+ Открыть новую партию</button>
+      </div>
+
+      <div id="activeBatchSection" class="hidden space-y-3">
+        <div class="flex justify-between items-center bg-[#080d1a] border border-[#233152] p-2.5 rounded-xl text-xs">
+          <div>Партия: <b id="displayBatchNum" class="text-white">—</b></div>
+          <div>RAL: <b id="displayRal" class="text-white">—</b></div>
+          <div id="displayPackType" class="text-[#38bdf8] font-bold">—</div>
+        </div>
+
+        <!-- КОРОБКИ -->
+        <div id="boxInputWrap" class="hidden bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-center space-y-1">
+          <label class="text-[10px] font-extrabold text-[#8fa0c2] uppercase block">Номер последней выпущенной коробки</label>
+          <input type="number" id="boxUnitInput" placeholder="№" oninput="onUnitInput()" class="w-full bg-[#131c31] border-2 border-[#0072ce] rounded-xl py-3 text-center text-3xl font-black text-white outline-none">
+          <div class="text-[11px] text-[#8fa0c2]" id="boxDeltaText">—</div>
+        </div>
+
+        <!-- СМЕШЕНИЕ -->
+        <div id="mixInputWrap" class="hidden space-y-2">
+          <div class="text-[10px] font-extrabold text-[#8fa0c2] uppercase">Сейчас делаю:</div>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button onclick="setComponent('comp1', this)" class="comp-btn py-2.5 text-xs font-extrabold rounded-xl btn-press">1 п/ф</button>
+            <button onclick="setComponent('comp2', this)" class="comp-btn py-2.5 text-xs font-extrabold rounded-xl btn-press">2 п/ф</button>
+            <button onclick="setComponent('finished', this)" class="comp-btn py-2.5 text-xs font-extrabold rounded-xl btn-press">Готовая</button>
+          </div>
+          <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-center space-y-1">
+            <label class="text-[10px] font-extrabold text-[#8fa0c2] uppercase block" id="mixUnitLabel">Номер последнего мешка</label>
+            <input type="number" id="mixUnitInput" placeholder="№" oninput="onUnitInput()" class="w-full bg-[#131c31] border-2 border-[#0072ce] rounded-xl py-3 text-center text-3xl font-black text-white outline-none">
+            <div class="text-[11px] text-[#8fa0c2]" id="mixDeltaText">—</div>
+          </div>
+          <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-xs space-y-1" id="mixTotals"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="sendCheckpoint()" class="py-3 bg-[#1e1b4b] border border-[#4338ca] font-extrabold rounded-xl text-[#a5b4fc] text-xs uppercase btn-press">Отправить на дашборд</button>
+          <button onclick="openClosePartyModal()" class="py-3 bg-[#1c2742] border border-[#ef4444] text-[#fca5a5] font-extrabold rounded-xl text-xs uppercase btn-press">Закрыть партию</button>
+        </div>
+        <div id="lastSyncNotice" class="hidden text-[10px] text-center text-[#34d399]"></div>
+      </div>
+    </div>
+
+    <!-- БРАК / ПЫЛЬ -->
+    <div class="grid grid-cols-2 gap-2">
+      <button onclick="openModal('modalDefect')" class="bg-[#131c31] border border-[#55222b] p-3 rounded-2xl text-center btn-press space-y-1">
+        <div class="text-[11px] font-black text-[#f87171] uppercase">Брак</div>
+        <div id="badgeDefect" class="text-[10px] text-[#94a3b8]">0 кг</div>
+      </button>
+      <button onclick="openModal('modalDust')" class="bg-[#131c31] border border-[#233152] p-3 rounded-2xl text-center btn-press space-y-1">
+        <div class="text-[11px] font-black text-[#38bdf8] uppercase">Пыль</div>
+        <div id="badgeDust" class="text-[10px] text-[#94a3b8]">0 кг</div>
+      </button>
+    </div>
+
+    <button id="btnSubmitShift" onclick="openSummary()" class="w-full py-4 bg-gradient-to-r from-[#0072ce] to-[#0284c7] font-black rounded-2xl text-white text-sm uppercase tracking-wider shadow-xl btn-press">СДАТЬ СМЕНУ И ОТПРАВИТЬ ОТЧЁТ</button>
+  </div>
+</main>
+
+<!-- МОДАЛКА: НОВАЯ ПАРТИЯ -->
+<div id="modalOpenBatch" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
+    <h3 class="text-base font-black text-[#38bdf8]">Открытие партии</h3>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">№ Партии</label>
+      <input type="text" id="newBatchNum" placeholder="26060780" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none focus:border-[#0072ce]">
+    </div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Код продукта</label>
+      <input type="text" id="newProductCode" placeholder="Введите код продукта" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none focus:border-[#0072ce]">
+    </div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Цвет RAL</label>
+      <div class="flex bg-[#080d1a] border border-[#29385c] rounded-xl overflow-hidden">
+        <span class="bg-[#1c2742] text-[#38bdf8] font-black text-xs px-2.5 flex items-center border-r border-[#29385c]">RAL</span>
+        <input type="text" id="newRal" placeholder="7021" class="w-full bg-transparent px-2 py-2 text-sm text-white font-bold outline-none">
+      </div>
+    </div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Тип партии</label>
+      <div class="grid grid-cols-2 gap-1 bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
+        <button onclick="setNewBatchPack('box', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active">ПК</button>
+        <button onclick="setNewBatchPack('mix', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle">Смешение</button>
+      </div>
+    </div>
+    <button id="btnConfirmOpenBatch" onclick="confirmOpenBatch()" class="w-full py-3 bg-[#10b981] text-white font-bold rounded-xl text-xs uppercase btn-press">Начать работу</button>
+    <button onclick="closeModal('modalOpenBatch')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Отмена</button>
+  </div>
+</div>
+
+<!-- МОДАЛКА: ЗАКРЫТИЕ -->
+<div id="modalCloseBatch" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-3 max-h-[90vh] overflow-y-auto">
+    <h3 class="text-base font-black text-[#ef4444]">Закрытие партии</h3>
+    <div id="closeBoxFields">
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Номер последней коробки</label>
+      <input type="number" id="closeUnitTo" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
+    </div>
+    <div id="closeMixFields" class="hidden space-y-2">
+      <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Последний мешок 1 п/ф</label><input type="number" id="closeComp1" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none"></div>
+      <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Последний мешок 2 п/ф</label><input type="number" id="closeComp2" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none"></div>
+      <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Последняя коробка готовой краски</label><input type="number" id="closeFinished" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none"></div>
+    </div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Вес последней коробки (если не 20 кг)</label>
+      <input type="number" id="closeLastBoxWeight" placeholder="20" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
+    </div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Пыль при закрытии, кг (необязательно)</label>
+      <input type="number" id="closeDust" placeholder="0" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
+    </div>
+    
+    <button id="btnCloseBatch" onclick="closeBatch()" class="w-full py-3 bg-[#ef4444] text-white font-bold rounded-xl text-xs uppercase btn-press">Подтвердить закрытие</button>
+    <button onclick="closeModal('modalCloseBatch')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Отмена</button>
+  </div>
+</div>
+
+<!-- МОДАЛКА: БРАК -->
+<div id="modalDefect" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
+    <h3 class="text-base font-black text-[#f87171]">Фиксация брака (коробки по 20 кг)</h3>
+    <div class="grid grid-cols-2 gap-2">
+      <input type="number" id="defStart" placeholder="С коробки №" class="bg-[#080d1a] border border-[#29385c] rounded-xl p-2 text-white font-bold outline-none">
+      <input type="number" id="defEnd" placeholder="По коробку №" class="bg-[#080d1a] border border-[#29385c] rounded-xl p-2 text-white font-bold outline-none">
+    </div>
+    <button onclick="addDefect()" class="w-full py-3 bg-[#ef4444] text-white font-bold rounded-xl text-xs uppercase btn-press">Внести в брак</button>
+    <div id="defectList" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
+    <button onclick="closeModal('modalDefect')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Готово</button>
+  </div>
+</div>
+
+<!-- МОДАЛКА: ПЫЛЬ -->
+<div id="modalDust" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
+    <h3 class="text-base font-black text-[#38bdf8]">Сброс пыли</h3>
+    <input type="number" id="dustInput" placeholder="Вес мешка (кг)" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl p-2 text-white font-bold outline-none">
+    <button onclick="addDust()" class="w-full py-3 bg-[#0284c7] text-white font-bold rounded-xl text-xs uppercase btn-press">Добавить мешок</button>
+    <div id="dustList" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
+    <button onclick="closeModal('modalDust')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Готово</button>
+  </div>
+</div>
+
+<!-- МОДАЛКА: СВОДКА -->
+<div id="modalSummary" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-3">
+    <h3 class="text-base font-black text-[#38bdf8]">Сводка сдачи смены</h3>
+    <div class="space-y-1.5 text-xs" id="summaryRows"></div>
+    <div class="text-[10px] text-[#64748b]">Партия останется открытой для следующего оператора.</div>
+    <button id="btnFinalShift" onclick="submitFinalShift()" class="w-full py-3.5 bg-[#0072ce] text-white font-black rounded-xl text-xs uppercase btn-press">Подтвердить и сдать</button>
+    <button onclick="closeModal('modalSummary')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Назад</button>
+  </div>
+</div>
+
+<!-- МОДАЛКА: СТАТИСТИКА -->
+<div id="statsModal" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4 max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center border-b border-[#1c2742] pb-2">
+      <h3 class="text-base font-black text-[#38bdf8]">Моя выработка</h3>
+      <button onclick="closeModal('statsModal')" class="text-gray-400 font-bold text-lg">✕</button>
+    </div>
+    <input type="text" id="statsOperatorName" readonly class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-gray-400 outline-none uppercase">
+    <div class="grid grid-cols-2 gap-2">
+      <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">С даты</label><input type="date" id="customDateFrom" onchange="loadStats()" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-2 py-2 text-xs text-white outline-none"></div>
+      <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">По дату</label><input type="date" id="customDateTo" onchange="loadStats()" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-2 py-2 text-xs text-white outline-none"></div>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Дневные смены</div><div class="text-xl font-black text-white" id="stDayShifts">0</div></div>
+      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Ночные смены</div><div class="text-xl font-black text-white" id="stNightShifts">0</div></div>
+      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Произведено краски</div><div class="text-xl font-black text-[#34d399]" id="stPaintKg">0 кг</div></div>
+      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Стимулирующие выплаты</div><div class="text-xl font-black text-[#fbbf24]" id="stEarnedRub">0 ₽</div></div>
+    </div>
+    <button onclick="closeModal('statsModal')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Закрыть</button>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://oqhrzruxubqthqyxmdcg.supabase.co";
+const SUPABASE_KEY = "sb_publishable_m5YmzYjW1BpotrbaRpCdgA__kYvilf3";
+const PRIMATEK_LINES = [1, 5, 6, 7, 8, 13, 14, 15];
+const EARNING_RATE = 0.5;
+const UNIT_WEIGHT = 20;
+const COMP_NAMES = { comp1: '1 п/ф', comp2: '2 п/ф', finished: 'Готовая краска' };
+
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ===== Локальное состояние: только настройки телефона, НЕ правда о партии =====
+let local = JSON.parse(localStorage.getItem('primatek_local_v2')) || {
+  line: 6, operator: '', shiftAccepted: false, handoverStatus: null,
+  lineStatus: 'В РАБОТЕ', repairReason: '', defects: [], dust: [], planKg: 0,
+  shiftKey: null, shiftStartISO: null
+};
+function saveLocal() { localStorage.setItem('primatek_local_v2', JSON.stringify(local)); }
+
+// ===== Серверная правда =====
+let batch = null;          // открытая партия линии из таблицы batches
+let myBaseline = null;     // последние номера на момент моей приёмки (для "вы за смену")
+let sentSnapshot = null;   // номера на момент последней отправки (для дельт)
+let activeComp = 'comp1';
+let newBatchPack = 'box';
+let busy = false;
+
+// ===== Окно смены =====
+function getShiftInfo() {
+  const now = new Date(); const h = now.getHours();
+  let start = new Date(now), end = new Date(now), name = 'ДЕНЬ';
+  if (h >= 8 && h < 20) { start.setHours(8,0,0,0); end.setHours(20,0,0,0); }
+  else if (h >= 20) { name='НОЧЬ'; start.setHours(20,0,0,0); end.setDate(end.getDate()+1); end.setHours(8,0,0,0); }
+  else { name='НОЧЬ'; start.setDate(start.getDate()-1); start.setHours(20,0,0,0); end.setHours(8,0,0,0); }
+  const d = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;
+  return { start, end, name, planDate: d, key: `${d}|${name}` };
+}
+
+window.onload = async () => {
+  renderLines();
+  updateShiftBadge();
+  document.getElementById('operatorName').value = local.operator || '';
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('customDateFrom').value = today;
+  document.getElementById('customDateTo').value = today;
+
+  // Смена в localStorage устарела (пересекли границу 8/20)? Сбрасываем приёмку.
+  if (local.shiftAccepted && local.shiftKey !== getShiftInfo().key) {
+    local.shiftAccepted = false; local.defects = []; local.dust = []; saveLocal();
+  }
+
+  await refreshBatch();
+
+  if (local.shiftAccepted) {
+    enterWorkMode(false);
+  } else {
+    document.getElementById('operatorName').addEventListener('input', checkHandoverReady);
+  }
+  setInterval(updateShiftBadge, 60000);
+};
+
+
+let noticeTimer = null;
+function showNotice(message, type) {
+  const text = String(message || 'Готово');
+  const inferred = type || (/не удалось|ошибка|не подтверждены|не обновил|не повторяйте/i.test(text) ? 'error' :
+    (/проверьте|уже есть|нет новых|не может|укажите|заполните|пустая|сначала/i.test(text) ? 'warning' :
+    (/сохран|отправ|закрыта|сдана|принять смену/i.test(text) ? 'success' : 'info')));
+  const root = document.getElementById('primatekNotice');
+  const title = document.getElementById('primatekNoticeTitle');
+  const mascot = document.getElementById('primatekNoticeMascot');
+  const body = document.getElementById('primatekNoticeText');
+  if (!root || !title || !mascot || !body) return;
+  clearTimeout(noticeTimer);
+  root.className = inferred;
+  title.textContent = inferred === 'success' ? 'Данные сохранены!' : inferred === 'warning' ? 'Обрати внимание' : inferred === 'error' ? 'Не удалось выполнить действие' : 'Сообщение PRIMATEK';
+  document.getElementById('primatekNoticeMark').textContent = inferred === 'success' ? '✓' : inferred === 'warning' ? '!' : inferred === 'error' ? '×' : 'i';
+  mascot.dataset.mood = inferred;
+  body.textContent = text;
+  root.classList.remove('hidden');
+  requestAnimationFrame(() => root.classList.add('show'));
+  noticeTimer = setTimeout(hideNotice, inferred === 'error' ? 15000 : inferred === 'success' ? 15000 : inferred === 'warning' ? 12000 : 10000);
+}
+function hideNotice() {
+  const root = document.getElementById('primatekNotice');
+  if (!root) return;
+  root.classList.remove('show');
+  clearTimeout(noticeTimer);
+  setTimeout(() => { if (!root.classList.contains('show')) root.classList.add('hidden'); }, 220);
+}
+
+function updateShiftBadge() {
+  document.getElementById('shiftBadge').innerText = 'СМЕНА: ' + getShiftInfo().name;
+}
+
+function renderLines() {
+  document.getElementById('lineButtons').innerHTML = PRIMATEK_LINES.map(num => `
+    <button onclick="selectLine(${num})" class="py-2 text-xs font-black rounded-xl border border-[#233152] ${num === local.line ? 'bg-[#0072ce] text-white border-[#38bdf8]' : 'bg-[#080d1a] text-[#cbd5e1]'}">${num}</button>`).join('');
+}
+
+async function selectLine(num) {
+  local.line = num; saveLocal(); renderLines();
+  await refreshBatch();
+  checkHandoverReady();
+  loadPlanFromCloud();
+}
+
+// ===== Поиск открытой партии: ТОЛЬКО по статусу =====
+async function refreshBatch() {
+  try {
+    const { data, error } = await client.from('batches')
+      .select('*').eq('line_number', local.line).eq('status', 'open').limit(1);
+    if (error) throw error;
+    batch = (data && data.length) ? data[0] : null;
+  } catch (e) { console.error(e); batch = null; }
+  renderFoundBatch();
+  updateBatchUI();
+}
+
+function renderFoundBatch() {
+  const found = document.getElementById('foundBatchCard');
+  const none = document.getElementById('noBatchCard');
+  if (batch) {
+    found.classList.remove('hidden'); none.classList.add('hidden');
+    document.getElementById('foundBatchTitle').innerText =
+      `№ ${batch.batch_number} · ${batch.ral_color || '—'} · ${batch.package_type === 'mix' ? 'СМЕШЕНИЕ' : 'КОРОБКИ'}`;
+    document.getElementById('foundBatchNumbers').innerText = batch.package_type === 'mix'
+      ? `Последние: 1 п/ф — №${batch.last_comp1}, 2 п/ф — №${batch.last_comp2}, готовая — №${batch.last_finished}`
+      : `Последняя коробка: №${batch.last_unit}`;
+    document.getElementById('foundBatchOpened').innerText =
+      `Открыл: ${batch.opened_by || '—'} · ${new Date(batch.opened_at).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
+  } else {
+    found.classList.add('hidden'); none.classList.remove('hidden');
+  }
+}
+
+function selectHandoverStatus(status, btn) {
+  local.handoverStatus = status; saveLocal();
+  document.querySelectorAll('.hand-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('handoverRepairWrap').classList.toggle('hidden', status !== 'РЕМОНТ');
+  checkHandoverReady();
+}
+
+function checkHandoverReady() {
+  const name = document.getElementById('operatorName').value.trim();
+  let ok = name && local.handoverStatus;
+  if (local.handoverStatus === 'РЕМОНТ' && !document.getElementById('handoverRepairReason').value) ok = false;
+  document.getElementById('btnAcceptHandover').disabled = !ok;
+}
+
+async function acceptHandover() {
+  if (busy) return; busy = true;
+  const btn = document.getElementById('btnAcceptHandover');
+  btn.innerText = 'Отправка...'; btn.disabled = true;
+  try {
+    await refreshBatch(); // ещё раз проверяем сервер прямо перед приёмкой
+    const si = getShiftInfo();
+    local.operator = document.getElementById('operatorName').value.trim().toUpperCase();
+    local.lineStatus = local.handoverStatus;
+    local.repairReason = local.handoverStatus === 'РЕМОНТ' ? document.getElementById('handoverRepairReason').value : '';
+    local.shiftAccepted = true;
+    local.shiftKey = si.key;
+    local.shiftStartISO = si.start.toISOString();
+    local.defects = []; local.dust = [];
+    saveLocal();
+
+    // База: последние номера на момент приёмки = моя отправная точка
+    myBaseline = batch ? snapshotOf(batch) : null;
+    sentSnapshot = batch ? snapshotOf(batch) : null;
+    if (batch) activeComp = batch.active_component || 'comp1';
+
+    const { error } = await client.from('shift_reports').insert([{
+      line_number: local.line, operator_name: local.operator, event_type: 'STATUS_CHANGE',
+      line_status: local.lineStatus,
+      batch_id: batch ? batch.id : null, batch_number: batch ? batch.batch_number : null,
+      ral_color: batch ? batch.ral_color : null, package_type: batch ? batch.package_type : null,
+      shift_key: si.key
+    }]);
+    if (error) throw error;
+
+    enterWorkMode(true);
+  } catch (err) {
+    console.error('Ошибка приёма смены:', err);
+    showNotice('Не удалось принять смену. Проверьте соединение и попробуйте ещё раз.');
+    local.shiftAccepted = false; saveLocal();
+    btn.innerText = 'ПРИНЯТЬ СМЕНУ'; btn.disabled = false;
+  } finally { busy = false; }
+}
+
+function snapshotOf(b) {
+  return { last_unit: b.last_unit||0, last_comp1: b.last_comp1||0, last_comp2: b.last_comp2||0, last_finished: b.last_finished||0 };
+}
+
+function enterWorkMode(fromAccept) {
+  document.getElementById('handoverSection').classList.add('hidden');
+  document.getElementById('handoverCompact').classList.remove('hidden');
+  document.getElementById('gamificationBlock').classList.remove('hidden');
+  document.getElementById('workArea').classList.remove('hidden');
+  if (!fromAccept && batch) {
+    // Восстановление после перезагрузки: база = последние отправленные мной номера из журнала
+    restoreMySession();
+  }
+  updateCompactBar(); updateBatchUI(); renderDefects(); renderDust(); calculateProduction();
+  highlightStatusButtons();
+}
+
+async function restoreMySession() {
+  try {
+    const { data } = await client.from('shift_reports')
+      .select('*').eq('line_number', local.line).eq('operator_name', local.operator)
+      .eq('shift_key', local.shiftKey).order('created_at', { ascending: false }).limit(20);
+    const rows = data || [];
+    const withNums = rows.find(r => r.comp1_to !== null || r.unit_to !== null);
+    if (withNums && batch) {
+      sentSnapshot = { last_unit: withNums.unit_to||0, last_comp1: withNums.comp1_to||0, last_comp2: withNums.comp2_to||0, last_finished: withNums.finished_to||0 };
+    } else if (batch) { sentSnapshot = snapshotOf(batch); }
+    // baseline: самая ранняя запись приёмки за смену — берём из первой STATUS_CHANGE или из снапшота
+    myBaseline = sentSnapshot ? {...sentSnapshot} : (batch ? snapshotOf(batch) : null);
+    // пересчитываем "мои кг" из дельт журнала
+    myDeltaKg = rows.filter(r=>r.event_type==='PRODUCTION'||r.event_type==='PARTY_CLOSE')
+      .reduce((s,r)=> s+(+r.delta_comp1_kg||0)+(+r.delta_comp2_kg||0)+(+r.delta_finished_kg||0)+(+r.delta_boxes_kg||0), 0);
+    calculateProduction();
+  } catch(e){ console.error(e); }
+}
+
+function reopenHandover() {
+  document.getElementById('handoverSection').classList.remove('hidden');
+  document.getElementById('handoverCompact').classList.add('hidden');
+  refreshBatch();
+}
+
+function updateCompactBar() {
+  const colors = { 'В РАБОТЕ':'bg-[#10b981]','ЧИСТКА':'bg-[#f59e0b]','ПРОБЫ':'bg-[#38bdf8]','РЕМОНТ':'bg-[#ef4444]' };
+  document.getElementById('compactDot').className = `w-2.5 h-2.5 rounded-full animate-pulse ${colors[local.lineStatus]||'bg-[#10b981]'}`;
+  document.getElementById('compactInfo').innerText = `Линия №${local.line} • ${local.operator} • ${local.lineStatus}`;
+}
+
+function highlightStatusButtons() {
+  document.querySelectorAll('.st-btn').forEach(b => b.classList.toggle('active', b.innerText === local.lineStatus));
+  const map = { 'В РАБОТЕ':'#34d399','ЧИСТКА':'#fbbf24','ПРОБЫ':'#38bdf8','РЕМОНТ':'#f87171' };
+  const t = document.getElementById('statusTimer');
+  t.innerText = local.lineStatus; t.style.color = map[local.lineStatus] || '#34d399';
+  document.getElementById('repairReasonWrap').classList.toggle('hidden', local.lineStatus !== 'РЕМОНТ');
+  if (local.repairReason) document.getElementById('repairReasonSelect').value = local.repairReason;
+}
+
+async function setLineStatus(status, btn) {
+  local.lineStatus = status; saveLocal();
+  highlightStatusButtons(); updateCompactBar();
+  if (status !== 'РЕМОНТ') {
+    local.repairReason = ''; saveLocal();
+    try { await insertStatusEvent(status, null); }
+    catch (e) { console.error(e); }
+  }
+}
+
+async function submitRepairReason() {
+  const reason = document.getElementById('repairReasonSelect').value;
+  if (!reason) return;
+  local.repairReason = reason; saveLocal();
+  try { await insertStatusEvent('РЕМОНТ', reason); }
+  catch (e) { console.error(e); }
+}
+
+async function insertStatusEvent(status, reason) {
+  const { error } = await client.from('shift_reports').insert([{
+    line_number: local.line, operator_name: local.operator, event_type: 'STATUS_CHANGE',
+    line_status: status, repair_reason: status === 'РЕМОНТ' ? (reason || null) : null,
+    batch_id: batch ? batch.id : null, shift_key: getShiftInfo().key
+  }]);
+  if (error) {
+    console.error('Не удалось записать статус линии:', error);
+    showNotice('Не удалось сохранить статус линии. Проверьте соединение и попробуйте ещё раз.', 'error');
+    throw error;
+  }
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+// ===== Открытие партии =====
+function openNewBatchModal() {
+  if (batch) { showNotice('На линии уже есть открытая партия!'); refreshBatch(); return; }
+  newBatchPack = 'box';
+  document.querySelectorAll('.new-pack-btn').forEach((t,i)=> t.className = `new-pack-btn py-1.5 text-xs font-extrabold rounded-lg ${i===0?'tab-active':'tab-idle'}`);
+  document.getElementById('newBatchNum').value = '';
+  document.getElementById('newProductCode').value = '';
+  document.getElementById('newRal').value = '';
+  openModal('modalOpenBatch');
+}
+function setNewBatchPack(type, btn) {
+  newBatchPack = type;
+  document.querySelectorAll('.new-pack-btn').forEach(t=>t.className='new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle');
+  btn.className='new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active';
+}
+
+async function confirmOpenBatch() {
+  if (busy) return;
+  const bNum = document.getElementById('newBatchNum').value.trim();
+  const productCode = document.getElementById('newProductCode').value.trim();
+  const ral = document.getElementById('newRal').value.trim();
+  if (!bNum || !productCode || !ral) { showNotice('Заполните номер партии, код продукта и RAL!'); return; }
+  busy = true;
+  const btn = document.getElementById('btnConfirmOpenBatch'); btn.innerText = 'Создание...';
+  try {
+    const { data, error } = await client.from('batches').insert([{
+      line_number: local.line, batch_number: bNum, product_code: productCode, ral_color: 'RAL ' + ral,
+      package_type: newBatchPack, status: 'open', opened_by: local.operator,
+      active_component: 'comp1'
+    }]).select();
+    if (error) {
+      if (String(error.message).includes('one_open_batch_per_line')) {
+        showNotice('На линии уже есть открытая партия (возможно, открыл другой оператор). Обновляю...');
+        await refreshBatch(); closeModal('modalOpenBatch'); return;
+      }
+      throw error;
+    }
+    batch = data[0];
+    myBaseline = snapshotOf(batch); sentSnapshot = snapshotOf(batch); myDeltaKg = 0;
+    activeComp = 'comp1';
+    if (local.lineStatus !== 'В РАБОТЕ') { local.lineStatus = 'В РАБОТЕ'; saveLocal(); highlightStatusButtons(); updateCompactBar(); await insertStatusEvent('В РАБОТЕ', null); }
+    closeModal('modalOpenBatch'); updateBatchUI(); calculateProduction();
+  } catch (err) { console.error('Ошибка открытия партии:', err); showNotice('Не удалось открыть партию. Попробуйте ещё раз.'); }
+  finally { busy = false; btn.innerText = 'Начать работу'; }
+}
+
+// ===== UI партии =====
+function updateBatchUI() {
+  const openSec = document.getElementById('openBatchSection');
+  const actSec = document.getElementById('activeBatchSection');
+  if (!batch) { openSec.classList.remove('hidden'); actSec.classList.add('hidden'); return; }
+  openSec.classList.add('hidden'); actSec.classList.remove('hidden');
+  document.getElementById('displayBatchNum').innerText = batch.batch_number;
+  document.getElementById('displayRal').innerText = batch.ral_color || '—';
+  document.getElementById('displayPackType').innerText = batch.package_type === 'mix' ? 'СМЕШЕНИЕ' : 'ПК';
+
+  if (batch.package_type === 'mix') {
+    document.getElementById('boxInputWrap').classList.add('hidden');
+    document.getElementById('mixInputWrap').classList.remove('hidden');
+    activeComp = batch.active_component || activeComp;
+    highlightCompButtons();
+    fillUnitInputs();
+    renderMixTotals();
+  } else {
+    document.getElementById('boxInputWrap').classList.remove('hidden');
+    document.getElementById('mixInputWrap').classList.add('hidden');
+    fillUnitInputs();
+  }
+  onUnitInput();
+}
+
+function fillUnitInputs() {
+  if (!batch) return;
+  if (batch.package_type === 'mix') {
+    const last = batch['last_' + activeComp] || 0;
+    document.getElementById('mixUnitInput').value = last > 0 ? last : '';
+    document.getElementById('mixUnitLabel').innerText =
+      activeComp === 'finished' ? 'Номер последней коробки готовой краски' : `Номер последнего мешка ${COMP_NAMES[activeComp]}`;
+  } else {
+    document.getElementById('boxUnitInput').value = batch.last_unit > 0 ? batch.last_unit : '';
+  }
+}
+
+function highlightCompButtons() {
+  document.querySelectorAll('.comp-btn').forEach((b,i)=>{
+    const key = ['comp1','comp2','finished'][i];
+    b.classList.toggle('active', key === activeComp);
+  });
+}
+
+async function setComponent(comp, btn) {
+  if (!batch || batch.package_type !== 'mix') return;
+  // Перед переключением сохраняем введённый номер текущего компонента, если он больше серверного
+  await flushCurrentInputIfNeeded();
+  activeComp = comp;
+  highlightCompButtons();
+  fillUnitInputs();
+  onUnitInput();
+  try { await client.from('batches').update({ active_component: comp }).eq('id', batch.id); batch.active_component = comp; } catch(e){}
+}
+
+async function flushCurrentInputIfNeeded() {
+  const val = getCurrentInputValue();
+  const serverLast = batch['last_' + activeComp] || 0;
+  if (val > serverLast) await sendCheckpoint(true); // тихая отправка дельты
+}
+
+function getCurrentInputValue() {
+  if (!batch) return 0;
+  const el = batch.package_type === 'mix' ? document.getElementById('mixUnitInput') : document.getElementById('boxUnitInput');
+  return parseInt(el.value) || 0;
+}
+
+let myDeltaKg = 0; // подтверждённые сервером кг за мою смену
+
+function pendingDelta() {
+  // сколько кг добавлено в поле, но ещё не отправлено
+  if (!batch || !sentSnapshot) return { kg: 0, count: 0, from: 0, to: 0 };
+  const val = getCurrentInputValue();
+  if (batch.package_type === 'mix') {
+    const base = sentSnapshot['last_' + activeComp] || 0;
+    if (val > base) return { kg: (val - base) * UNIT_WEIGHT, count: val - base, from: base + 1, to: val };
+    return { kg: 0, count: 0, from: 0, to: 0 };
+  } else {
+    const base = sentSnapshot.last_unit || 0;
+    if (val > base) return { kg: (val - base) * UNIT_WEIGHT, count: val - base, from: base + 1, to: val };
+    return { kg: 0, count: 0, from: 0, to: 0 };
+  }
+}
+
+function onUnitInput() {
+  const d = pendingDelta();
+  const txt = d.kg > 0 ? `+${d.count} шт (№${d.from}–${d.to}) = +${d.kg} кг к отправке` : 'Введите номер больше предыдущего';
+  if (batch && batch.package_type === 'mix') {
+    document.getElementById('mixDeltaText').innerText = txt;
+    renderMixTotals();
+  } else {
+    document.getElementById('boxDeltaText').innerText = txt;
+  }
+  calculateProduction();
+}
+
+function batchTotalKg() {
+  if (!batch) return 0;
+  return batch.package_type === 'mix'
+    ? ((batch.last_comp1||0)+(batch.last_comp2||0)+(batch.last_finished||0)) * UNIT_WEIGHT
+    : (batch.last_unit||0) * UNIT_WEIGHT;
+}
+
+function renderMixTotals() {
+  if (!batch || batch.package_type !== 'mix') return;
+  const base = myBaseline || { last_comp1:0, last_comp2:0, last_finished:0 };
+  const rows = ['comp1','comp2','finished'].map(k => {
+    const cur = batch['last_'+k]||0;
+    const mine = Math.max(0, cur - (base['last_'+k]||0));
+    const pend = (k === activeComp) ? pendingDelta().count : 0;
+    return `<div class="flex justify-between"><span class="text-[#8fa0c2]">${COMP_NAMES[k]}:</span>
+      <span><b class="text-white">${(cur+pend)*UNIT_WEIGHT} кг</b> <span class="text-[#34d399]">/ вы: ${(mine+pend)*UNIT_WEIGHT} кг</span></span></div>`;
+  }).join('');
+  const total = batchTotalKg() + pendingDelta().kg;
+  const mineTotal = myKgForDisplay();
+  document.getElementById('mixTotals').innerHTML = rows +
+    `<div class="border-t border-[#233152] pt-1 mt-1 flex justify-between"><span class="font-extrabold text-[#38bdf8]">ИТОГО:</span><span class="font-black text-white">${total} кг <span class="text-[#34d399] font-bold">/ вы: ${mineTotal} кг</span></span></div>`;
+}
+
+function myKgForDisplay() {
+  const defectKg = local.defects.reduce((s,d)=>s+d.kg,0);
+  return Math.max(0, myDeltaKg + pendingDelta().kg - defectKg);
+}
+
+function calculateProduction() {
+  const goodKg = myKgForDisplay();
+  const incentive = goodKg * EARNING_RATE;
+  document.getElementById('statMoney').innerText = Math.round(incentive * 100) / 100 + ' ₽';
+  document.getElementById('statDonePlan').innerText = goodKg.toLocaleString('ru-RU') + ' кг';
+  document.getElementById('premiumLeftText').innerText = 'Стимулирующие выплаты: ' + goodKg.toLocaleString('ru-RU') + ' кг × 0,5 ₽';
+
+}
+
+// ===== Отправка дельты (PRODUCTION / PARTY_CLOSE / SHIFT_CLOSE) =====
+async function pushDelta(eventType, closeOpts = null) {
+  if (!batch && eventType !== 'SHIFT_CLOSE') { showNotice('Нет открытой партии'); return false; }
+  const si = getShiftInfo();
+  const defectKg = local.defects.reduce((s,d)=>s+d.kg,0);
+  const dustKg = local.dust.reduce((s,d)=>s+d,0) + (closeOpts?.extraDust||0);
+
+  // целевые номера: из полей ввода (или из модалки закрытия)
+  let target = batch ? snapshotOf(batch) : {last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
+  if (closeOpts) {
+    target = closeOpts.target;
+  } else if (batch) {
+    const val = getCurrentInputValue();
+    if (batch.package_type === 'mix') target['last_'+activeComp] = Math.max(val, target['last_'+activeComp]);
+    else target.last_unit = Math.max(val, target.last_unit);
+  }
+
+  const snap = sentSnapshot || {last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
+  let dComp1=0,dComp2=0,dFin=0,dBox=0;
+  if (batch) {
+    if (batch.package_type === 'mix') {
+      dComp1 = Math.max(0,(target.last_comp1-(snap.last_comp1||0)))*UNIT_WEIGHT;
+      dComp2 = Math.max(0,(target.last_comp2-(snap.last_comp2||0)))*UNIT_WEIGHT;
+      dFin   = Math.max(0,(target.last_finished-(snap.last_finished||0)))*UNIT_WEIGHT;
+      // неполная последняя коробка при закрытии
+      if (eventType==='PARTY_CLOSE' && closeOpts?.lastWeight && closeOpts.lastWeight!==20 && dFin>0)
+        dFin = dFin - UNIT_WEIGHT + closeOpts.lastWeight;
+    } else {
+      dBox = Math.max(0,(target.last_unit-(snap.last_unit||0)))*UNIT_WEIGHT;
+      if (eventType==='PARTY_CLOSE' && closeOpts?.lastWeight && closeOpts.lastWeight!==20 && dBox>0)
+        dBox = dBox - UNIT_WEIGHT + closeOpts.lastWeight;
+    }
+  }
+  const deltaKg = dComp1+dComp2+dFin+dBox;
+  const goodDelta = Math.max(0, deltaKg - defectKg);
+
+  const payload = {
+    line_number: local.line, operator_name: local.operator, event_type: eventType,
+    line_status: local.lineStatus,
+    batch_id: batch?batch.id:null, batch_number: batch?batch.batch_number:null,
+    ral_color: batch?batch.ral_color:null, package_type: batch?batch.package_type:null,
+    shift_key: si.key,
+    delta_comp1_kg: dComp1, delta_comp2_kg: dComp2, delta_finished_kg: dFin, delta_boxes_kg: dBox,
+    comp1_to: batch&&batch.package_type==='mix'?target.last_comp1:null,
+    comp2_to: batch&&batch.package_type==='mix'?target.last_comp2:null,
+    finished_to: batch&&batch.package_type==='mix'?target.last_finished:null,
+    unit_from: batch&&batch.package_type==='box'?(snap.last_unit||0)+1:null,
+    unit_to: batch&&batch.package_type==='box'?target.last_unit:null,
+    total_good_kg: goodDelta,
+    chips_kg: dComp1+dComp2,
+    defect_kg: defectKg, defect_boxes: local.defects.reduce((s,d)=>s+d.count,0),
+    dust_kg: dustKg, plan_kg: local.planKg>0?local.planKg:null
+  };
+
+  const { error } = await client.from('shift_reports').insert([payload]);
+  if (error) { console.error('Ошибка отправки данных:', error); showNotice('Не удалось отправить данные. Они пока не подтверждены сервером. Попробуйте ещё раз.'); return false; }
+
+  // обновляем счётчики партии на сервере
+  if (batch) {
+    const upd = batch.package_type==='mix'
+      ? { last_comp1: target.last_comp1, last_comp2: target.last_comp2, last_finished: target.last_finished, active_component: activeComp }
+      : { last_unit: target.last_unit };
+    if (eventType==='PARTY_CLOSE') {
+      upd.status='closed'; upd.closed_by=local.operator; upd.closed_at=new Date().toISOString();
+      upd.last_box_weight=closeOpts?.lastWeight||20; upd.dust_kg=dustKg;
+    }
+    const { error: upErr } = await client.from('batches').update(upd).eq('id', batch.id);
+    if (upErr) { console.error('Журнал записан, но не обновилась партия:', upErr); showNotice('Запись сохранена, но счётчики партии не обновились. Не повторяйте ввод — сообщите начальнику смены.'); return false; }
+    Object.assign(batch, upd);
+    sentSnapshot = {...target};
+  }
+  myDeltaKg += goodDelta;
+  local.defects = []; local.dust = []; saveLocal();
+  renderDefects(); renderDust();
+  return true;
+}
+
+async function sendCheckpoint(silent = false) {
+  if (busy) return;
+  if (!batch) { showNotice('Сначала откройте партию!'); return; }
+  if (pendingDelta().kg === 0 && local.defects.length===0 && local.dust.length===0) {
+    if (!silent) showNotice('Нет новых данных для отправки'); return;
+  }
+  busy = true;
+  try {
+    if (await pushDelta('PRODUCTION')) {
+      if (!silent) {
+        const n = document.getElementById('lastSyncNotice');
+        n.classList.remove('hidden');
+        n.innerText = 'Отправлено в '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+        setTimeout(()=>n.classList.add('hidden'),5000);
+      }
+      updateBatchUI(); calculateProduction();
+    }
+  } finally { busy = false; }
+}
+
+// ===== Закрытие партии =====
+function openClosePartyModal() {
+  if (!batch) return;
+  const isMix = batch.package_type==='mix';
+  document.getElementById('closeBoxFields').classList.toggle('hidden', isMix);
+  document.getElementById('closeMixFields').classList.toggle('hidden', !isMix);
+  if (isMix) {
+    document.getElementById('closeComp1').value = Math.max(batch.last_comp1||0, activeComp==='comp1'?getCurrentInputValue():0);
+    document.getElementById('closeComp2').value = Math.max(batch.last_comp2||0, activeComp==='comp2'?getCurrentInputValue():0);
+    document.getElementById('closeFinished').value = Math.max(batch.last_finished||0, activeComp==='finished'?getCurrentInputValue():0);
+  } else {
+    document.getElementById('closeUnitTo').value = Math.max(batch.last_unit||0, getCurrentInputValue());
+  }
+  document.getElementById('closeLastBoxWeight').value = '';
+  document.getElementById('closeDust').value = '';
+  updateClosePreview();
+  ['closeComp1','closeComp2','closeFinished','closeUnitTo','closeLastBoxWeight'].forEach(id=>{
+    document.getElementById(id).oninput = updateClosePreview;
+  });
+  openModal('modalCloseBatch');
+}
+
+function closeTargets() {
+  if (batch.package_type==='mix') {
+    return {
+      last_unit: 0,
+      last_comp1: parseInt(document.getElementById('closeComp1').value)||0,
+      last_comp2: parseInt(document.getElementById('closeComp2').value)||0,
+      last_finished: parseInt(document.getElementById('closeFinished').value)||0
+    };
+  }
+  return { last_unit: parseInt(document.getElementById('closeUnitTo').value)||0, last_comp1:0,last_comp2:0,last_finished:0 };
+}
+
+function updateClosePreview() {
+  if (!batch) return;
+  const t = closeTargets();
+  const lw = parseFloat(document.getElementById('closeLastBoxWeight').value)||20;
+  const snap = sentSnapshot||{last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
+  let kg = batch.package_type==='mix'
+    ? Math.max(0,t.last_comp1-(snap.last_comp1||0))*20 + Math.max(0,t.last_comp2-(snap.last_comp2||0))*20 + Math.max(0,t.last_finished-(snap.last_finished||0))*20
+    : Math.max(0,t.last_unit-(snap.last_unit||0))*20;
+  const hasNew = batch.package_type==='mix' ? t.last_finished>(snap.last_finished||0) : t.last_unit>(snap.last_unit||0);
+  if (lw!==20 && hasNew) kg = kg-20+lw;
+  // Предварительный информационный блок удалён по согласованному UX-решению.
+}
+
+async function closeBatch() {
+  if (busy) return;
+  const t = closeTargets();
+  const snap = sentSnapshot||{last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
+  if (batch.package_type==='mix') {
+    if (t.last_comp1<(batch.last_comp1||0)||t.last_comp2<(batch.last_comp2||0)||t.last_finished<(batch.last_finished||0)) {
+      showNotice('Номер не может быть меньше уже зафиксированного!'); return;
+    }
+    if (t.last_comp1+t.last_comp2+t.last_finished===0) { showNotice('Партия пустая — укажите номера'); return; }
+  } else {
+    if (t.last_unit<(batch.last_unit||0)) { showNotice('Номер не может быть меньше уже зафиксированного!'); return; }
+    if (t.last_unit===0) { showNotice('Укажите номер последней коробки'); return; }
+  }
+  const lw = parseFloat(document.getElementById('closeLastBoxWeight').value)||20;
+  if (lw<=0||lw>20) { showNotice('Вес последней коробки: от 0 до 20 кг'); return; }
+  const extraDust = parseFloat(document.getElementById('closeDust').value)||0;
+
+  busy = true;
+  const btn = document.getElementById('btnCloseBatch'); btn.innerText='Закрытие...';
+  try {
+    if (await pushDelta('PARTY_CLOSE', { target: t, lastWeight: lw, extraDust })) {
+      showNotice('Партия закрыта! Выработка засчитана в вашу смену.');
+      batch = null; myBaseline = null; sentSnapshot = null;
+      closeModal('modalCloseBatch');
+      updateBatchUI(); calculateProduction(); renderFoundBatch();
+    }
+  } finally { busy = false; btn.innerText='Подтвердить закрытие'; }
+}
+
+// ===== Брак / пыль =====
+function addDefect() {
+  const s = parseInt(document.getElementById('defStart').value), e = parseInt(document.getElementById('defEnd').value);
+  if (s && e && e>=s) {
+    local.defects.push({from:s,to:e,count:e-s+1,kg:(e-s+1)*UNIT_WEIGHT});
+    document.getElementById('defStart').value=''; document.getElementById('defEnd').value='';
+    saveLocal(); renderDefects(); calculateProduction();
+  } else showNotice('Укажите корректный диапазон');
+}
+function renderDefects() {
+  document.getElementById('badgeDefect').innerText = local.defects.reduce((s,d)=>s+d.kg,0)+' кг';
+  document.getElementById('defectList').innerHTML = local.defects.map((d,i)=>
+    `<div class="flex justify-between text-[#fca5a5]"><span>#${d.from}-#${d.to} (${d.count} шт = ${d.kg} кг)</span><span class="cursor-pointer font-bold" onclick="removeDefect(${i})">✕</span></div>`).join('');
+}
+function removeDefect(i){ local.defects.splice(i,1); saveLocal(); renderDefects(); calculateProduction(); }
+
+function addDust() {
+  const v = parseFloat(document.getElementById('dustInput').value);
+  if (v && v>0) { local.dust.push(v); document.getElementById('dustInput').value=''; saveLocal(); renderDust(); }
+}
+function renderDust() {
+  document.getElementById('badgeDust').innerText = local.dust.reduce((s,d)=>s+d,0).toFixed(1)+' кг';
+  document.getElementById('dustList').innerHTML = local.dust.map((d,i)=>
+    `<div class="flex justify-between text-[#94a3b8]"><span>Мешок #${i+1}: ${d} кг</span><span class="cursor-pointer font-bold" onclick="removeDust(${i})">✕</span></div>`).join('');
+}
+function removeDust(i){ local.dust.splice(i,1); saveLocal(); renderDust(); }
+
+// ===== Сдача смены =====
+function openSummary() {
+  const si = getShiftInfo();
+  const goodKg = myKgForDisplay();
+  const earned = goodKg * EARNING_RATE;
+  const dustKg = local.dust.reduce((s,d)=>s+d,0);
+  document.getElementById('summaryRows').innerHTML = `
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Линия / Смена:</span><b>№${local.line} (${si.name})</b></div>
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Оператор:</span><b>${local.operator}</b></div>
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Партия:</span><b>${batch?batch.batch_number+' (останется открытой)':'нет открытой'}</b></div>
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Ваша выработка:</span><b class="text-[#34d399]">${goodKg} кг</b></div>
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Пыль:</span><b>${dustKg.toFixed(1)} кг</b></div>
+    <div class="flex justify-between py-1"><span class="text-gray-400">Стимулирующие выплаты:</span><b class="text-[#38bdf8]">${Math.round(earned)} ₽</b></div>`;
+  openModal('modalSummary');
+}
+
+async function submitFinalShift() {
+  if (busy) return; busy = true;
+  const btn = document.getElementById('btnFinalShift'); btn.innerText='Отправка...';
+  try {
+    if (await pushDelta('SHIFT_CLOSE')) {
+      showNotice('Смена сдана!'+(batch?' Партия остаётся открытой для следующего оператора.':''));
+      closeModal('modalSummary');
+      local.shiftAccepted=false; local.defects=[]; local.dust=[]; local.handoverStatus=null;
+      saveLocal();
+      setTimeout(()=>location.reload(),1200);
+    }
+  } finally { busy=false; btn.innerText='Подтвердить и сдать'; }
+}
+
+// ===== Статистика =====
+function openStatsModal() {
+  const op = local.operator || document.getElementById('operatorName').value.trim();
+  if (!op) { showNotice('Сначала введите фамилию!'); return; }
+  document.getElementById('statsOperatorName').value = op;
+  openModal('statsModal'); loadStats();
+}
+
+async function loadStats() {
+  const op = document.getElementById('statsOperatorName').value;
+  const from = document.getElementById('customDateFrom').value, to = document.getElementById('customDateTo').value;
+  if (!op||!from||!to) return;
+  try {
+    const { data, error } = await client.from('shift_reports').select('*')
+      .eq('operator_name', op).in('event_type',['SHIFT_CLOSE','PARTY_CLOSE','PRODUCTION'])
+      .gte('created_at', from+'T00:00:00').lte('created_at', to+'T23:59:59');
+    if (error) throw error;
+    const rows = data||[];
+    const shifts = rows.filter(r=>r.event_type==='SHIFT_CLOSE');
+    let day=0,night=0;
+    shifts.forEach(r=>{ const h=new Date(r.created_at).getHours(); (h>=8&&h<20)?day++:night++; });
+    // кг: новые записи считаем по дельтам, старые (без shift_key) — по снимку SHIFT_CLOSE/PARTY_CLOSE
+    let kg=0;
+    rows.forEach(r=>{
+      if (r.shift_key) {
+        kg += (+r.delta_comp1_kg||0)+(+r.delta_comp2_kg||0)+(+r.delta_finished_kg||0)+(+r.delta_boxes_kg||0)-(+r.defect_kg||0);
+      } else if (r.event_type!=='PRODUCTION') {
+        const k=+r.total_good_kg||0; kg+=k;
+      }
+    });
+    const earned = Math.max(0, kg) * EARNING_RATE;
+    document.getElementById('stDayShifts').innerText = day;
+    document.getElementById('stNightShifts').innerText = night;
+    document.getElementById('stPaintKg').innerText = Math.max(0,kg).toLocaleString('ru-RU')+' кг';
+    document.getElementById('stEarnedRub').innerText = (Math.round(earned*100)/100).toLocaleString('ru-RU')+' ₽';
+  } catch(e){ console.error(e); }
+}
+
+async function loadPlanFromCloud() {
+  try {
+    const si = getShiftInfo();
+    const { data } = await client.from('shift_plans').select('plan_kg')
+      .eq('plan_date', si.planDate).eq('shift', si.name).eq('line_number', local.line).limit(1);
+    local.planKg = (data&&data.length&&data[0].plan_kg)?Number(data[0].plan_kg):0;
+    saveLocal(); calculateProduction();
+  } catch(e){}
+}
+</script>
+</body>
+</html>
