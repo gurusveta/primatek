@@ -49,9 +49,37 @@
     #primatekNoticeClose{position:absolute;right:14px;top:12px;border:0;background:transparent;color:#cbd5e1;font-size:28px;line-height:1;padding:0 3px}
     @media(min-width:600px){#primatekNotice{padding:32px}#primatekNoticeCard{width:430px}}
  
+  
+    /* Mascot-led modal notifications */
+    #primatekNotice{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(2,6,23,.72);backdrop-filter:blur(5px);opacity:0;transition:opacity .2s ease}
+    #primatekNotice.show{opacity:1}
+    #primatekNoticeCard{position:relative;width:min(100%,520px);min-height:300px;display:grid;grid-template-columns:minmax(125px, .9fr) 1.1fr;align-items:center;gap:16px;padding:28px 24px;border:2px solid #315b91;border-radius:26px;background:linear-gradient(145deg,#1a2944,#0b1426);box-shadow:0 24px 80px rgba(0,0,0,.72);transform:scale(.92) translateY(12px);transition:transform .22s ease;pointer-events:auto}
+    #primatekNotice.show #primatekNoticeCard{transform:scale(1) translateY(0)}
+    #primatekNotice.success #primatekNoticeCard{border-color:#10b981}
+    #primatekNotice.warning #primatekNoticeCard{border-color:#f59e0b}
+    #primatekNotice.error #primatekNoticeCard{border-color:#ef4444}
+    #primatekNotice.info #primatekNoticeCard{border-color:#38bdf8}
+    #primatekNoticeMascot{width:100%;max-width:210px;align-self:end;display:flex;align-items:end;justify-content:center;background:transparent}
+    #primatekNoticeMascot img{display:block;width:100%;height:auto;max-height:270px;object-fit:contain;object-position:bottom}
+    #primatekNoticeContent{min-width:0;text-align:left;padding:16px 0}
+    #primatekNoticeMark{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:32px;font-weight:900;margin-bottom:14px;background:#064e3b;color:#6ee7b7}
+    #primatekNotice.warning #primatekNoticeMark{background:#78350f;color:#fde68a}
+    #primatekNotice.error #primatekNoticeMark{background:#7f1d1d;color:#fecaca}
+    #primatekNotice.info #primatekNoticeMark{background:#0c4a6e;color:#bae6fd}
+    #primatekNoticeTitle{font-size:clamp(17px,4vw,22px);font-weight:900;letter-spacing:.01em;color:#6ee7b7;margin:0 0 10px}
+    #primatekNotice.warning #primatekNoticeTitle{color:#fcd34d}
+    #primatekNotice.error #primatekNoticeTitle{color:#fca5a5}
+    #primatekNotice.info #primatekNoticeTitle{color:#7dd3fc}
+    #primatekNoticeText{font-size:clamp(14px,3.6vw,17px);line-height:1.45;color:#f8fafc;overflow-wrap:anywhere}
+    #primatekNoticeClose{margin-top:20px;min-width:130px;border:0;border-radius:12px;padding:12px 20px;background:#059669;color:#fff;font-size:14px;font-weight:900}
+    #primatekNotice.warning #primatekNoticeClose{background:#b45309}
+    #primatekNotice.error #primatekNoticeClose{background:#b91c1c}
+    #primatekNotice.info #primatekNoticeClose{background:#0369a1}
+    @media(max-width:430px){#primatekNotice{padding:12px}#primatekNoticeCard{grid-template-columns: minmax(105px,.82fr) 1.18fr;gap:10px;padding:22px 14px;min-height:245px}#primatekNoticeMascot img{max-height:230px}#primatekNoticeMark{width:42px;height:42px;font-size:25px;margin-bottom:10px}#primatekNoticeClose{margin-top:14px;min-width:110px;padding:10px 12px}}
+ 
   </style>
 </head>
-<body class="min-h-screen pb-24 select-none">\n<div id="primatekNotice" class="hidden" role="status" aria-live="polite"><div id="primatekNoticeCard"><div id="primatekNoticeMascot" aria-hidden="true"><svg viewBox="0 0 96 96" width="54" height="54" role="img" aria-label="Маскот PRIMATEK"><path d="M15 39C15 18 29 7 48 7s33 11 33 32v8H15z" fill="#1676dc" stroke="#93c5fd" stroke-width="3"/><path d="M10 44h76v9H10z" fill="#0755a7" stroke="#93c5fd" stroke-width="2"/><text x="48" y="40" font-size="7" font-weight="900" fill="#fff" text-anchor="middle">ПРИМАТЕК</text><path d="M25 55c2-11 11-17 23-17s21 6 23 17l-2 20c-2 10-11 15-21 15S29 85 27 75z" fill="#f2b58e" stroke="#9a5a3d" stroke-width="2"/><path d="M35 61q5-5 10 0M52 61q5-5 10 0" fill="none" stroke="#593b2b" stroke-width="3" stroke-linecap="round"/><circle cx="40" cy="66" r="2.5" fill="#1e293b"/><circle cx="57" cy="66" r="2.5" fill="#1e293b"/><path d="M40 77q8 9 17 0" fill="none" stroke="#7c2d12" stroke-width="2.5" stroke-linecap="round"/><path d="M18 94q2-15 16-17l14 9 14-9q14 2 16 17" fill="#0755a7" stroke="#60a5fa" stroke-width="2"/></svg></div><div class="min-w-0 flex-1"><div id="primatekNoticeTitle">PRIMATEK</div><div id="primatekNoticeText"></div></div><button id="primatekNoticeClose" onclick="hideNotice()" aria-label="Закрыть">×</button></div></div>
+<body class="min-h-screen pb-24 select-none">\n<div id="primatekNotice" class="hidden" role="status" aria-live="polite"><div id="primatekNoticeCard"><div id="primatekNoticeMascot" aria-hidden="true"><img src="assets/primatek-mascot.png" alt="Маскот PRIMATEK"></div><div class="min-w-0 flex-1"><div id="primatekNoticeContent"><div id="primatekNoticeMark" aria-hidden="true">✓</div><div id="primatekNoticeTitle">PRIMATEK</div><div id="primatekNoticeText"></div><button id="primatekNoticeClose" onclick="hideNotice()">ПОНЯТНО</button></div></div></div>
 <div class="px-3 py-2 text-center text-[10px] font-bold tracking-wide bg-amber-500/15 text-amber-200 border-b border-amber-500/30">ПРЕДПРОСМОТР PRIMATEK · ДЛЯ ПРОВЕРКИ ИНТЕРФЕЙСА</div>
 
 
@@ -413,12 +441,13 @@ function showNotice(message, type) {
   if (!root || !title || !mascot || !body) return;
   clearTimeout(noticeTimer);
   root.className = inferred;
-  title.textContent = inferred === 'success' ? 'Всё получилось' : inferred === 'warning' ? 'Обрати внимание' : inferred === 'error' ? 'Нужна помощь' : 'Сообщение PRIMATEK';
+  title.textContent = inferred === 'success' ? 'Данные сохранены!' : inferred === 'warning' ? 'Обрати внимание' : inferred === 'error' ? 'Не удалось выполнить действие' : 'Сообщение PRIMATEK';
+  document.getElementById('primatekNoticeMark').textContent = inferred === 'success' ? '✓' : inferred === 'warning' ? '!' : inferred === 'error' ? '×' : 'i';
   mascot.dataset.mood = inferred;
   body.textContent = text;
   root.classList.remove('hidden');
   requestAnimationFrame(() => root.classList.add('show'));
-  noticeTimer = setTimeout(hideNotice, inferred === 'error' ? 7000 : 4200);
+  noticeTimer = setTimeout(hideNotice, inferred === 'error' ? 9000 : 6500);
 }
 function hideNotice() {
   const root = document.getElementById('primatekNotice');
