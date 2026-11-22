@@ -122,11 +122,13 @@
       <div id="repairReasonWrap" class="hidden mt-2">
         <select id="repairReasonSelect" class="w-full bg-[#080d1a] border border-[#ef4444] text-white text-xs rounded-lg p-2 outline-none" onchange="submitRepairReason()">
           <option value="">Выберите причину поломки...</option>
-          <option>Поломка основного оборудования</option>
-          <option>Поломка вспомогательного оборудования</option>
-          <option>Разрыв/замена сетки</option>
-          <option>Отсутствие персонала (СГИ)</option>
-          <option>Другое (Остановка)</option>
+          <option>Замена сита</option>
+          <option>Фасовка</option>
+          <option>Нижний дозатор</option>
+          <option>Кулер</option>
+          <option>Фидер</option>
+          <option>Остановка шнеков</option>
+          <option>Ошибка на пульте</option>
         </select>
       </div>
     </div>
@@ -200,6 +202,10 @@
       <input type="text" id="newBatchNum" placeholder="26060780" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none focus:border-[#0072ce]">
     </div>
     <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Код продукта</label>
+      <input type="text" id="newProductCode" placeholder="Введите код продукта" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none focus:border-[#0072ce]">
+    </div>
+    <div>
       <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Цвет RAL</label>
       <div class="flex bg-[#080d1a] border border-[#29385c] rounded-xl overflow-hidden">
         <span class="bg-[#1c2742] text-[#38bdf8] font-black text-xs px-2.5 flex items-center border-r border-[#29385c]">RAL</span>
@@ -209,7 +215,7 @@
     <div>
       <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Тип партии</label>
       <div class="grid grid-cols-2 gap-1 bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
-        <button onclick="setNewBatchPack('box', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active">Коробки</button>
+        <button onclick="setNewBatchPack('box', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active">ПК</button>
         <button onclick="setNewBatchPack('mix', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle">Смешение</button>
       </div>
     </div>
@@ -239,7 +245,7 @@
       <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Пыль при закрытии, кг (необязательно)</label>
       <input type="number" id="closeDust" placeholder="0" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
     </div>
-    <div id="closePreview" class="text-xs text-[#8fa0c2] bg-[#080d1a] border border-[#233152] rounded-xl p-2.5">—</div>
+    
     <button id="btnCloseBatch" onclick="closeBatch()" class="w-full py-3 bg-[#ef4444] text-white font-bold rounded-xl text-xs uppercase btn-press">Подтвердить закрытие</button>
     <button onclick="closeModal('modalCloseBatch')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Отмена</button>
   </div>
@@ -554,6 +560,7 @@ function openNewBatchModal() {
   newBatchPack = 'box';
   document.querySelectorAll('.new-pack-btn').forEach((t,i)=> t.className = `new-pack-btn py-1.5 text-xs font-extrabold rounded-lg ${i===0?'tab-active':'tab-idle'}`);
   document.getElementById('newBatchNum').value = '';
+  document.getElementById('newProductCode').value = '';
   document.getElementById('newRal').value = '';
   openModal('modalOpenBatch');
 }
@@ -566,13 +573,14 @@ function setNewBatchPack(type, btn) {
 async function confirmOpenBatch() {
   if (busy) return;
   const bNum = document.getElementById('newBatchNum').value.trim();
+  const productCode = document.getElementById('newProductCode').value.trim();
   const ral = document.getElementById('newRal').value.trim();
-  if (!bNum || !ral) { alert('Заполните № партии и RAL!'); return; }
+  if (!bNum || !productCode || !ral) { alert('Заполните номер партии, код продукта и RAL!'); return; }
   busy = true;
   const btn = document.getElementById('btnConfirmOpenBatch'); btn.innerText = 'Создание...';
   try {
     const { data, error } = await client.from('batches').insert([{
-      line_number: local.line, batch_number: bNum, ral_color: 'RAL ' + ral,
+      line_number: local.line, batch_number: bNum, product_code: productCode, ral_color: 'RAL ' + ral,
       package_type: newBatchPack, status: 'open', opened_by: local.operator,
       active_component: 'comp1'
     }]).select();
@@ -600,7 +608,7 @@ function updateBatchUI() {
   openSec.classList.add('hidden'); actSec.classList.remove('hidden');
   document.getElementById('displayBatchNum').innerText = batch.batch_number;
   document.getElementById('displayRal').innerText = batch.ral_color || '—';
-  document.getElementById('displayPackType').innerText = batch.package_type === 'mix' ? 'СМЕШЕНИЕ' : 'КОРОБКИ';
+  document.getElementById('displayPackType').innerText = batch.package_type === 'mix' ? 'СМЕШЕНИЕ' : 'ПК';
 
   if (batch.package_type === 'mix') {
     document.getElementById('boxInputWrap').classList.add('hidden');
@@ -866,11 +874,7 @@ function updateClosePreview() {
     : Math.max(0,t.last_unit-(snap.last_unit||0))*20;
   const hasNew = batch.package_type==='mix' ? t.last_finished>(snap.last_finished||0) : t.last_unit>(snap.last_unit||0);
   if (lw!==20 && hasNew) kg = kg-20+lw;
-  const defectKg = local.defects.reduce((s,d)=>s+d.kg,0);
-  document.getElementById('closePreview').innerHTML =
-    `Будет засчитано вам за смену: <b class="text-[#34d399]">${Math.max(0,kg-defectKg)} кг</b>` +
-    (defectKg?` (минус брак ${defectKg} кг)`:'') +
-    `<br>Итог партии целиком: <b class="text-white">${batch.package_type==='mix'?(t.last_comp1+t.last_comp2+t.last_finished)*20:t.last_unit*20} кг</b>`;
+  // Предварительный информационный блок удалён по согласованному UX-решению.
 }
 
 async function closeBatch() {
