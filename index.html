@@ -378,7 +378,7 @@ async function verifyOperatorPin(event) {
   const button = document.getElementById('pinSubmitButton');
   const errorBox = document.getElementById('pinError');
   const pin = input.value.trim();
-  if (!/^\\d{4}$/.test(pin)) {
+  if (!/^\d{4}$/.test(pin)) {
     errorBox.textContent = 'Введите четыре цифры.';
     input.focus();
     return;
