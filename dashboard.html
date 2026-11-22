@@ -441,20 +441,21 @@
 
     let totalLiveKg = 0, totalLivePcs = 0, shiftDefectKg = 0, shiftDefectBoxes = 0, shiftChipsKg = 0, shiftDustKg = 0;
 
+    // Каждая запись PRODUCTION / PARTY_CLOSE / SHIFT_CLOSE содержит прирост
+    // с момента предыдущей успешной отправки. Суммируем события смены,
+    // а не берём только последнюю запись (она часто бывает нулевой).
     PRIMATEK_LINES.forEach(lineNum => {
-      const lineReports = shiftReports
-        .filter(r => Number(r.line_number) === lineNum && r.total_good_kg !== null)
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      
-      if (lineReports.length > 0) {
-        const latest = lineReports[0];
-        totalLiveKg += Number(latest.total_good_kg) || 0;
-        totalLivePcs += Number(latest.good_boxes || latest.good_bags) || 0;
-        shiftDefectKg += Number(latest.defect_kg) || 0;
-        shiftDefectBoxes += Number(latest.defect_boxes) || 0;
-        shiftChipsKg += Number(latest.chips_kg) || 0;
-        shiftDustKg += Number(latest.dust_kg) || 0;
-      }
+      const lineReports = shiftReports.filter(r =>
+        Number(r.line_number) === lineNum &&
+        ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type)
+      );
+
+      totalLiveKg += lineReports.reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
+      totalLivePcs += lineReports.reduce((sum, r) => sum + (Number(r.good_boxes || r.good_bags) || 0), 0);
+      shiftDefectKg += lineReports.reduce((sum, r) => sum + (Number(r.defect_kg) || 0), 0);
+      shiftDefectBoxes += lineReports.reduce((sum, r) => sum + (Number(r.defect_boxes) || 0), 0);
+      shiftChipsKg += lineReports.reduce((sum, r) => sum + (Number(r.chips_kg) || 0), 0);
+      shiftDustKg += lineReports.reduce((sum, r) => sum + (Number(r.dust_kg) || 0), 0);
     });
 
     document.getElementById('sumLiveKg').innerText = totalLiveKg.toLocaleString('ru-RU') + ' кг';
@@ -496,8 +497,13 @@
         op = latestAny.operator_name || 'Не указан';
         batch = latestAny.batch_number || '—';
         ral = latestAny.ral_color || '—';
-        currentKg = Number(latestAny.total_good_kg) || 0;
-        chipsKg = Number(latestAny.chips_kg) || 0;
+        const currentShiftEvents = rawReports.filter(r =>
+          Number(r.line_number) === lineNum &&
+          new Date(r.created_at) >= shiftStart &&
+          ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type)
+        );
+        currentKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
+        chipsKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.chips_kg) || 0), 0);
 
         if (latestAny.unit_from && latestAny.unit_to) boxText = `№ ${latestAny.unit_from} — № ${latestAny.unit_to}`;
         
