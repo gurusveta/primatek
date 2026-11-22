@@ -138,7 +138,7 @@
   </style>
 </head>
 <body>
-<div id="primatekNotice" class="hidden" role="status" aria-live="polite"><div id="primatekNoticeCard"><div id="primatekNoticeMascot" aria-hidden="true">👷🏻‍♂️</div><div class="min-w-0 flex-1"><div id="primatekNoticeTitle">PRIMATEK</div><div id="primatekNoticeText"></div></div><button id="primatekNoticeClose" onclick="hideNotice()" aria-label="Закрыть">×</button></div></div>
+<div id="primatekNotice" class="hidden" role="status" aria-live="polite"><div id="primatekNoticeCard"><div id="primatekNoticeMascot" aria-hidden="true"><svg viewBox="0 0 96 96" width="54" height="54" role="img" aria-label="Маскот PRIMATEK"><path d="M15 39C15 18 29 7 48 7s33 11 33 32v8H15z" fill="#1676dc" stroke="#93c5fd" stroke-width="3"/><path d="M10 44h76v9H10z" fill="#0755a7" stroke="#93c5fd" stroke-width="2"/><text x="48" y="40" font-size="7" font-weight="900" fill="#fff" text-anchor="middle">ПРИМАТЕК</text><path d="M25 55c2-11 11-17 23-17s21 6 23 17l-2 20c-2 10-11 15-21 15S29 85 27 75z" fill="#f2b58e" stroke="#9a5a3d" stroke-width="2"/><path d="M35 61q5-5 10 0M52 61q5-5 10 0" fill="none" stroke="#593b2b" stroke-width="3" stroke-linecap="round"/><circle cx="40" cy="66" r="2.5" fill="#1e293b"/><circle cx="57" cy="66" r="2.5" fill="#1e293b"/><path d="M40 77q8 9 17 0" fill="none" stroke="#7c2d12" stroke-width="2.5" stroke-linecap="round"/><path d="M18 94q2-15 16-17l14 9 14-9q14 2 16 17" fill="#0755a7" stroke="#60a5fa" stroke-width="2"/></svg></div><div class="min-w-0 flex-1"><div id="primatekNoticeTitle">PRIMATEK</div><div id="primatekNoticeText"></div></div><button id="primatekNoticeClose" onclick="hideNotice()" aria-label="Закрыть">×</button></div></div>
 
 <div class="container">
   
@@ -357,7 +357,7 @@
     if(!root)return;
     const kind=type||(/ошибка|не удалось|нет данных/i.test(String(message))?'error':(/нет данных|проверьте/i.test(String(message))?'warning':'success'));
     document.getElementById('primatekNoticeTitle').textContent=kind==='error'?'Нужна помощь':kind==='warning'?'Обрати внимание':'PRIMATEK';
-    document.getElementById('primatekNoticeMascot').textContent=kind==='error'?'😟':'👷🏻‍♂️';
+    document.getElementById('primatekNoticeMascot').dataset.mood=kind;
     document.getElementById('primatekNoticeText').textContent=String(message);
     root.className=kind; clearTimeout(noticeTimer); root.classList.remove('hidden');
     requestAnimationFrame(()=>root.classList.add('show'));
