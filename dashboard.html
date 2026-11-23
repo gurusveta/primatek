@@ -647,7 +647,10 @@ function getMascotAsset(message, kind) {
         shiftKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
         chipsKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.chips_kg) || 0), 0);
         if (activeBatch) {
-          partyKg = rawReports
+          const initialUnits = activeBatch.package_type === 'mix'
+            ? (Number(activeBatch.initial_comp1)||0) + (Number(activeBatch.initial_comp2)||0) + (Number(activeBatch.initial_finished)||0)
+            : (Number(activeBatch.initial_unit)||0);
+          partyKg = initialUnits * 20 + rawReports
             .filter(r => r.batch_id === activeBatch.id && ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type))
             .reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
         }
@@ -786,7 +789,10 @@ function getMascotAsset(message, kind) {
     tbody.innerHTML = batches.map(b => {
       const events = rawReports.filter(r => r.batch_id === b.id &&
         ['PRODUCTION','PARTY_CLOSE','SHIFT_CLOSE'].includes(r.event_type));
-      const kg = events.reduce((sum,r) => sum + (Number(r.total_good_kg)||0),0);
+      const initialUnits = b.package_type === 'mix'
+        ? (Number(b.initial_comp1)||0) + (Number(b.initial_comp2)||0) + (Number(b.initial_finished)||0)
+        : (Number(b.initial_unit)||0);
+      const kg = initialUnits * 20 + events.reduce((sum,r) => sum + (Number(r.total_good_kg)||0),0);
       const chips = events.reduce((sum,r) => sum + (Number(r.chips_kg)||0),0);
       const dt = b.closed_at ? new Date(b.closed_at) : new Date(b.opened_at);
       const time = dt.toLocaleDateString('ru-RU') + ' ' + dt.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
