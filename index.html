@@ -277,6 +277,19 @@
   <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
     <h3 class="text-base font-black text-[#38bdf8]">Открытие партии</h3>
     <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Состояние производства</label>
+      <div class="grid grid-cols-2 gap-1 bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
+        <button id="newBatchModeNew" onclick="setNewBatchMode('new')" class="py-2 text-xs font-extrabold rounded-lg tab-active">Новая партия</button>
+        <button id="newBatchModeJoin" onclick="setNewBatchMode('join')" class="py-2 text-xs font-extrabold rounded-lg tab-idle">Уже производится</button>
+      </div>
+      <div id="newBatchModeHint" class="mt-2 text-[10px] text-[#8fa0c2]">Новая партия: первая коробка будет № 1.</div>
+    </div>
+    <div id="existingBatchStartWrap" class="hidden bg-[#080d1a] border border-[#315b91] rounded-xl p-3 space-y-2">
+      <div class="text-[10px] font-extrabold text-[#38bdf8] uppercase">С какого номера начинаете вы?</div>
+      <div id="existingBatchStartFields" class="grid grid-cols-1 gap-2"></div>
+      <div class="text-[10px] text-[#8fa0c2]">Укажите номер первой коробки или мешка, который произведёте. Предыдущие единицы останутся в общей нумерации партии, но не попадут в вашу выработку.</div>
+    </div>
+    <div>
       <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">№ Партии</label>
       <input type="text" id="newBatchNum" placeholder="26060780" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none focus:border-[#0072ce]">
     </div>
@@ -459,6 +472,7 @@ let myBaseline = null;     // последние номера на момент 
 let sentSnapshot = null;   // номера на момент последней отправки (для дельт)
 let activeComp = 'comp1';
 let newBatchPack = 'box';
+let newBatchMode = 'new';
 let busy = false;
 
 // ===== Окно смены =====
@@ -854,15 +868,45 @@ function openNewBatchModal() {
   if (batch) { showNotice('На линии уже есть открытая партия!'); refreshBatch(); return; }
   newBatchPack = 'box';
   document.querySelectorAll('.new-pack-btn').forEach((t,i)=> t.className = `new-pack-btn py-1.5 text-xs font-extrabold rounded-lg ${i===0?'tab-active':'tab-idle'}`);
+  setNewBatchMode('new');
   document.getElementById('newBatchNum').value = '';
   document.getElementById('newProductCode').value = '';
   document.getElementById('newRal').value = '';
   openModal('modalOpenBatch');
 }
+function setNewBatchMode(mode) {
+  newBatchMode = mode === 'join' ? 'join' : 'new';
+  document.getElementById('newBatchModeNew').className = `py-2 text-xs font-extrabold rounded-lg ${newBatchMode === 'new' ? 'tab-active' : 'tab-idle'}`;
+  document.getElementById('newBatchModeJoin').className = `py-2 text-xs font-extrabold rounded-lg ${newBatchMode === 'join' ? 'tab-active' : 'tab-idle'}`;
+  const wrap = document.getElementById('existingBatchStartWrap');
+  const fields = document.getElementById('existingBatchStartFields');
+  const hint = document.getElementById('newBatchModeHint');
+  wrap.classList.toggle('hidden', newBatchMode !== 'join');
+  hint.innerText = newBatchMode === 'join'
+    ? 'Партия уже существует на линии, но ещё не зарегистрирована в PRIMATEK. Укажите первый номер, который произведёте.'
+    : 'Новая партия: первая коробка будет № 1.';
+  if (newBatchMode === 'join') {
+    if (newBatchPack === 'mix') {
+      fields.innerHTML = ['comp1','comp2','finished'].map(key => `
+        <label class="block text-[10px] text-[#8fa0c2]">${COMP_NAMES[key]} · первый номер
+          <input id="join-start-${key}" type="number" min="1" step="1" value="1" class="mt-1 w-full bg-[#131c31] border border-[#29385c] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#38bdf8]">
+        </label>`).join('');
+    } else {
+      fields.innerHTML = `
+        <label class="block text-[10px] text-[#8fa0c2]">Первая коробка моей выработки
+          <input id="join-start-unit" type="number" min="1" step="1" value="1" class="mt-1 w-full bg-[#131c31] border border-[#29385c] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#38bdf8]">
+        </label>`;
+    }
+  } else {
+    fields.innerHTML = '';
+  }
+}
+
 function setNewBatchPack(type, btn) {
   newBatchPack = type;
   document.querySelectorAll('.new-pack-btn').forEach(t=>t.className='new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle');
   btn.className='new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active';
+  setNewBatchMode(newBatchMode);
 }
 
 async function confirmOpenBatch() {
@@ -871,13 +915,36 @@ async function confirmOpenBatch() {
   const productCode = document.getElementById('newProductCode').value.trim();
   const ral = document.getElementById('newRal').value.trim();
   if (!bNum || !productCode || !ral) { showNotice('Заполните номер партии, код продукта и RAL!'); return; }
+  const initialCounters = {
+    initial_unit: 0, initial_comp1: 0, initial_comp2: 0, initial_finished: 0,
+    last_unit: 0, last_comp1: 0, last_comp2: 0, last_finished: 0
+  };
+  if (newBatchMode === 'join') {
+    const keys = newBatchPack === 'mix' ? ['comp1','comp2','finished'] : ['unit'];
+    for (const key of keys) {
+      const first = Number(document.getElementById('join-start-' + key)?.value);
+      if (!Number.isInteger(first) || first < 1) {
+        showNotice('Укажите корректный номер первой производимой единицы.', 'warning');
+        document.getElementById('join-start-' + key)?.focus();
+        return;
+      }
+      const baseline = first - 1;
+      if (key === 'unit') {
+        initialCounters.initial_unit = baseline;
+        initialCounters.last_unit = baseline;
+      } else {
+        initialCounters['initial_' + key] = baseline;
+        initialCounters['last_' + key] = baseline;
+      }
+    }
+  }
   busy = true;
   const btn = document.getElementById('btnConfirmOpenBatch'); btn.innerText = 'Создание...';
   try {
     const { data, error } = await client.from('batches').insert([{
       line_number: local.line, batch_number: bNum, product_code: productCode, ral_color: 'RAL ' + ral,
       package_type: newBatchPack, status: 'open', opened_by: local.operator,
-      active_component: 'comp1'
+      active_component: 'comp1', ...initialCounters
     }]).select();
     if (error) {
       if (String(error.message).includes('one_open_batch_per_line')) {
@@ -888,6 +955,8 @@ async function confirmOpenBatch() {
     }
     batch = data[0];
     myBaseline = snapshotOf(batch); sentSnapshot = snapshotOf(batch); myDeltaKg = 0;
+    local.productionStarts = null;
+    saveLocal();
     activeComp = 'comp1';
     if (local.lineStatus !== 'В РАБОТЕ') { local.lineStatus = 'В РАБОТЕ'; saveLocal(); highlightStatusButtons(); updateCompactBar(); await insertStatusEvent('В РАБОТЕ', null); }
     closeModal('modalOpenBatch'); updateBatchUI(); calculateProduction();
