@@ -396,7 +396,7 @@ const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const PRIMATEK_PIN_SESSION_KEY = 'primatek_pin_verified_v1';
 function initPinGate() {
   const gate = document.getElementById('pinGate');
-  if (sessionStorage.getItem(PRIMATEK_PIN_SESSION_KEY) === '1') gate.classList.add('hidden');
+  if (localStorage.getItem(PRIMATEK_PIN_SESSION_KEY) === '1') gate.classList.add('hidden');
   else gate.classList.remove('hidden');
   setTimeout(() => document.getElementById('operatorPinInput')?.focus(), 100);
 }
@@ -428,7 +428,7 @@ async function verifyOperatorPin(event) {
       input.focus();
       return;
     }
-    sessionStorage.setItem(PRIMATEK_PIN_SESSION_KEY, '1');
+    localStorage.setItem(PRIMATEK_PIN_SESSION_KEY, '1');
     document.getElementById('pinGate').classList.add('hidden');
   } catch (err) {
     console.error('PIN verification failed:', err);
