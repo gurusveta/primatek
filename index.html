@@ -108,6 +108,11 @@
     <div id="noBatchCard" class="hidden bg-[#080d1a] border border-[#29385c] rounded-xl p-3 text-[11px] text-[#8fa0c2]">
       Открытой партии нет — после приёмки откройте новую.
     </div>
+    <div id="productionStartWrap" class="hidden bg-[#080d1a] border border-[#315b91] rounded-xl p-3 space-y-2">
+      <div class="text-[10px] font-extrabold text-[#38bdf8] uppercase">Начинаю с номера</div>
+      <div id="productionStartFields" class="grid grid-cols-1 gap-2"></div>
+      <div class="text-[10px] text-[#8fa0c2]">Укажите номер первой единицы, которую произведёте в своей смене. Общий счётчик партии не сбрасывается.</div>
+    </div>
 
     <div>
       <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Статус линии при приёмке</label>
@@ -567,6 +572,7 @@ async function refreshBatch() {
 function renderFoundBatch() {
   const found = document.getElementById('foundBatchCard');
   const none = document.getElementById('noBatchCard');
+  const startWrap = document.getElementById('productionStartWrap');
   if (batch) {
     found.classList.remove('hidden'); none.classList.add('hidden');
     document.getElementById('foundBatchTitle').innerText =
@@ -576,9 +582,52 @@ function renderFoundBatch() {
       : `Последняя коробка: №${batch.last_unit}`;
     document.getElementById('foundBatchOpened').innerText =
       `Код продукта: ${batch.product_code || '—'} · Открыл: ${batch.opened_by || '—'} · ${new Date(batch.opened_at).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
+    if (startWrap) {
+      startWrap.classList.remove('hidden');
+      const fields = document.getElementById('productionStartFields');
+      if (batch.package_type === 'mix') {
+        fields.innerHTML = ['comp1','comp2','finished'].map(k => {
+          const last = Number(batch['last_'+k] || 0);
+          return `<label class="block text-[10px] text-[#8fa0c2]">${COMP_NAMES[k]} · первый номер
+            <input id="start-${k}" type="number" min="${last+1}" step="1" value="${last+1}" class="mt-1 w-full bg-[#131c31] border border-[#29385c] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#38bdf8]">
+          </label>`;
+        }).join('');
+      } else {
+        const last = Number(batch.last_unit || 0);
+        fields.innerHTML = `<label class="block text-[10px] text-[#8fa0c2]">Первая коробка моей смены
+          <input id="start-unit" type="number" min="${last+1}" step="1" value="${last+1}" class="mt-1 w-full bg-[#131c31] border border-[#29385c] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#38bdf8]">
+        </label>`;
+      }
+    }
   } else {
     found.classList.add('hidden'); none.classList.remove('hidden');
+    if (startWrap) startWrap.classList.add('hidden');
   }
+}
+
+function readHandoverProductionStarts() {
+  if (!batch) return null;
+  const keys = batch.package_type === 'mix' ? ['comp1','comp2','finished'] : ['unit'];
+  const starts = { batchId: batch.id };
+  for (const key of keys) {
+    const input = document.getElementById('start-' + key);
+    const value = Number(input?.value);
+    const last = Number(batch[key === 'unit' ? 'last_unit' : 'last_' + key] || 0);
+    if (!Number.isInteger(value) || value <= last) {
+      showNotice('Начальный номер должен быть больше последнего номера партии.', 'warning');
+      input?.focus();
+      return false;
+    }
+    starts[key] = value;
+  }
+  return starts;
+}
+
+function personalStartBase(key, snapshot) {
+  if (!batch) return Number(snapshot?.['last_' + key] || snapshot?.last_unit || 0);
+  const starts = local.productionStarts;
+  if (!starts || String(starts.batchId) !== String(batch.id)) return Number(snapshot?.['last_' + key] || snapshot?.last_unit || 0);
+  return Math.max(Number(snapshot?.['last_' + key] || snapshot?.last_unit || 0), Number(starts[key] || 1) - 1);
 }
 
 function selectHandoverStatus(status, btn) {
@@ -601,7 +650,15 @@ async function acceptHandover() {
   const btn = document.getElementById('btnAcceptHandover');
   btn.innerText = 'Отправка...'; btn.disabled = true;
   try {
+    const enteredStarts = readHandoverProductionStarts();
+    if (enteredStarts === false) { btn.innerText = 'ПРИНЯТЬ СМЕНУ'; checkHandoverReady(); return; }
     await refreshBatch(); // ещё раз проверяем сервер прямо перед приёмкой
+    if (batch && enteredStarts && String(enteredStarts.batchId) === String(batch.id)) {
+      for (const key of Object.keys(enteredStarts).filter(k => k !== 'batchId')) {
+        const last = Number(batch[key === 'unit' ? 'last_unit' : 'last_' + key] || 0);
+        if (enteredStarts[key] <= last) throw new Error('Пока вы принимали смену, счётчик партии изменился. Проверьте начальные номера и примите смену ещё раз.');
+      }
+    }
     const si = getShiftInfo();
     local.operator = document.getElementById('operatorName').value.trim().toUpperCase();
     local.lineStatus = local.handoverStatus;
@@ -609,6 +666,7 @@ async function acceptHandover() {
     local.shiftAccepted = true;
     local.shiftKey = si.key;
     local.shiftStartISO = si.start.toISOString();
+    local.productionStarts = batch ? (enteredStarts || null) : null;
     local.defects = []; local.dust = [];
     saveLocal();
 
@@ -908,11 +966,11 @@ function pendingDelta() {
   if (!batch || !sentSnapshot) return { kg: 0, count: 0, from: 0, to: 0 };
   const val = getCurrentInputValue();
   if (batch.package_type === 'mix') {
-    const base = sentSnapshot['last_' + activeComp] || 0;
+    const base = personalStartBase(activeComp, sentSnapshot);
     if (val > base) return { kg: (val - base) * UNIT_WEIGHT, count: val - base, from: base + 1, to: val };
     return { kg: 0, count: 0, from: 0, to: 0 };
   } else {
-    const base = sentSnapshot.last_unit || 0;
+    const base = personalStartBase('unit', sentSnapshot);
     if (val > base) return { kg: (val - base) * UNIT_WEIGHT, count: val - base, from: base + 1, to: val };
     return { kg: 0, count: 0, from: 0, to: 0 };
   }
@@ -942,7 +1000,8 @@ function renderMixTotals() {
   const base = myBaseline || { last_comp1:0, last_comp2:0, last_finished:0 };
   const rows = ['comp1','comp2','finished'].map(k => {
     const cur = batch['last_'+k]||0;
-    const mine = Math.max(0, cur - (base['last_'+k]||0));
+    const mineBase = Math.max(Number(base['last_'+k]||0), personalStartBase(k, base));
+    const mine = Math.max(0, cur - mineBase);
     const pend = (k === activeComp) ? pendingDelta().count : 0;
     return `<div class="flex justify-between"><span class="text-[#8fa0c2]">${COMP_NAMES[k]}:</span>
       <span><b class="text-white">${(cur+pend)*UNIT_WEIGHT} кг</b> <span class="text-[#34d399]">/ вы: ${(mine+pend)*UNIT_WEIGHT} кг</span></span></div>`;
@@ -988,14 +1047,14 @@ async function pushDelta(eventType, closeOpts = null) {
   let dComp1=0,dComp2=0,dFin=0,dBox=0;
   if (batch) {
     if (batch.package_type === 'mix') {
-      dComp1 = Math.max(0,(target.last_comp1-(snap.last_comp1||0)))*UNIT_WEIGHT;
-      dComp2 = Math.max(0,(target.last_comp2-(snap.last_comp2||0)))*UNIT_WEIGHT;
-      dFin   = Math.max(0,(target.last_finished-(snap.last_finished||0)))*UNIT_WEIGHT;
+      dComp1 = Math.max(0,(target.last_comp1-Math.max(snap.last_comp1||0, personalStartBase('comp1', snap))))*UNIT_WEIGHT;
+      dComp2 = Math.max(0,(target.last_comp2-Math.max(snap.last_comp2||0, personalStartBase('comp2', snap))))*UNIT_WEIGHT;
+      dFin   = Math.max(0,(target.last_finished-Math.max(snap.last_finished||0, personalStartBase('finished', snap))))*UNIT_WEIGHT;
       // неполная последняя коробка при закрытии
       if (eventType==='PARTY_CLOSE' && closeOpts?.lastWeight && closeOpts.lastWeight!==20 && dFin>0)
         dFin = dFin - UNIT_WEIGHT + closeOpts.lastWeight;
     } else {
-      dBox = Math.max(0,(target.last_unit-(snap.last_unit||0)))*UNIT_WEIGHT;
+      dBox = Math.max(0,(target.last_unit-Math.max(snap.last_unit||0, personalStartBase('unit', snap))))*UNIT_WEIGHT;
       if (eventType==='PARTY_CLOSE' && closeOpts?.lastWeight && closeOpts.lastWeight!==20 && dBox>0)
         dBox = dBox - UNIT_WEIGHT + closeOpts.lastWeight;
     }
@@ -1014,7 +1073,7 @@ async function pushDelta(eventType, closeOpts = null) {
     comp1_to: batch&&batch.package_type==='mix'?target.last_comp1:null,
     comp2_to: batch&&batch.package_type==='mix'?target.last_comp2:null,
     finished_to: batch&&batch.package_type==='mix'?target.last_finished:null,
-    unit_from: batch&&batch.package_type==='box'?(snap.last_unit||0)+1:null,
+    unit_from: batch&&batch.package_type==='box'?Math.max(snap.last_unit||0, personalStartBase('unit', snap))+1:null,
     unit_to: batch&&batch.package_type==='box'?target.last_unit:null,
     total_good_kg: goodDelta,
     chips_kg: dComp1+dComp2,
