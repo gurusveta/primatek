@@ -653,6 +653,10 @@ async function acceptHandover() {
     const enteredStarts = readHandoverProductionStarts();
     if (enteredStarts === false) { btn.innerText = 'ПРИНЯТЬ СМЕНУ'; checkHandoverReady(); return; }
     await refreshBatch(); // ещё раз проверяем сервер прямо перед приёмкой
+    if (batch && (!enteredStarts || String(enteredStarts.batchId) !== String(batch.id))) {
+      showNotice('На линии изменилась открытая партия. Проверьте начальные номера и примите смену ещё раз.', 'warning');
+      btn.innerText = 'ПРИНЯТЬ СМЕНУ'; checkHandoverReady(); return;
+    }
     if (batch && enteredStarts && String(enteredStarts.batchId) === String(batch.id)) {
       for (const key of Object.keys(enteredStarts).filter(k => k !== 'batchId')) {
         const last = Number(batch[key === 'unit' ? 'last_unit' : 'last_' + key] || 0);
