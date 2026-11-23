@@ -1073,7 +1073,7 @@ async function pushDelta(eventType, closeOpts = null) {
     comp1_to: batch&&batch.package_type==='mix'?target.last_comp1:null,
     comp2_to: batch&&batch.package_type==='mix'?target.last_comp2:null,
     finished_to: batch&&batch.package_type==='mix'?target.last_finished:null,
-    unit_from: batch&&batch.package_type==='box'?Math.max(snap.last_unit||0, personalStartBase('unit', snap))+1:null,
+    unit_from: batch&&batch.package_type==='box'&&target.last_unit>Math.max(snap.last_unit||0, personalStartBase('unit', snap))?Math.max(snap.last_unit||0, personalStartBase('unit', snap))+1:null,
     unit_to: batch&&batch.package_type==='box'?target.last_unit:null,
     total_good_kg: goodDelta,
     chips_kg: dComp1+dComp2,
