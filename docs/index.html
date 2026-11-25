@@ -517,15 +517,15 @@ window.onload = async () => {
 
 function getMascotAsset(message, kind) {
   const value = String(message || '').toLowerCase();
-  if (/проб|образц|качеств|лаборатор|провер.*краск/.test(value)) return 'assets/mascot-quality-check.png';
-  if (/пыл|уборк|чистк|салфет|очист/.test(value)) return 'assets/mascot-cleaning.png';
-  if (/ремонт|неисправ|оборудован|поломк|инструмент/.test(value)) return 'assets/mascot-repair.png';
-  if (/поздрав|отличн|ура|побед|превосход/.test(value)) return 'assets/mascot-celebration.png';
-  if (kind === 'success') return 'assets/mascot-success.png';
-  if (kind === 'warning') return 'assets/mascot-warning.png';
-  if (kind === 'error') return 'assets/mascot-error.png';
-  if (kind === 'info') return 'assets/mascot-info.png';
-  return 'assets/mascot-neutral.png';
+  if (/проб|образц|качеств|лаборатор|провер.*краск/.test(value)) return 'https://raw.githubusercontent.com/gurusveta/primatek/main/assets/mascot-quality-check.png';
+  if (/пыл|уборк|чистк|салфет|очист/.test(value)) return 'https://raw.githubusercontent.com/gurusveta/primatek/main/assets/mascot-cleaning.png';
+  if (/ремонт|неисправ|оборудован|поломк|инструмент/.test(value)) return 'https://raw.githubusercontent.com/gurusveta/primatek/main/assets/mascot-repair.png';
+  if (/поздрав|отличн|ура|побед|превосход/.test(value)) return 'https://raw.githubusercontent.com/gurusveta/primatek/main/assets/mascot-celebration.png';
+  if (kind === 'success') return 'https://raw.githubusercontent.com/gurusveta/primatek/main/assets/mascot-success.png';
+  if (kind === 'warning') return 'https://raw.githubusercontent.com/gurusveta/primatek/main/assets/mascot-warning.png';
+  if (kind === 'error') return 'https://raw.githubusercontent.com/gurusveta/primatek/main/assets/mascot-error.png';
+  if (kind === 'info') return 'https://raw.githubusercontent.com/gurusveta/primatek/main/assets/mascot-info.png';
+  return 'https://raw.githubusercontent.com/gurusveta/primatek/main/assets/mascot-neutral.png';
 }
 
 function showNotice(message, type) {
