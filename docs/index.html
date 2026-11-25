@@ -1,78 +1,1607 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PRIMATEK — безопасный тест</title>
-<style>
-:root{color-scheme:dark;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#070c18;color:#f8fafc}
-*{box-sizing:border-box}body{margin:0;padding:18px 12px 40px;background:#070c18}.wrap{max-width:520px;margin:auto}
-.banner{padding:10px;text-align:center;background:#78350f33;border:1px solid #b45309;color:#fde68a;border-radius:12px;font-size:12px;font-weight:800}
-header{padding:20px 4px 14px;display:flex;justify-content:space-between;align-items:center}h1{font-size:20px;margin:0;color:#38bdf8}small{color:#94a3b8}
-.card{background:#131c31;border:1px solid #29385c;border-radius:18px;padding:16px;margin:12px 0}.label{font-size:11px;color:#94a3b8;font-weight:800;text-transform:uppercase;display:block;margin-bottom:7px}
-input,select{width:100%;padding:12px;border-radius:11px;background:#080d1a;border:1px solid #405274;color:white;font-size:16px;margin:4px 0 12px}
-button{border:1px solid #315b91;background:#172554;color:#dbeafe;border-radius:11px;padding:12px;font-weight:800;cursor:pointer}
-button.active{background:#0072ce;border-color:#38bdf8;color:white}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.primary{width:100%;background:#047857;border:0;color:white;margin-top:10px}.muted{font-size:12px;color:#94a3b8;line-height:1.5}.hidden{display:none!important}
-.result{padding:14px;background:#080d1a;border:1px solid #10b981;border-radius:13px;margin-top:12px}.big{font-size:26px;font-weight:900;color:#34d399}.warning{color:#fcd34d}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PRIMATEK — Приложение оператора</title>
+  <meta name="theme-color" content="#0b132b">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { -webkit-tap-highlight-color: transparent; background-color: #070c18; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .btn-press:active { transform: scale(0.97); }
+    .st-work { border-color:#10b981; color:#34d399; background:rgba(16,185,129,.1);} .st-work.active{background:#10b981;color:#fff;border-color:#34d399;}
+    .st-clean { border-color:#f59e0b; color:#fbbf24; background:rgba(245,158,11,.1);} .st-clean.active{background:#f59e0b;color:#fff;border-color:#fbbf24;}
+    .st-sample { border-color:#38bdf8; color:#38bdf8; background:rgba(2,132,199,.1);} .st-sample.active{background:#0284c7;color:#fff;border-color:#38bdf8;}
+    .st-repair { border-color:#ef4444; color:#f87171; background:rgba(239,68,68,.1);} .st-repair.active{background:#ef4444;color:#fff;border-color:#f87171;}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(5,9,20,.9);z-index:50;justify-content:center;align-items:center;padding:16px;backdrop-filter:blur(2px);}
+    #pinGate{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(3,7,18,.97);backdrop-filter:blur(8px)}
+    #pinGate.hidden{display:none}
+    .modal-overlay.open{display:flex;}
+    .tab-active{background:#0072ce;color:#fff;} .tab-idle{color:#8fa0c2;}
+    .comp-btn{border:1px solid #29385c;background:#080d1a;color:#8fa0c2;}
+    .comp-btn.active{background:#0072ce;color:#fff;border-color:#38bdf8;box-shadow:0 0 10px rgba(0,114,206,.4);}
+
+    /* Единый стиль уведомлений PRIMATEK */
+    #primatekNotice{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(2,6,23,.72);backdrop-filter:blur(5px);opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s ease}
+    #primatekNotice.show{opacity:1;visibility:visible}
+    #primatekNoticeCard{position:relative;width:min(100%,520px);min-height:280px;display:grid;grid-template-columns:minmax(115px,.9fr) 1.1fr;align-items:center;gap:16px;padding:26px 22px;border:2px solid #315b91;border-radius:26px;background:linear-gradient(145deg,#1a2944,#0b1426);box-shadow:0 24px 80px rgba(0,0,0,.72);transform:scale(.94) translateY(10px);transition:transform .22s ease;pointer-events:auto}
+    #primatekNotice.show #primatekNoticeCard{transform:scale(1) translateY(0)}
+    #primatekNotice.success #primatekNoticeCard{border-color:#10b981}
+    #primatekNotice.warning #primatekNoticeCard{border-color:#f59e0b}
+    #primatekNotice.error #primatekNoticeCard{border-color:#ef4444}
+    #primatekNotice.info #primatekNoticeCard{border-color:#38bdf8}
+    #primatekNoticeMascot{width:100%;max-width:210px;align-self:end;display:flex;align-items:flex-end;justify-content:center;background:transparent}
+    #primatekNoticeMascot img{display:block;width:100%;height:auto;max-height:260px;object-fit:contain;object-position:bottom}
+     #primatekNoticeMascot{align-self:center;align-items:center}
+     #primatekNoticeMascot img{transform-origin:50% 85%;transition:filter .25s ease,transform .25s ease}
+     #primatekNoticeMascot[data-mood="success"] img{animation:mascotSuccess .65s ease both;filter:drop-shadow(0 5px 14px rgba(16,185,129,.28))}
+     #primatekNoticeMascot[data-mood="warning"] img{animation:mascotWarning .55s ease both;filter:drop-shadow(0 5px 14px rgba(245,158,11,.25))}
+     #primatekNoticeMascot[data-mood="error"] img{animation:mascotError .42s ease both;filter:drop-shadow(0 5px 14px rgba(239,68,68,.28))}
+     #primatekNoticeMascot[data-mood="info"] img{animation:mascotInfo .7s ease both;filter:drop-shadow(0 5px 14px rgba(56,189,248,.22))}
+     @keyframes mascotSuccess{0%{transform:translateY(8px) scale(.94)}55%{transform:translateY(-7px) scale(1.035)}100%{transform:translateY(0) scale(1)}}
+     @keyframes mascotWarning{0%{transform:rotate(0)}30%{transform:rotate(-5deg)}65%{transform:rotate(4deg)}100%{transform:rotate(0)}}
+     @keyframes mascotError{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+     @keyframes mascotInfo{0%{transform:translateY(5px) scale(.97)}50%{transform:translateY(-4px) scale(1.02)}100%{transform:translateY(0) scale(1)}}
+    #primatekNoticeContent{min-width:0;text-align:left;padding:16px 0}
+    #primatekNoticeMark{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:32px;font-weight:900;margin-bottom:14px;background:#064e3b;color:#6ee7b7}
+    #primatekNotice.warning #primatekNoticeMark{background:#78350f;color:#fde68a}
+    #primatekNotice.error #primatekNoticeMark{background:#7f1d1d;color:#fecaca}
+    #primatekNotice.info #primatekNoticeMark{background:#0c4a6e;color:#bae6fd}
+    #primatekNoticeTitle{font-size:clamp(17px,4vw,22px);font-weight:900;letter-spacing:.01em;color:#6ee7b7;margin:0 0 10px}
+    #primatekNotice.warning #primatekNoticeTitle{color:#fcd34d}
+    #primatekNotice.error #primatekNoticeTitle{color:#fca5a5}
+    #primatekNotice.info #primatekNoticeTitle{color:#7dd3fc}
+    #primatekNoticeText{font-size:clamp(14px,3.6vw,17px);line-height:1.45;color:#f8fafc;overflow-wrap:anywhere}
+    #primatekNoticeClose{margin-top:20px;min-width:130px;border:0;border-radius:12px;padding:12px 20px;background:#059669;color:#fff;font-size:14px;font-weight:900}
+    #primatekNotice.warning #primatekNoticeClose{background:#b45309}
+    #primatekNotice.error #primatekNoticeClose{background:#b91c1c}
+    #primatekNotice.info #primatekNoticeClose{background:#0369a1}
+    #primatekNotice.hidden{display:none}
+    @media(max-width:430px){#primatekNotice{padding:12px}#primatekNoticeCard{grid-template-columns:minmax(105px,.82fr) 1.18fr;gap:10px;padding:20px 14px;min-height:245px}#primatekNoticeMascot img{max-height:230px}#primatekNoticeMark{width:42px;height:42px;font-size:25px;margin-bottom:10px}#primatekNoticeClose{margin-top:14px;min-width:110px;padding:10px 12px}}
 </style>
 </head>
-<body><div class="wrap">
-<div class="banner">БЕЗОПАСНЫЙ ПРЕДПРОСМОТР · ДАННЫЕ НЕ СОХРАНЯЮТСЯ</div>
-<header><h1>PRIMATEK</h1><small>Тест регистрации партии</small></header>
-<div class="card">
-<strong>1. Тип упаковки</strong>
-<div class="grid" style="margin-top:10px"><button id="pack-unit" class="active" onclick="setPack('unit')">Обычная краска</button><button id="pack-mix" onclick="setPack('mix')">Двухкомпонентная</button></div>
+<body class="min-h-screen pb-24 select-none">
+<div id="pinGate" role="dialog" aria-modal="true" aria-labelledby="pinGateTitle">
+  <form onsubmit="verifyOperatorPin(event)" class="w-full max-w-sm bg-[#131c31] border border-[#2d3e66] rounded-3xl p-6 shadow-2xl text-center space-y-4">
+    <div class="text-[#38bdf8] text-xs font-black tracking-[.25em]">PRIMATEK</div>
+    <h1 id="pinGateTitle" class="text-xl font-black text-white">Введите PIN-код</h1>
+    <p class="text-xs text-[#8fa0c2]">Для входа в приложение оператора</p>
+    <input id="operatorPinInput" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="••••" aria-label="PIN-код" class="w-full bg-[#080d1a] border-2 border-[#29385c] focus:border-[#38bdf8] rounded-2xl px-4 py-4 text-center text-3xl font-black tracking-[.6em] text-white outline-none">
+    <div id="pinError" class="min-h-5 text-xs text-[#fca5a5]" aria-live="polite"></div>
+    <button id="pinSubmitButton" type="submit" class="w-full py-3 bg-[#0072ce] font-black rounded-xl text-white text-sm uppercase tracking-wider">Войти</button>
+  </form>
 </div>
-<div class="card">
-<strong>2. Как начинаем?</strong>
-<div class="grid" style="margin-top:10px"><button id="mode-new" class="active" onclick="setMode('new')">Новая партия</button><button id="mode-join" onclick="setMode('join')">Уже производится</button></div>
-<p id="hint" class="muted">Новая партия: первая коробка будет № 1.</p>
-<div id="join-fields" class="hidden">
-<div id="unit-field"><label class="label">Номер первой коробки, которую произведу я</label><input id="first-unit" type="number" min="1" step="1" value="360" oninput="syncStart('unit')" ></div>
-<div id="mix-fields" class="hidden">
-<label class="label">1-й полуфабрикат — первый мой номер</label><input id="first-comp1" type="number" min="1" step="1" value="1" oninput="syncStart('comp1')" >
-<label class="label">2-й полуфабрикат — первый мой номер</label><input id="first-comp2" type="number" min="1" step="1" value="1" oninput="syncStart('comp2')" >
-<label class="label">Готовая краска — первый мой номер</label><input id="first-finished" type="number" min="1" step="1" value="1" oninput="syncStart('finished')" >
+<div id="primatekNotice" class="hidden" role="status" aria-live="polite"><div id="primatekNoticeCard"><div id="primatekNoticeMascot" aria-hidden="true"><img src="https://raw.githubusercontent.com/gurusveta/primatek/main/assets/mascot-neutral.png" alt="Маскот PRIMATEK"></div><div class="min-w-0 flex-1"><div id="primatekNoticeContent"><div id="primatekNoticeMark" aria-hidden="true">✓</div><div id="primatekNoticeTitle">PRIMATEK</div><div id="primatekNoticeText"></div><button id="primatekNoticeClose" onclick="hideNotice()">ПОНЯТНО</button></div></div></div></div>
+
+
+
+<header class="bg-[#0f172a] border-b border-[#1e293b] px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-md">
+  <svg width="120" height="26" viewBox="0 0 230 50" fill="none"><circle cx="6" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.5"/><circle cx="16" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.8"/><circle cx="26" cy="11" r="3.2" fill="#0072ce"/><circle cx="6" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.6"/><circle cx="16" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.9"/><circle cx="26" cy="22" r="3.2" fill="#0072ce"/><circle cx="6" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.4"/><circle cx="16" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.7"/><circle cx="26" cy="33" r="3.2" fill="#0072ce"/><text x="36" y="34" font-family="'Arial Black',sans-serif" font-weight="900" font-size="31" fill="#0072ce">PRIMATEK</text></svg>
+  <div class="flex items-center space-x-2">
+    <div id="shiftBadge" class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-[#1a2744] text-[#38bdf8] border border-[#2c4270]">СМЕНА: —</div>
+    <button onclick="openStatsModal()" class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-[#172554] text-[#38bdf8] border border-[#1e40af] btn-press">Выработка</button>
+    <select id="languageSelect" aria-label="Язык интерфейса" class="text-[11px] font-bold px-1.5 py-1.5 rounded-lg bg-[#172554] text-white border border-[#1e40af] outline-none" onchange="setPrimatekLanguage(this.value)">
+      <option value="ru">RU</option><option value="uz">UZ</option><option value="tg">TJ</option>
+    </select>
+  </div>
+</header>
+
+<main class="p-3 max-w-md mx-auto space-y-3">
+
+  <!-- ПРИЁМКА -->
+  <div id="handoverSection" class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-3">
+    <h2 class="text-xs font-extrabold text-[#38bdf8] uppercase tracking-wider">Приём смены и выбор линии</h2>
+    <div class="grid grid-cols-4 gap-1.5" id="lineButtons"></div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">ФИО Оператора</label>
+      <input type="text" id="operatorName" placeholder="Оператор, пиши сюда фамилию и имя" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-[#0072ce] uppercase">
+    </div>
+
+    <!-- Найденная открытая партия -->
+    <div id="foundBatchCard" class="hidden bg-[#080d1a] border border-[#10b981] rounded-xl p-3 space-y-1.5">
+      <div class="text-[10px] font-extrabold text-[#34d399] uppercase">Открытая партия на линии</div>
+      <div class="text-sm font-black text-white" id="foundBatchTitle">—</div>
+      <div class="text-[11px] text-[#8fa0c2]" id="foundBatchNumbers">—</div>
+      <div class="text-[10px] text-[#64748b]" id="foundBatchOpened">—</div>
+    </div>
+    <div id="noBatchCard" class="hidden bg-[#080d1a] border border-[#29385c] rounded-xl p-3 text-[11px] text-[#8fa0c2]">
+      Открытой партии нет — после приёмки откройте новую.
+    </div>
+    <div id="productionStartWrap" class="hidden bg-[#080d1a] border border-[#315b91] rounded-xl p-3 space-y-2">
+      <div class="text-[10px] font-extrabold text-[#38bdf8] uppercase">Начинаю с номера</div>
+      <div id="productionStartFields" class="grid grid-cols-1 gap-2"></div>
+      <div class="text-[10px] text-[#8fa0c2]">Укажите номер первой единицы, которую произведёте в своей смене. Общий счётчик партии не сбрасывается.</div>
+    </div>
+
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Статус линии при приёмке</label>
+      <div class="grid grid-cols-2 gap-1.5">
+        <button onclick="selectHandoverStatus('В РАБОТЕ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-work">В РАБОТЕ</button>
+        <button onclick="selectHandoverStatus('ЧИСТКА', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-clean">ЧИСТКА</button>
+        <button onclick="selectHandoverStatus('ПРОБЫ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-sample">ПРОБЫ</button>
+        <button onclick="selectHandoverStatus('РЕМОНТ', this)" class="hand-btn py-2.5 text-xs font-extrabold rounded-xl border st-repair">РЕМОНТ</button>
+      </div>
+    </div>
+
+    <div id="handoverRepairWrap" class="hidden">
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Причина ремонта</label>
+      <select id="handoverRepairReason" onchange="checkHandoverReady()" class="w-full bg-[#080d1a] border border-[#ef4444] text-white text-xs rounded-lg p-2 outline-none">
+        <option value="">Выберите причину...</option>
+        <option>Замена сита</option>
+        <option>Фасовка</option>
+        <option>Нижний дозатор</option>
+        <option>Кулер</option>
+        <option>Фидер</option>
+        <option>Остановка шнеков</option>
+        <option>Ошибка на пульте</option>
+      </select>
+    </div>
+
+    <button id="btnAcceptHandover" onclick="acceptHandover()" disabled class="w-full py-3 bg-[#10b981] disabled:opacity-40 font-black rounded-xl text-white text-xs uppercase tracking-wider btn-press">ПРИНЯТЬ СМЕНУ</button>
+    <div id="handoverHint" class="text-[10px] text-center text-[#64748b]">Выберите линию, введите ФИО и статус</div>
+  </div>
+
+  <!-- ПЛАШКА -->
+  <div id="handoverCompact" class="hidden bg-[#131c31] border border-[#233152] rounded-xl p-3 flex items-center justify-between shadow">
+    <div class="flex items-center space-x-2">
+      <span id="compactDot" class="w-2.5 h-2.5 rounded-full bg-[#10b981] animate-pulse"></span>
+      <span id="compactInfo" class="text-xs font-bold text-white">—</span>
+    </div>
+    <button onclick="reopenHandover()" class="text-[11px] font-bold text-[#38bdf8] underline btn-press">Изменить ✎</button>
+  </div>
+
+  <!-- ГАМИФИКАЦИЯ -->
+  <div id="gamificationBlock" class="hidden bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg">
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">ВЫРАБОТКА ЗА СМЕНУ</span>
+        <div class="text-xl font-black text-white" id="statDonePlan">0 кг</div>
+      </div>
+      <div class="text-right">
+        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">СТИМУЛИРУЮЩИЕ ВЫПЛАТЫ</span>
+        <div class="text-xl font-black text-[#34d399]" id="statMoney">0 ₽</div>
+      </div>
+    </div>
+    <div class="text-[11px] text-[#8fa0c2] text-center mt-2" id="premiumLeftText">Расчёт: произведённые килограммы × 0,5 ₽</div>
+  </div>
+
+  <!-- ПРОГРЕСС ПЛАНА ЛИНИИ -->
+  <div id="linePlanProgressBlock" class="hidden bg-[#131c31] border border-[#315b91] rounded-2xl p-4 shadow-lg space-y-3">
+    <div class="flex items-center justify-between">
+      <span class="text-[11px] font-black text-[#38bdf8] uppercase tracking-wider">ВЫПОЛНЕНИЕ ПЛАНА</span>
+      <span id="linePlanPercent" class="text-lg font-black text-white">—</span>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">План линии</div><div id="linePlanTarget" class="text-lg font-black text-white">—</div></div>
+      <div class="text-right"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Факт линии</div><div id="linePlanFact" class="text-lg font-black text-[#34d399]">—</div></div>
+    </div>
+    <div class="w-full h-2 rounded-full bg-[#080d1a] overflow-hidden"><div id="linePlanProgressBar" class="h-full rounded-full bg-[#10b981] transition-all duration-500" style="width:0%"></div></div>
+    <div id="linePlanRemaining" class="text-[11px] text-center text-[#8fa0c2]">План на эту смену ещё не задан</div>
+  </div>
+
+  <!-- РАБОЧАЯ ЗОНА -->
+  <div id="workArea" class="hidden space-y-3">
+
+    <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-3 shadow-lg space-y-2">
+      <div class="flex justify-between items-center px-1">
+        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider">Текущий статус линии</span>
+        <span id="statusTimer" class="text-[11px] font-bold text-[#34d399]">—</span>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="setLineStatus('В РАБОТЕ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-work">В РАБОТЕ</button>
+        <button onclick="setLineStatus('ЧИСТКА', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-clean">ЧИСТКА</button>
+        <button onclick="setLineStatus('ПРОБЫ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-sample">ПРОБЫ</button>
+        <button onclick="setLineStatus('РЕМОНТ', this)" class="st-btn py-3 text-xs font-extrabold rounded-xl border st-repair">РЕМОНТ</button>
+      </div>
+      <div id="repairReasonWrap" class="hidden mt-2">
+        <select id="repairReasonSelect" class="w-full bg-[#080d1a] border border-[#ef4444] text-white text-xs rounded-lg p-2 outline-none" onchange="submitRepairReason()">
+          <option value="">Выберите причину поломки...</option>
+          <option>Замена сита</option>
+          <option>Фасовка</option>
+          <option>Нижний дозатор</option>
+          <option>Кулер</option>
+          <option>Фидер</option>
+          <option>Остановка шнеков</option>
+          <option>Ошибка на пульте</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ПАРТИЯ -->
+    <div class="bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg space-y-3">
+      <div id="openBatchSection">
+        <button onclick="openNewBatchModal()" class="w-full py-4 border-2 border-dashed border-[#38bdf8] rounded-xl bg-[#1a2744] text-[#38bdf8] font-black text-sm uppercase tracking-wider btn-press">+ Открыть новую партию</button>
+      </div>
+
+      <div id="activeBatchSection" class="hidden space-y-3">
+        <div class="flex justify-between items-center bg-[#080d1a] border border-[#233152] p-2.5 rounded-xl text-xs">
+          <div>Партия: <b id="displayBatchNum" class="text-white">—</b></div>
+          <div>RAL: <b id="displayRal" class="text-white">—</b></div>
+          <div id="displayPackType" class="text-[#38bdf8] font-bold">—</div>
+        </div>
+        <div class="bg-[#080d1a] border border-[#233152] px-3 py-2 rounded-xl text-xs">
+          <span class="text-[#8fa0c2]">Код продукта:</span>
+          <b id="displayProductCode" class="text-white ml-1">—</b>
+        </div>
+
+        <!-- КОРОБКИ -->
+        <div id="boxInputWrap" class="hidden bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-center space-y-1">
+          <label class="text-[10px] font-extrabold text-[#8fa0c2] uppercase block">Номер последней выпущенной коробки</label>
+          <input type="number" id="boxUnitInput" placeholder="№" oninput="onUnitInput()" class="w-full bg-[#131c31] border-2 border-[#0072ce] rounded-xl py-3 text-center text-3xl font-black text-white outline-none">
+          <div class="text-[11px] text-[#8fa0c2]" id="boxDeltaText">—</div>
+        </div>
+
+        <!-- СМЕШЕНИЕ -->
+        <div id="mixInputWrap" class="hidden space-y-2">
+          <div class="text-[10px] font-extrabold text-[#8fa0c2] uppercase">Сейчас делаю:</div>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button onclick="setComponent('comp1', this)" class="comp-btn py-2.5 text-xs font-extrabold rounded-xl btn-press">1 п/ф</button>
+            <button onclick="setComponent('comp2', this)" class="comp-btn py-2.5 text-xs font-extrabold rounded-xl btn-press">2 п/ф</button>
+            <button onclick="setComponent('finished', this)" class="comp-btn py-2.5 text-xs font-extrabold rounded-xl btn-press">Готовая</button>
+          </div>
+          <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-center space-y-1">
+            <label class="text-[10px] font-extrabold text-[#8fa0c2] uppercase block" id="mixUnitLabel">Номер последнего мешка</label>
+            <input type="number" id="mixUnitInput" placeholder="№" oninput="onUnitInput()" class="w-full bg-[#131c31] border-2 border-[#0072ce] rounded-xl py-3 text-center text-3xl font-black text-white outline-none">
+            <div class="text-[11px] text-[#8fa0c2]" id="mixDeltaText">—</div>
+          </div>
+          <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-xs space-y-1" id="mixTotals"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="sendCheckpoint()" class="py-3 bg-[#1e1b4b] border border-[#4338ca] font-extrabold rounded-xl text-[#a5b4fc] text-xs uppercase btn-press">Отправить на дашборд</button>
+          <button onclick="openClosePartyModal()" class="py-3 bg-[#1c2742] border border-[#ef4444] text-[#fca5a5] font-extrabold rounded-xl text-xs uppercase btn-press">Закрыть партию</button>
+        </div>
+        <div id="lastSyncNotice" class="hidden text-[10px] text-center text-[#34d399]"></div>
+      </div>
+    </div>
+
+    <!-- БРАК / ПЫЛЬ -->
+    <div class="grid grid-cols-2 gap-2">
+      <button onclick="openModal('modalDefect')" class="bg-[#131c31] border border-[#55222b] p-3 rounded-2xl text-center btn-press space-y-1">
+        <div class="text-[11px] font-black text-[#f87171] uppercase">Брак</div>
+        <div id="badgeDefect" class="text-[10px] text-[#94a3b8]">0 кг</div>
+      </button>
+      <button onclick="openModal('modalDust')" class="bg-[#131c31] border border-[#233152] p-3 rounded-2xl text-center btn-press space-y-1">
+        <div class="text-[11px] font-black text-[#38bdf8] uppercase">Пыль</div>
+        <div id="badgeDust" class="text-[10px] text-[#94a3b8]">0 кг</div>
+      </button>
+    </div>
+
+    <button id="btnSubmitShift" onclick="openSummary()" class="w-full py-4 bg-gradient-to-r from-[#0072ce] to-[#0284c7] font-black rounded-2xl text-white text-sm uppercase tracking-wider shadow-xl btn-press">СДАТЬ СМЕНУ И ОТПРАВИТЬ ОТЧЁТ</button>
+  </div>
+</main>
+
+<!-- МОДАЛКА: НОВАЯ ПАРТИЯ -->
+<div id="modalOpenBatch" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
+    <h3 class="text-base font-black text-[#38bdf8]">Открытие партии</h3>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Состояние производства</label>
+      <div class="grid grid-cols-2 gap-1 bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
+        <button id="newBatchModeNew" onclick="setNewBatchMode('new')" class="py-2 text-xs font-extrabold rounded-lg tab-active">Новая партия</button>
+        <button id="newBatchModeJoin" onclick="setNewBatchMode('join')" class="py-2 text-xs font-extrabold rounded-lg tab-idle">Уже производится</button>
+      </div>
+      <div id="newBatchModeHint" class="mt-2 text-[10px] text-[#8fa0c2]">Новая партия: первая коробка будет № 1.</div>
+    </div>
+    <div id="existingBatchStartWrap" class="hidden bg-[#080d1a] border border-[#315b91] rounded-xl p-3 space-y-2">
+      <div class="text-[10px] font-extrabold text-[#38bdf8] uppercase">С какого номера начинаете вы?</div>
+      <div id="existingBatchStartFields" class="grid grid-cols-1 gap-2"></div>
+      <div class="text-[10px] text-[#8fa0c2]">Укажите номер первой коробки или мешка, который произведёте. Предыдущие единицы останутся в общей нумерации партии, но не попадут в вашу выработку.</div>
+    </div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">№ Партии</label>
+      <input type="text" id="newBatchNum" placeholder="26060780" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none focus:border-[#0072ce]">
+    </div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Код продукта</label>
+      <input type="text" id="newProductCode" placeholder="Введите код продукта" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none focus:border-[#0072ce]">
+    </div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Цвет RAL</label>
+      <div class="flex bg-[#080d1a] border border-[#29385c] rounded-xl overflow-hidden">
+        <span class="bg-[#1c2742] text-[#38bdf8] font-black text-xs px-2.5 flex items-center border-r border-[#29385c]">RAL</span>
+        <input type="text" id="newRal" placeholder="7021" class="w-full bg-transparent px-2 py-2 text-sm text-white font-bold outline-none">
+      </div>
+    </div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Тип партии</label>
+      <div class="grid grid-cols-2 gap-1 bg-[#080d1a] p-1 rounded-xl border border-[#233152]">
+        <button onclick="setNewBatchPack('box', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active">ПК</button>
+        <button onclick="setNewBatchPack('mix', this)" class="new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle">Смешение</button>
+      </div>
+    </div>
+    <button id="btnConfirmOpenBatch" onclick="confirmOpenBatch()" class="w-full py-3 bg-[#10b981] text-white font-bold rounded-xl text-xs uppercase btn-press">Начать работу</button>
+    <button onclick="closeModal('modalOpenBatch')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Отмена</button>
+  </div>
 </div>
-<p class="muted">Введённый номер остаётся общим номером партии. Предыдущие номера не попадут в твою личную выработку.</p>
+
+<!-- МОДАЛКА: ЗАКРЫТИЕ -->
+<div id="modalCloseBatch" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-3 max-h-[90vh] overflow-y-auto">
+    <h3 class="text-base font-black text-[#ef4444]">Закрытие партии</h3>
+    <div id="closeBoxFields">
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Номер последней коробки</label>
+      <input type="number" id="closeUnitTo" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
+    </div>
+    <div id="closeMixFields" class="hidden space-y-2">
+      <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Последний мешок 1 п/ф</label><input type="number" id="closeComp1" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none"></div>
+      <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Последний мешок 2 п/ф</label><input type="number" id="closeComp2" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none"></div>
+      <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Последняя коробка готовой краски</label><input type="number" id="closeFinished" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none"></div>
+    </div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Вес последней коробки (если не 20 кг)</label>
+      <input type="number" id="closeLastBoxWeight" placeholder="20" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
+    </div>
+    <div>
+      <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Пыль при закрытии, кг (необязательно)</label>
+      <input type="number" id="closeDust" placeholder="0" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-white font-bold outline-none">
+    </div>
+    
+    <button id="btnCloseBatch" onclick="closeBatch()" class="w-full py-3 bg-[#ef4444] text-white font-bold rounded-xl text-xs uppercase btn-press">Подтвердить закрытие</button>
+    <button onclick="closeModal('modalCloseBatch')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Отмена</button>
+  </div>
 </div>
+
+<!-- МОДАЛКА: БРАК -->
+<div id="modalDefect" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
+    <h3 class="text-base font-black text-[#f87171]">Фиксация брака (коробки по 20 кг)</h3>
+    <div class="grid grid-cols-2 gap-2">
+      <input type="number" id="defStart" placeholder="С коробки №" class="bg-[#080d1a] border border-[#29385c] rounded-xl p-2 text-white font-bold outline-none">
+      <input type="number" id="defEnd" placeholder="По коробку №" class="bg-[#080d1a] border border-[#29385c] rounded-xl p-2 text-white font-bold outline-none">
+    </div>
+    <button onclick="addDefect()" class="w-full py-3 bg-[#ef4444] text-white font-bold rounded-xl text-xs uppercase btn-press">Внести в брак</button>
+    <div id="defectList" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
+    <button onclick="closeModal('modalDefect')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Готово</button>
+  </div>
 </div>
-<div class="card">
-<strong>3. Проверка расчёта</strong>
-<p class="muted">Для проверки укажи номер последней произведённой единицы после своей работы. В реальном приложении он вводится в рабочем окне.</p>
-<div id="unit-test">
-<label class="label">Последняя коробка после моей работы</label>
-<input id="last-unit" type="number" min="0" step="1" value="0" oninput="calculate()">
-<div class="result"><div class="muted">Личная выработка</div><div class="big" id="personal">0 кг</div><div id="detail" class="muted">0 коробок × 20 кг</div></div>
+
+<!-- МОДАЛКА: ПЫЛЬ -->
+<div id="modalDust" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4">
+    <h3 class="text-base font-black text-[#38bdf8]">Сброс пыли</h3>
+    <input type="number" id="dustInput" placeholder="Вес мешка (кг)" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl p-2 text-white font-bold outline-none">
+    <button onclick="addDust()" class="w-full py-3 bg-[#0284c7] text-white font-bold rounded-xl text-xs uppercase btn-press">Добавить мешок</button>
+    <div id="dustList" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
+    <button onclick="closeModal('modalDust')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Готово</button>
+  </div>
 </div>
-<div id="mix-test" class="hidden">
-<div class="card">
-<strong>1-й полуфабрикат</strong>
-<label class="label">Последний произведённый номер</label><input id="last-comp1" type="number" min="0" step="1" value="0" oninput="calculate()">
-<div class="result"><div class="muted">Личная выработка</div><div class="big" id="personal-comp1">0 кг</div><div id="detail-comp1" class="muted">0 единиц × 20 кг</div></div>
+
+<!-- МОДАЛКА: СВОДКА -->
+<div id="modalSummary" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-3">
+    <h3 class="text-base font-black text-[#38bdf8]">Сводка сдачи смены</h3>
+    <div class="space-y-1.5 text-xs" id="summaryRows"></div>
+    <div class="text-[10px] text-[#64748b]">Партия останется открытой для следующего оператора.</div>
+    <button id="btnFinalShift" onclick="submitFinalShift()" class="w-full py-3.5 bg-[#0072ce] text-white font-black rounded-xl text-xs uppercase btn-press">Подтвердить и сдать</button>
+    <button onclick="closeModal('modalSummary')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Назад</button>
+  </div>
 </div>
-<div class="card">
-<strong>2-й полуфабрикат</strong>
-<label class="label">Последний произведённый номер</label><input id="last-comp2" type="number" min="0" step="1" value="0" oninput="calculate()">
-<div class="result"><div class="muted">Личная выработка</div><div class="big" id="personal-comp2">0 кг</div><div id="detail-comp2" class="muted">0 единиц × 20 кг</div></div>
+
+<!-- МОДАЛКА: СТАТИСТИКА -->
+<div id="statsModal" class="modal-overlay">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4 max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center border-b border-[#1c2742] pb-2">
+      <h3 class="text-base font-black text-[#38bdf8]">Моя выработка</h3>
+      <button onclick="closeModal('statsModal')" class="text-gray-400 font-bold text-lg">✕</button>
+    </div>
+    <input type="text" id="statsOperatorName" readonly class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2 text-sm text-gray-400 outline-none uppercase">
+    <div class="grid grid-cols-2 gap-2">
+      <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">С даты</label><input type="date" id="customDateFrom" onchange="loadStats()" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-2 py-2 text-xs text-white outline-none"></div>
+      <div><label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">По дату</label><input type="date" id="customDateTo" onchange="loadStats()" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-2 py-2 text-xs text-white outline-none"></div>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Дневные смены</div><div class="text-xl font-black text-white" id="stDayShifts">0</div></div>
+      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Ночные смены</div><div class="text-xl font-black text-white" id="stNightShifts">0</div></div>
+      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Произведено краски</div><div class="text-xl font-black text-[#34d399]" id="stPaintKg">0 кг</div></div>
+      <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3"><div class="text-[10px] font-bold text-[#8fa0c2] uppercase">Стимулирующие выплаты</div><div class="text-xl font-black text-[#fbbf24]" id="stEarnedRub">0 ₽</div></div>
+    </div>
+    <button onclick="closeModal('statsModal')" class="w-full py-2.5 bg-[#1c2742] text-[#cbd5e1] font-bold rounded-xl text-xs btn-press">Закрыть</button>
+  </div>
 </div>
-<div class="card">
-<strong>Готовая краска</strong>
-<label class="label">Последний произведённый номер</label><input id="last-finished" type="number" min="0" step="1" value="0" oninput="calculate()">
-<div class="result"><div class="muted">Личная выработка</div><div class="big" id="personal-finished">0 кг</div><div id="detail-finished" class="muted">0 единиц × 20 кг</div></div>
-</div>
-</div>
-<button class="primary" onclick="resetDemo()">Сбросить тест</button>
-<p class="muted warning">Это только интерактивная модель логики. Кнопки не открывают партии и не отправляют данные в PRIMATEK или Supabase.</p>
-</div>
-</div>
+
 <script>
-let pack='unit',mode='new';
-function setPack(v){pack=v;document.getElementById('pack-unit').classList.toggle('active',v==='unit');document.getElementById('pack-mix').classList.toggle('active',v==='mix');document.getElementById('unit-field').classList.toggle('hidden',v==='mix');document.getElementById('mix-fields').classList.toggle('hidden',v!=='mix');document.getElementById('unit-test').classList.toggle('hidden',v==='mix');document.getElementById('mix-test').classList.toggle('hidden',v!=='mix');calculate()}
-function setMode(v){mode=v;document.getElementById('mode-new').classList.toggle('active',v==='new');document.getElementById('mode-join').classList.toggle('active',v==='join');document.getElementById('join-fields').classList.toggle('hidden',v!=='join');document.getElementById('hint').textContent=v==='new'?'Новая партия: первая коробка будет № 1.':'Партия уже идёт, но ещё не зарегистрирована в PRIMATEK. Укажи первый номер, который произведёшь сам, отдельно для каждого потока.';if(v==='new'){['last-unit','last-comp1','last-comp2','last-finished'].forEach(id=>document.getElementById(id).value=0)}else{document.getElementById('last-unit').value=Math.max(0,Number(document.getElementById('first-unit').value)-1);document.getElementById('last-comp1').value=Math.max(0,Number(document.getElementById('first-comp1').value)-1);document.getElementById('last-comp2').value=Math.max(0,Number(document.getElementById('first-comp2').value)-1);document.getElementById('last-finished').value=Math.max(0,Number(document.getElementById('first-finished').value)-1)}calculate()}
-function renderStream(lastId,firstId,outId,detailId){const last=Number(document.getElementById(lastId).value);const first=mode==='join'?Number(document.getElementById(firstId).value):1;const out=document.getElementById(outId);const detail=document.getElementById(detailId);if(!Number.isInteger(last)||last<0||!Number.isInteger(first)||first<1){out.textContent='—';detail.textContent='Проверь номера: они должны быть целыми и неотрицательными.';return}const count=last-first+1;if(count<0){out.textContent='—';detail.textContent='Последний номер не может быть меньше первого.';return}out.textContent=(count*20).toLocaleString('ru-RU')+' кг';detail.textContent=count+' единиц × 20 кг; личный отсчёт начинается с № '+first}
-function syncStart(key){if(mode==='join'){const first=Number(document.getElementById('first-'+key).value);document.getElementById('last-'+key).value=Math.max(0,first-1)}calculate()}
-function calculate(){renderStream('last-unit','first-unit','personal','detail');renderStream('last-comp1','first-comp1','personal-comp1','detail-comp1');renderStream('last-comp2','first-comp2','personal-comp2','detail-comp2');renderStream('last-finished','first-finished','personal-finished','detail-finished')}
-function resetDemo(){pack='unit';mode='new';document.getElementById('first-unit').value=360;['first-comp1','first-comp2','first-finished'].forEach(id=>document.getElementById(id).value=1);['last-unit','last-comp1','last-comp2','last-finished'].forEach(id=>document.getElementById(id).value=0);setPack('unit');setMode('new')}
-calculate();
-</script></body></html>
+const SUPABASE_URL = "https://oqhrzruxubqthqyxmdcg.supabase.co";
+const SUPABASE_KEY = "sb_publishable_m5YmzYjW1BpotrbaRpCdgA__kYvilf3";
+const PRIMATEK_LINES = [1, 5, 6, 7, 8, 13, 14, 15];
+const EARNING_RATE = 0.5;
+const UNIT_WEIGHT = 20;
+const COMP_NAMES = { comp1: '1 п/ф', comp2: '2 п/ф', finished: 'Готовая краска' };
+
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const PRIMATEK_PIN_SESSION_KEY = 'primatek_pin_verified_v1';
+function initPinGate() {
+  const gate = document.getElementById('pinGate');
+  if (localStorage.getItem(PRIMATEK_PIN_SESSION_KEY) === '1') gate.classList.add('hidden');
+  else gate.classList.remove('hidden');
+  setTimeout(() => document.getElementById('operatorPinInput')?.focus(), 100);
+}
+async function verifyOperatorPin(event) {
+  event.preventDefault();
+  const input = document.getElementById('operatorPinInput');
+  const button = document.getElementById('pinSubmitButton');
+  const errorBox = document.getElementById('pinError');
+  const pin = input.value.trim();
+  if (!/^\d{4}$/.test(pin)) {
+    errorBox.textContent = 'Введите четыре цифры.';
+    input.focus();
+    return;
+  }
+  button.disabled = true;
+  button.textContent = 'Проверка...';
+  errorBox.textContent = '';
+  try {
+    const { data, error } = await client.functions.invoke('verify-operator-pin', { body: { pin } });
+    if (error) {
+      if (error.context?.status === 429) throw new Error('Слишком много попыток. Подождите 10 минут.');
+      throw error;
+    }
+    if (!data?.valid) {
+      errorBox.textContent = data?.error === 'too_many_attempts'
+        ? 'Слишком много попыток. Подождите 10 минут.'
+        : 'Неверный PIN-код. Попробуйте ещё раз.';
+      input.value = '';
+      input.focus();
+      return;
+    }
+    localStorage.setItem(PRIMATEK_PIN_SESSION_KEY, '1');
+    document.getElementById('pinGate').classList.add('hidden');
+  } catch (err) {
+    console.error('PIN verification failed:', err);
+    errorBox.textContent = err.message || 'Не удалось проверить PIN. Проверьте соединение.';
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Войти';
+  }
+}
+initPinGate();
+
+// ===== Локальное состояние: только настройки телефона, НЕ правда о партии =====
+let local = JSON.parse(localStorage.getItem('primatek_local_v2')) || {
+  line: 6, operator: '', shiftAccepted: false, handoverStatus: null,
+  lineStatus: 'В РАБОТЕ', repairReason: '', defects: [], dust: [], planKg: 0,
+  shiftKey: null, shiftStartISO: null
+};
+function saveLocal() { localStorage.setItem('primatek_local_v2', JSON.stringify(local)); }
+
+// ===== Серверная правда =====
+let batch = null;          // открытая партия линии из таблицы batches
+let myBaseline = null;     // последние номера на момент моей приёмки (для "вы за смену")
+let sentSnapshot = null;   // номера на момент последней отправки (для дельт)
+let activeComp = 'comp1';
+let newBatchPack = 'box';
+let newBatchMode = 'new';
+let busy = false;
+
+// ===== Окно смены =====
+function getShiftInfo() {
+  const now = new Date(); const h = now.getHours();
+  let start = new Date(now), end = new Date(now), name = 'ДЕНЬ';
+  if (h >= 8 && h < 20) { start.setHours(8,0,0,0); end.setHours(20,0,0,0); }
+  else if (h >= 20) { name='НОЧЬ'; start.setHours(20,0,0,0); end.setDate(end.getDate()+1); end.setHours(8,0,0,0); }
+  else { name='НОЧЬ'; start.setDate(start.getDate()-1); start.setHours(20,0,0,0); end.setHours(8,0,0,0); }
+  const d = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;
+  return { start, end, name, planDate: d, key: `${d}|${name}` };
+}
+
+window.onload = async () => {
+  renderLines();
+  updateShiftBadge();
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('customDateFrom').value = today;
+  document.getElementById('customDateTo').value = today;
+
+  // Смена в localStorage устарела (пересекли границу 8/20)? Сбрасываем приёмку.
+  if (local.shiftAccepted && local.shiftKey !== getShiftInfo().key) {
+    local.shiftAccepted = false; local.operator = ''; local.defects = []; local.dust = [];
+  }
+  // После сдачи смены не показываем ФИО предыдущего оператора.
+  if (!local.shiftAccepted) local.operator = '';
+  document.getElementById('operatorName').value = local.shiftAccepted ? (local.operator || '') : '';
+  saveLocal();
+
+  await refreshBatch();
+
+  if (local.shiftAccepted) {
+    enterWorkMode(false);
+  } else {
+    document.getElementById('operatorName').addEventListener('input', checkHandoverReady);
+  }
+  setInterval(updateShiftBadge, 60000);
+  startOperatorRealtime();
+  setInterval(() => { if (local.shiftAccepted) loadPlanFromCloud(); }, 60000);
+};
+
+
+function getMascotAsset(message, kind) {
+  const value = String(message || '').toLowerCase();
+  if (/проб|образц|качеств|лаборатор|провер.*краск/.test(value)) return 'assets/mascot-quality-check.png';
+  if (/пыл|уборк|чистк|салфет|очист/.test(value)) return 'assets/mascot-cleaning.png';
+  if (/ремонт|неисправ|оборудован|поломк|инструмент/.test(value)) return 'assets/mascot-repair.png';
+  if (/поздрав|отличн|ура|побед|превосход/.test(value)) return 'assets/mascot-celebration.png';
+  if (kind === 'success') return 'assets/mascot-success.png';
+  if (kind === 'warning') return 'assets/mascot-warning.png';
+  if (kind === 'error') return 'assets/mascot-error.png';
+  if (kind === 'info') return 'assets/mascot-info.png';
+  return 'assets/mascot-neutral.png';
+}
+
+function showNotice(message, type) {
+  const text = String(message || 'Готово');
+  const inferred = type || (/не удалось|ошибка|не подтверждены|не обновил|не повторяйте/i.test(text) ? 'error' :
+    (/проверьте|уже есть|нет новых|не может|укажите|заполните|пустая|сначала/i.test(text) ? 'warning' :
+    (/сохран|отправ|закрыта|сдана|принять смену/i.test(text) ? 'success' : 'info')));
+  const root = document.getElementById('primatekNotice');
+  const title = document.getElementById('primatekNoticeTitle');
+  const mascot = document.getElementById('primatekNoticeMascot');
+  const body = document.getElementById('primatekNoticeText');
+  if (!root || !title || !mascot || !body) return;
+  root.className = inferred;
+  title.textContent = inferred === 'success' ? 'Данные сохранены!' : inferred === 'warning' ? 'Обрати внимание' : inferred === 'error' ? 'Не удалось выполнить действие' : 'Сообщение PRIMATEK';
+  document.getElementById('primatekNoticeMark').textContent = inferred === 'success' ? '✓' : inferred === 'warning' ? '!' : inferred === 'error' ? '×' : 'i';
+  mascot.dataset.mood = inferred;
+  const mascotImage = mascot.querySelector('img');
+  if (mascotImage) mascotImage.src = getMascotAsset(text, inferred);
+  body.textContent = text;
+  root.classList.remove('hidden');
+  requestAnimationFrame(() => root.classList.add('show'));
+}
+function hideNotice() {
+  const root = document.getElementById('primatekNotice');
+  if (!root) return;
+  root.classList.remove('show');
+  setTimeout(() => { if (!root.classList.contains('show')) root.classList.add('hidden'); }, 220);
+}
+
+function updateShiftBadge() {
+  document.getElementById('shiftBadge').innerText = 'СМЕНА: ' + getShiftInfo().name;
+}
+
+function renderLines() {
+  document.getElementById('lineButtons').innerHTML = PRIMATEK_LINES.map(num => `
+    <button onclick="selectLine(${num})" class="py-2 text-xs font-black rounded-xl border border-[#233152] ${num === local.line ? 'bg-[#0072ce] text-white border-[#38bdf8]' : 'bg-[#080d1a] text-[#cbd5e1]'}">${num}</button>`).join('');
+}
+
+async function selectLine(num) {
+  local.line = num; saveLocal(); renderLines();
+  await refreshBatch();
+  checkHandoverReady();
+  loadPlanFromCloud();
+}
+
+// ===== Поиск открытой партии: ТОЛЬКО по статусу =====
+async function refreshBatch() {
+  try {
+    const { data, error } = await client.from('batches')
+      .select('*').eq('line_number', local.line).eq('status', 'open').limit(1);
+    if (error) throw error;
+    batch = (data && data.length) ? data[0] : null;
+  } catch (e) { console.error(e); batch = null; }
+  renderFoundBatch();
+  updateBatchUI();
+}
+
+function renderFoundBatch() {
+  const found = document.getElementById('foundBatchCard');
+  const none = document.getElementById('noBatchCard');
+  const startWrap = document.getElementById('productionStartWrap');
+  if (batch) {
+    found.classList.remove('hidden'); none.classList.add('hidden');
+    document.getElementById('foundBatchTitle').innerText =
+      `№ ${batch.batch_number} · ${batch.ral_color || '—'} · ${batch.package_type === 'mix' ? 'СМЕШЕНИЕ' : 'КОРОБКИ'}`;
+    document.getElementById('foundBatchNumbers').innerText = batch.package_type === 'mix'
+      ? `Последние: 1 п/ф — №${batch.last_comp1}, 2 п/ф — №${batch.last_comp2}, готовая — №${batch.last_finished}`
+      : `Последняя коробка: №${batch.last_unit}`;
+    document.getElementById('foundBatchOpened').innerText =
+      `Код продукта: ${batch.product_code || '—'} · Открыл: ${batch.opened_by || '—'} · ${new Date(batch.opened_at).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
+    if (startWrap) {
+      startWrap.classList.remove('hidden');
+      const fields = document.getElementById('productionStartFields');
+      if (batch.package_type === 'mix') {
+        fields.innerHTML = ['comp1','comp2','finished'].map(k => {
+          const last = Number(batch['last_'+k] || 0);
+          return `<label class="block text-[10px] text-[#8fa0c2]">${COMP_NAMES[k]} · первый номер
+            <input id="start-${k}" type="number" min="${last+1}" step="1" value="${last+1}" class="mt-1 w-full bg-[#131c31] border border-[#29385c] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#38bdf8]">
+          </label>`;
+        }).join('');
+      } else {
+        const last = Number(batch.last_unit || 0);
+        fields.innerHTML = `<label class="block text-[10px] text-[#8fa0c2]">Первая коробка моей смены
+          <input id="start-unit" type="number" min="${last+1}" step="1" value="${last+1}" class="mt-1 w-full bg-[#131c31] border border-[#29385c] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#38bdf8]">
+        </label>`;
+      }
+    }
+  } else {
+    found.classList.add('hidden'); none.classList.remove('hidden');
+    if (startWrap) startWrap.classList.add('hidden');
+  }
+}
+
+function readHandoverProductionStarts() {
+  if (!batch) return null;
+  const keys = batch.package_type === 'mix' ? ['comp1','comp2','finished'] : ['unit'];
+  const starts = { batchId: batch.id };
+  for (const key of keys) {
+    const input = document.getElementById('start-' + key);
+    const value = Number(input?.value);
+    const last = Number(batch[key === 'unit' ? 'last_unit' : 'last_' + key] || 0);
+    if (!Number.isInteger(value) || value <= last) {
+      showNotice('Начальный номер должен быть больше последнего номера партии.', 'warning');
+      input?.focus();
+      return false;
+    }
+    starts[key] = value;
+  }
+  return starts;
+}
+
+function personalStartBase(key, snapshot) {
+  if (!batch) return Number(snapshot?.['last_' + key] || snapshot?.last_unit || 0);
+  const starts = local.productionStarts;
+  if (!starts || String(starts.batchId) !== String(batch.id)) return Number(snapshot?.['last_' + key] || snapshot?.last_unit || 0);
+  return Math.max(Number(snapshot?.['last_' + key] || snapshot?.last_unit || 0), Number(starts[key] || 1) - 1);
+}
+
+function selectHandoverStatus(status, btn) {
+  local.handoverStatus = status; saveLocal();
+  document.querySelectorAll('.hand-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('handoverRepairWrap').classList.toggle('hidden', status !== 'РЕМОНТ');
+  checkHandoverReady();
+}
+
+function checkHandoverReady() {
+  const name = document.getElementById('operatorName').value.trim();
+  let ok = name && local.handoverStatus;
+  if (local.handoverStatus === 'РЕМОНТ' && !document.getElementById('handoverRepairReason').value) ok = false;
+  document.getElementById('btnAcceptHandover').disabled = !ok;
+}
+
+async function acceptHandover() {
+  if (busy) return; busy = true;
+  const btn = document.getElementById('btnAcceptHandover');
+  btn.innerText = 'Отправка...'; btn.disabled = true;
+  try {
+    const enteredStarts = readHandoverProductionStarts();
+    if (enteredStarts === false) { btn.innerText = 'ПРИНЯТЬ СМЕНУ'; checkHandoverReady(); return; }
+    await refreshBatch(); // ещё раз проверяем сервер прямо перед приёмкой
+    if (batch && (!enteredStarts || String(enteredStarts.batchId) !== String(batch.id))) {
+      showNotice('На линии изменилась открытая партия. Проверьте начальные номера и примите смену ещё раз.', 'warning');
+      btn.innerText = 'ПРИНЯТЬ СМЕНУ'; checkHandoverReady(); return;
+    }
+    if (batch && enteredStarts && String(enteredStarts.batchId) === String(batch.id)) {
+      for (const key of Object.keys(enteredStarts).filter(k => k !== 'batchId')) {
+        const last = Number(batch[key === 'unit' ? 'last_unit' : 'last_' + key] || 0);
+        if (enteredStarts[key] <= last) throw new Error('Пока вы принимали смену, счётчик партии изменился. Проверьте начальные номера и примите смену ещё раз.');
+      }
+    }
+    const si = getShiftInfo();
+    local.operator = document.getElementById('operatorName').value.trim().toUpperCase();
+    local.lineStatus = local.handoverStatus;
+    local.repairReason = local.handoverStatus === 'РЕМОНТ' ? document.getElementById('handoverRepairReason').value : '';
+    local.shiftAccepted = true;
+    local.shiftKey = si.key;
+    local.shiftStartISO = si.start.toISOString();
+    local.productionStarts = batch ? (enteredStarts || null) : null;
+    local.defects = []; local.dust = [];
+    saveLocal();
+
+    // База: последние номера на момент приёмки = моя отправная точка
+    myBaseline = batch ? snapshotOf(batch) : null;
+    sentSnapshot = batch ? snapshotOf(batch) : null;
+    if (batch) activeComp = batch.active_component || 'comp1';
+
+    if (local.lineStatus === 'РЕМОНТ') {
+      local.repairEventId = await ensureRepairEvent(local.repairReason || null);
+      saveLocal();
+    } else {
+      const { error } = await client.from('shift_reports').insert([{
+        line_number: local.line, operator_name: local.operator, event_type: 'STATUS_CHANGE',
+        line_status: local.lineStatus,
+        batch_id: batch ? batch.id : null, batch_number: batch ? batch.batch_number : null,
+        ral_color: batch ? batch.ral_color : null, package_type: batch ? batch.package_type : null,
+        shift_key: si.key
+      }]);
+      if (error) throw error;
+      local.repairEventId = null;
+      saveLocal();
+    }
+
+    enterWorkMode(true);
+  } catch (err) {
+    console.error('Ошибка приёма смены:', err);
+    showNotice('Не удалось принять смену. Проверьте соединение и попробуйте ещё раз.');
+    local.shiftAccepted = false; saveLocal();
+    btn.innerText = 'ПРИНЯТЬ СМЕНУ'; btn.disabled = false;
+  } finally { busy = false; }
+}
+
+function snapshotOf(b) {
+  return { last_unit: b.last_unit||0, last_comp1: b.last_comp1||0, last_comp2: b.last_comp2||0, last_finished: b.last_finished||0 };
+}
+
+function enterWorkMode(fromAccept) {
+  document.getElementById('handoverSection').classList.add('hidden');
+  document.getElementById('handoverCompact').classList.remove('hidden');
+  document.getElementById('gamificationBlock').classList.remove('hidden');
+  document.getElementById('linePlanProgressBlock').classList.remove('hidden');
+  document.getElementById('workArea').classList.remove('hidden');
+  loadPlanFromCloud();
+  if (!fromAccept && batch) {
+    // Восстановление после перезагрузки: база = последние отправленные мной номера из журнала
+    restoreMySession();
+  }
+  updateCompactBar(); updateBatchUI(); renderDefects(); renderDust(); calculateProduction();
+  highlightStatusButtons();
+}
+
+async function restoreMySession() {
+  try {
+    const { data } = await client.from('shift_reports')
+      .select('*').eq('line_number', local.line).eq('operator_name', local.operator)
+      .eq('shift_key', local.shiftKey).order('created_at', { ascending: false }).limit(100);
+    const rows = data || [];
+    // Снимок последней отправки ищем только в текущей партии: в течение смены оператор
+    // может закрыть одну партию и открыть следующую.
+    const batchRows = batch ? rows.filter(r => String(r.batch_id) === String(batch.id)) : [];
+    const withNums = batchRows.find(r =>
+      r.unit_to !== null && r.unit_to !== undefined ||
+      r.comp1_to !== null && r.comp1_to !== undefined ||
+      r.comp2_to !== null && r.comp2_to !== undefined ||
+      r.finished_to !== null && r.finished_to !== undefined
+    );
+    if (withNums) {
+      sentSnapshot = {
+        last_unit: Number(withNums.unit_to)||0,
+        last_comp1: Number(withNums.comp1_to)||0,
+        last_comp2: Number(withNums.comp2_to)||0,
+        last_finished: Number(withNums.finished_to)||0
+      };
+    } else if (batch) {
+      sentSnapshot = snapshotOf(batch);
+    } else {
+      sentSnapshot = null;
+    }
+
+    // Личный старт хранится отдельно от последнего отправленного номера.
+    // Поэтому после перезагрузки уже отправленная выработка не исчезает из разбивки mix.
+    const starts = batch && local.productionStarts &&
+      String(local.productionStarts.batchId) === String(batch.id)
+      ? local.productionStarts : null;
+    myBaseline = batch ? {
+      last_unit: starts && Number.isInteger(Number(starts.unit))
+        ? Number(starts.unit)-1 : Number(batch.initial_unit)||0,
+      last_comp1: starts && Number.isInteger(Number(starts.comp1))
+        ? Number(starts.comp1)-1 : Number(batch.initial_comp1)||0,
+      last_comp2: starts && Number.isInteger(Number(starts.comp2))
+        ? Number(starts.comp2)-1 : Number(batch.initial_comp2)||0,
+      last_finished: starts && Number.isInteger(Number(starts.finished))
+        ? Number(starts.finished)-1 : Number(batch.initial_finished)||0
+    } : null;
+
+    // Восстанавливаем суммарную личную выработку за смену по всем партиям.
+    myDeltaKg = rows.reduce((sum, r) => {
+      if (!['PRODUCTION','PARTY_CLOSE','SHIFT_CLOSE'].includes(r.event_type)) return sum;
+      const hasDeltas = r.delta_comp1_kg !== null && r.delta_comp1_kg !== undefined ||
+        r.delta_comp2_kg !== null && r.delta_comp2_kg !== undefined ||
+        r.delta_finished_kg !== null && r.delta_finished_kg !== undefined ||
+        r.delta_boxes_kg !== null && r.delta_boxes_kg !== undefined;
+      if (hasDeltas) {
+        return sum + Math.max(0,
+          (Number(r.delta_comp1_kg)||0) + (Number(r.delta_comp2_kg)||0) +
+          (Number(r.delta_finished_kg)||0) + (Number(r.delta_boxes_kg)||0) -
+          (Number(r.defect_kg)||0)
+        );
+      }
+      return sum + (r.event_type === 'PRODUCTION' ? 0 : Number(r.total_good_kg)||0);
+    }, 0);
+    calculateProduction();
+  } catch(e){ console.error(e); }
+}
+
+function reopenHandover() {
+  document.getElementById('handoverSection').classList.remove('hidden');
+  document.getElementById('handoverCompact').classList.add('hidden');
+  refreshBatch();
+}
+
+function updateCompactBar() {
+  const colors = { 'В РАБОТЕ':'bg-[#10b981]','ЧИСТКА':'bg-[#f59e0b]','ПРОБЫ':'bg-[#38bdf8]','РЕМОНТ':'bg-[#ef4444]' };
+  document.getElementById('compactDot').className = `w-2.5 h-2.5 rounded-full animate-pulse ${colors[local.lineStatus]||'bg-[#10b981]'}`;
+  document.getElementById('compactInfo').innerText = `Линия №${local.line} • ${local.operator} • ${local.lineStatus}`;
+}
+
+function highlightStatusButtons() {
+  document.querySelectorAll('.st-btn').forEach(b => b.classList.toggle('active', b.innerText === local.lineStatus));
+  const map = { 'В РАБОТЕ':'#34d399','ЧИСТКА':'#fbbf24','ПРОБЫ':'#38bdf8','РЕМОНТ':'#f87171' };
+  const t = document.getElementById('statusTimer');
+  t.innerText = local.lineStatus; t.style.color = map[local.lineStatus] || '#34d399';
+  document.getElementById('repairReasonWrap').classList.toggle('hidden', local.lineStatus !== 'РЕМОНТ');
+  if (local.repairReason) document.getElementById('repairReasonSelect').value = local.repairReason;
+}
+
+async function setLineStatus(status, btn) {
+  local.lineStatus = status;
+  highlightStatusButtons(); updateCompactBar();
+  if (status === 'РЕМОНТ') {
+    try {
+      local.repairEventId = await ensureRepairEvent(null);
+      saveLocal();
+    } catch (e) {
+      console.error(e);
+      showNotice('Не удалось зафиксировать начало ремонта. Проверьте соединение.', 'error');
+    }
+  } else {
+    local.repairReason = '';
+    local.repairEventId = null;
+    saveLocal();
+    try { await insertStatusEvent(status, null); }
+    catch (e) { console.error(e); }
+  }
+}
+
+async function submitRepairReason() {
+  const reason = document.getElementById('repairReasonSelect').value;
+  if (!reason) return;
+  try {
+    local.repairEventId = await ensureRepairEvent(reason);
+    local.repairReason = reason;
+    saveLocal();
+  } catch (e) {
+    console.error(e);
+    showNotice('Не удалось сохранить причину ремонта. Попробуйте ещё раз.', 'error');
+  }
+}
+
+async function ensureRepairEvent(reason) {
+  // Если ремонт уже начался до приёмки смены, сохраняем исходное время начала.
+  const { data: latest, error: latestError } = await client.from('shift_reports')
+    .select('id, line_status, repair_reason')
+    .eq('line_number', local.line)
+    .eq('event_type', 'STATUS_CHANGE')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (latestError) throw latestError;
+
+  if (latest && latest.line_status === 'РЕМОНТ') {
+    if (reason && latest.repair_reason !== reason) {
+      const { error } = await client.from('shift_reports')
+        .update({ repair_reason: reason })
+        .eq('id', latest.id);
+      if (error) throw error;
+    }
+    return latest.id;
+  }
+
+  const { data, error } = await client.from('shift_reports').insert([{
+    line_number: local.line,
+    operator_name: local.operator,
+    event_type: 'STATUS_CHANGE',
+    line_status: 'РЕМОНТ',
+    repair_reason: reason || null,
+    batch_id: batch ? batch.id : null,
+    batch_number: batch ? batch.batch_number : null,
+    ral_color: batch ? batch.ral_color : null,
+    package_type: batch ? batch.package_type : null,
+    shift_key: local.shiftKey || getShiftInfo().key
+  }]).select('id').single();
+  if (error) throw error;
+  return data.id;
+}
+
+async function insertStatusEvent(status, reason) {
+  const { error } = await client.from('shift_reports').insert([{
+    line_number: local.line, operator_name: local.operator, event_type: 'STATUS_CHANGE',
+    line_status: status, repair_reason: status === 'РЕМОНТ' ? (reason || null) : null,
+    batch_id: batch ? batch.id : null, shift_key: getShiftInfo().key
+  }]);
+  if (error) {
+    console.error('Не удалось записать статус линии:', error);
+    showNotice('Не удалось сохранить статус линии. Проверьте соединение и попробуйте ещё раз.', 'error');
+    throw error;
+  }
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+// ===== Открытие партии =====
+function openNewBatchModal() {
+  if (batch) { showNotice('На линии уже есть открытая партия!'); refreshBatch(); return; }
+  newBatchPack = 'box';
+  document.querySelectorAll('.new-pack-btn').forEach((t,i)=> t.className = `new-pack-btn py-1.5 text-xs font-extrabold rounded-lg ${i===0?'tab-active':'tab-idle'}`);
+  setNewBatchMode('new');
+  document.getElementById('newBatchNum').value = '';
+  document.getElementById('newProductCode').value = '';
+  document.getElementById('newRal').value = '';
+  openModal('modalOpenBatch');
+}
+function setNewBatchMode(mode) {
+  newBatchMode = mode === 'join' ? 'join' : 'new';
+  document.getElementById('newBatchModeNew').className = `py-2 text-xs font-extrabold rounded-lg ${newBatchMode === 'new' ? 'tab-active' : 'tab-idle'}`;
+  document.getElementById('newBatchModeJoin').className = `py-2 text-xs font-extrabold rounded-lg ${newBatchMode === 'join' ? 'tab-active' : 'tab-idle'}`;
+  const wrap = document.getElementById('existingBatchStartWrap');
+  const fields = document.getElementById('existingBatchStartFields');
+  const hint = document.getElementById('newBatchModeHint');
+  wrap.classList.toggle('hidden', newBatchMode !== 'join');
+  hint.innerText = newBatchMode === 'join'
+    ? 'Партия уже существует на линии, но ещё не зарегистрирована в PRIMATEK. Укажите первый номер, который произведёте.'
+    : 'Новая партия: первая коробка будет № 1.';
+  if (newBatchMode === 'join') {
+    if (newBatchPack === 'mix') {
+      fields.innerHTML = ['comp1','comp2','finished'].map(key => `
+        <label class="block text-[10px] text-[#8fa0c2]">${COMP_NAMES[key]} · первый номер
+          <input id="join-start-${key}" type="number" min="1" step="1" value="1" class="mt-1 w-full bg-[#131c31] border border-[#29385c] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#38bdf8]">
+        </label>`).join('');
+    } else {
+      fields.innerHTML = `
+        <label class="block text-[10px] text-[#8fa0c2]">Первая коробка моей выработки
+          <input id="join-start-unit" type="number" min="1" step="1" value="1" class="mt-1 w-full bg-[#131c31] border border-[#29385c] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#38bdf8]">
+        </label>`;
+    }
+  } else {
+    fields.innerHTML = '';
+  }
+}
+
+function setNewBatchPack(type, btn) {
+  newBatchPack = type;
+  document.querySelectorAll('.new-pack-btn').forEach(t=>t.className='new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-idle');
+  btn.className='new-pack-btn py-1.5 text-xs font-extrabold rounded-lg tab-active';
+  setNewBatchMode(newBatchMode);
+}
+
+async function confirmOpenBatch() {
+  if (busy) return;
+  const bNum = document.getElementById('newBatchNum').value.trim();
+  const productCode = document.getElementById('newProductCode').value.trim();
+  const ral = document.getElementById('newRal').value.trim();
+  if (!bNum || !productCode || !ral) { showNotice('Заполните номер партии, код продукта и RAL!'); return; }
+  const initialCounters = {
+    initial_unit: 0, initial_comp1: 0, initial_comp2: 0, initial_finished: 0,
+    last_unit: 0, last_comp1: 0, last_comp2: 0, last_finished: 0
+  };
+  if (newBatchMode === 'join') {
+    const keys = newBatchPack === 'mix' ? ['comp1','comp2','finished'] : ['unit'];
+    for (const key of keys) {
+      const first = Number(document.getElementById('join-start-' + key)?.value);
+      if (!Number.isInteger(first) || first < 1) {
+        showNotice('Укажите корректный номер первой производимой единицы.', 'warning');
+        document.getElementById('join-start-' + key)?.focus();
+        return;
+      }
+      const baseline = first - 1;
+      if (key === 'unit') {
+        initialCounters.initial_unit = baseline;
+        initialCounters.last_unit = baseline;
+      } else {
+        initialCounters['initial_' + key] = baseline;
+        initialCounters['last_' + key] = baseline;
+      }
+    }
+  }
+  busy = true;
+  const btn = document.getElementById('btnConfirmOpenBatch'); btn.innerText = 'Создание...';
+  try {
+    const { data, error } = await client.from('batches').insert([{
+      line_number: local.line, batch_number: bNum, product_code: productCode, ral_color: 'RAL ' + ral,
+      package_type: newBatchPack, status: 'open', opened_by: local.operator,
+      active_component: 'comp1', ...initialCounters
+    }]).select();
+    if (error) {
+      if (String(error.message).includes('one_open_batch_per_line')) {
+        showNotice('На линии уже есть открытая партия (возможно, открыл другой оператор). Обновляю...');
+        await refreshBatch(); closeModal('modalOpenBatch'); return;
+      }
+      throw error;
+    }
+    batch = data[0];
+    myBaseline = snapshotOf(batch); sentSnapshot = snapshotOf(batch); myDeltaKg = 0;
+    // Зафиксируем личную точку отсчёта и для создателя партии. Это нужно,
+    // чтобы после перезагрузки не принять общий счётчик партии за личную выработку.
+    local.productionStarts = newBatchPack === 'mix'
+      ? {
+          batchId: batch.id,
+          comp1: Number(initialCounters.initial_comp1||0) + 1,
+          comp2: Number(initialCounters.initial_comp2||0) + 1,
+          finished: Number(initialCounters.initial_finished||0) + 1
+        }
+      : { batchId: batch.id, unit: Number(initialCounters.initial_unit||0) + 1 };
+    saveLocal();
+    activeComp = 'comp1';
+    if (local.lineStatus !== 'В РАБОТЕ') { local.lineStatus = 'В РАБОТЕ'; saveLocal(); highlightStatusButtons(); updateCompactBar(); await insertStatusEvent('В РАБОТЕ', null); }
+    closeModal('modalOpenBatch'); updateBatchUI(); calculateProduction();
+  } catch (err) { console.error('Ошибка открытия партии:', err); showNotice('Не удалось открыть партию. Попробуйте ещё раз.'); }
+  finally { busy = false; btn.innerText = 'Начать работу'; }
+}
+
+// ===== UI партии =====
+function updateBatchUI() {
+  const openSec = document.getElementById('openBatchSection');
+  const actSec = document.getElementById('activeBatchSection');
+  if (!batch) { openSec.classList.remove('hidden'); actSec.classList.add('hidden'); return; }
+  openSec.classList.add('hidden'); actSec.classList.remove('hidden');
+  document.getElementById('displayBatchNum').innerText = batch.batch_number;
+  document.getElementById('displayRal').innerText = batch.ral_color || '—';
+  document.getElementById('displayPackType').innerText = batch.package_type === 'mix' ? 'СМЕШЕНИЕ' : 'ПК';
+  document.getElementById('displayProductCode').innerText = batch.product_code || '—';
+
+  if (batch.package_type === 'mix') {
+    document.getElementById('boxInputWrap').classList.add('hidden');
+    document.getElementById('mixInputWrap').classList.remove('hidden');
+    activeComp = batch.active_component || activeComp;
+    highlightCompButtons();
+    fillUnitInputs();
+    renderMixTotals();
+  } else {
+    document.getElementById('boxInputWrap').classList.remove('hidden');
+    document.getElementById('mixInputWrap').classList.add('hidden');
+    fillUnitInputs();
+  }
+  onUnitInput();
+}
+
+function fillUnitInputs() {
+  if (!batch) return;
+  if (batch.package_type === 'mix') {
+    const last = batch['last_' + activeComp] || 0;
+    document.getElementById('mixUnitInput').value = last > 0 ? last : '';
+    document.getElementById('mixUnitLabel').innerText =
+      activeComp === 'finished' ? 'Номер последней коробки готовой краски' : `Номер последнего мешка ${COMP_NAMES[activeComp]}`;
+  } else {
+    document.getElementById('boxUnitInput').value = batch.last_unit > 0 ? batch.last_unit : '';
+  }
+}
+
+function highlightCompButtons() {
+  document.querySelectorAll('.comp-btn').forEach((b,i)=>{
+    const key = ['comp1','comp2','finished'][i];
+    b.classList.toggle('active', key === activeComp);
+  });
+}
+
+async function setComponent(comp, btn) {
+  if (!batch || batch.package_type !== 'mix') return;
+  // Перед переключением сохраняем введённый номер текущего компонента, если он больше серверного
+  await flushCurrentInputIfNeeded();
+  activeComp = comp;
+  highlightCompButtons();
+  fillUnitInputs();
+  onUnitInput();
+  try { await client.from('batches').update({ active_component: comp }).eq('id', batch.id); batch.active_component = comp; } catch(e){}
+}
+
+async function flushCurrentInputIfNeeded() {
+  const val = getCurrentInputValue();
+  const serverLast = batch['last_' + activeComp] || 0;
+  if (val > serverLast) await sendCheckpoint(true); // тихая отправка дельты
+}
+
+function getCurrentInputValue() {
+  if (!batch) return 0;
+  const el = batch.package_type === 'mix' ? document.getElementById('mixUnitInput') : document.getElementById('boxUnitInput');
+  return parseInt(el.value) || 0;
+}
+
+let myDeltaKg = 0; // подтверждённые сервером кг за мою смену
+
+function pendingDelta() {
+  // сколько кг добавлено в поле, но ещё не отправлено
+  if (!batch || !sentSnapshot) return { kg: 0, count: 0, from: 0, to: 0 };
+  const val = getCurrentInputValue();
+  if (batch.package_type === 'mix') {
+    const base = personalStartBase(activeComp, sentSnapshot);
+    if (val > base) return { kg: (val - base) * UNIT_WEIGHT, count: val - base, from: base + 1, to: val };
+    return { kg: 0, count: 0, from: 0, to: 0 };
+  } else {
+    const base = personalStartBase('unit', sentSnapshot);
+    if (val > base) return { kg: (val - base) * UNIT_WEIGHT, count: val - base, from: base + 1, to: val };
+    return { kg: 0, count: 0, from: 0, to: 0 };
+  }
+}
+
+function onUnitInput() {
+  const d = pendingDelta();
+  const txt = d.kg > 0 ? `+${d.count} шт (№${d.from}–${d.to}) = +${d.kg} кг к отправке` : 'Введите номер больше предыдущего';
+  if (batch && batch.package_type === 'mix') {
+    document.getElementById('mixDeltaText').innerText = txt;
+    renderMixTotals();
+  } else {
+    document.getElementById('boxDeltaText').innerText = txt;
+  }
+  calculateProduction();
+}
+
+function batchTotalKg() {
+  if (!batch) return 0;
+  return batch.package_type === 'mix'
+    ? ((batch.last_comp1||0)+(batch.last_comp2||0)+(batch.last_finished||0)) * UNIT_WEIGHT
+    : (batch.last_unit||0) * UNIT_WEIGHT;
+}
+
+function renderMixTotals() {
+  if (!batch || batch.package_type !== 'mix') return;
+  const base = myBaseline || { last_comp1:0, last_comp2:0, last_finished:0 };
+  const rows = ['comp1','comp2','finished'].map(k => {
+    const cur = batch['last_'+k]||0;
+    const mineBase = Math.max(Number(base['last_'+k]||0), personalStartBase(k, base));
+    const mine = Math.max(0, cur - mineBase);
+    const pend = (k === activeComp) ? pendingDelta().count : 0;
+    return `<div class="flex justify-between"><span class="text-[#8fa0c2]">${COMP_NAMES[k]}:</span>
+      <span><b class="text-white">${(cur+pend)*UNIT_WEIGHT} кг</b> <span class="text-[#34d399]">/ вы: ${(mine+pend)*UNIT_WEIGHT} кг</span></span></div>`;
+  }).join('');
+  const total = batchTotalKg() + pendingDelta().kg;
+  const mineTotal = myKgForDisplay();
+  document.getElementById('mixTotals').innerHTML = rows +
+    `<div class="border-t border-[#233152] pt-1 mt-1 flex justify-between"><span class="font-extrabold text-[#38bdf8]">ИТОГО:</span><span class="font-black text-white">${total} кг <span class="text-[#34d399] font-bold">/ вы: ${mineTotal} кг</span></span></div>`;
+}
+
+function myKgForDisplay() {
+  const defectKg = local.defects.reduce((s,d)=>s+d.kg,0);
+  return Math.max(0, myDeltaKg + pendingDelta().kg - defectKg);
+}
+
+function calculateProduction() {
+  const goodKg = myKgForDisplay();
+  const incentive = goodKg * EARNING_RATE;
+  document.getElementById('statMoney').innerText = Math.round(incentive * 100) / 100 + ' ₽';
+  document.getElementById('statDonePlan').innerText = goodKg.toLocaleString('ru-RU') + ' кг';
+  document.getElementById('premiumLeftText').innerText = 'Стимулирующие выплаты: ' + goodKg.toLocaleString('ru-RU') + ' кг × 0,5 ₽';
+
+}
+
+// ===== Отправка дельты (PRODUCTION / PARTY_CLOSE / SHIFT_CLOSE) =====
+async function pushDelta(eventType, closeOpts = null) {
+  if (!batch && eventType !== 'SHIFT_CLOSE') { showNotice('Нет открытой партии'); return false; }
+  const si = getShiftInfo();
+  const defectKg = local.defects.reduce((s,d)=>s+d.kg,0);
+  const dustKg = local.dust.reduce((s,d)=>s+d,0) + (closeOpts?.extraDust||0);
+
+  // целевые номера: из полей ввода (или из модалки закрытия)
+  let target = batch ? snapshotOf(batch) : {last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
+  if (closeOpts) {
+    target = closeOpts.target;
+  } else if (batch) {
+    const val = getCurrentInputValue();
+    if (batch.package_type === 'mix') target['last_'+activeComp] = Math.max(val, target['last_'+activeComp]);
+    else target.last_unit = Math.max(val, target.last_unit);
+  }
+
+  const snap = sentSnapshot || {last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
+  let dComp1=0,dComp2=0,dFin=0,dBox=0;
+  if (batch) {
+    if (batch.package_type === 'mix') {
+      dComp1 = Math.max(0,(target.last_comp1-Math.max(snap.last_comp1||0, personalStartBase('comp1', snap))))*UNIT_WEIGHT;
+      dComp2 = Math.max(0,(target.last_comp2-Math.max(snap.last_comp2||0, personalStartBase('comp2', snap))))*UNIT_WEIGHT;
+      dFin   = Math.max(0,(target.last_finished-Math.max(snap.last_finished||0, personalStartBase('finished', snap))))*UNIT_WEIGHT;
+      // неполная последняя коробка при закрытии
+      if (eventType==='PARTY_CLOSE' && closeOpts?.lastWeight && closeOpts.lastWeight!==20 && dFin>0)
+        dFin = dFin - UNIT_WEIGHT + closeOpts.lastWeight;
+    } else {
+      dBox = Math.max(0,(target.last_unit-Math.max(snap.last_unit||0, personalStartBase('unit', snap))))*UNIT_WEIGHT;
+      if (eventType==='PARTY_CLOSE' && closeOpts?.lastWeight && closeOpts.lastWeight!==20 && dBox>0)
+        dBox = dBox - UNIT_WEIGHT + closeOpts.lastWeight;
+    }
+  }
+  const deltaKg = dComp1+dComp2+dFin+dBox;
+  const goodDelta = Math.max(0, deltaKg - defectKg);
+
+  const payload = {
+    line_number: local.line, operator_name: local.operator, event_type: eventType,
+    line_status: local.lineStatus,
+    batch_id: batch?batch.id:null, batch_number: batch?batch.batch_number:null,
+    product_code: batch?batch.product_code:null,
+    ral_color: batch?batch.ral_color:null, package_type: batch?batch.package_type:null,
+    shift_key: si.key,
+    delta_comp1_kg: dComp1, delta_comp2_kg: dComp2, delta_finished_kg: dFin, delta_boxes_kg: dBox,
+    comp1_to: batch&&batch.package_type==='mix'?target.last_comp1:null,
+    comp2_to: batch&&batch.package_type==='mix'?target.last_comp2:null,
+    finished_to: batch&&batch.package_type==='mix'?target.last_finished:null,
+    unit_from: batch&&batch.package_type==='box'&&target.last_unit>Math.max(snap.last_unit||0, personalStartBase('unit', snap))?Math.max(snap.last_unit||0, personalStartBase('unit', snap))+1:null,
+    unit_to: batch&&batch.package_type==='box'?target.last_unit:null,
+    total_good_kg: goodDelta,
+    chips_kg: dComp1+dComp2,
+    defect_kg: defectKg, defect_boxes: local.defects.reduce((s,d)=>s+d.count,0),
+    dust_kg: dustKg, plan_kg: local.planKg>0?local.planKg:null
+  };
+
+  const { error } = await client.from('shift_reports').insert([payload]);
+  if (error) { console.error('Ошибка отправки данных:', error); showNotice('Не удалось отправить данные. Они пока не подтверждены сервером. Попробуйте ещё раз.'); return false; }
+
+  // обновляем счётчики партии на сервере
+  if (batch) {
+    const upd = batch.package_type==='mix'
+      ? { last_comp1: target.last_comp1, last_comp2: target.last_comp2, last_finished: target.last_finished, active_component: activeComp }
+      : { last_unit: target.last_unit };
+    if (eventType==='PARTY_CLOSE') {
+      upd.status='closed'; upd.closed_by=local.operator; upd.closed_at=new Date().toISOString();
+      upd.last_box_weight=closeOpts?.lastWeight||20; upd.dust_kg=dustKg;
+    }
+    const { error: upErr } = await client.from('batches').update(upd).eq('id', batch.id);
+    if (upErr) { console.error('Журнал записан, но не обновилась партия:', upErr); showNotice('Запись сохранена, но счётчики партии не обновились. Не повторяйте ввод — сообщите начальнику смены.'); return false; }
+    Object.assign(batch, upd);
+    sentSnapshot = {...target};
+  }
+  myDeltaKg += goodDelta;
+  local.defects = []; local.dust = []; saveLocal();
+  renderDefects(); renderDust();
+  if (local.shiftAccepted) loadLineProgressFromCloud().catch(e => console.error("Не удалось обновить прогресс после отправки:", e));
+  return true;
+}
+
+async function sendCheckpoint(silent = false) {
+  if (busy) return;
+  if (!batch) { showNotice('Сначала откройте партию!'); return; }
+  if (pendingDelta().kg === 0 && local.defects.length===0 && local.dust.length===0) {
+    if (!silent) showNotice('Нет новых данных для отправки'); return;
+  }
+  busy = true;
+  try {
+    if (await pushDelta('PRODUCTION')) {
+      if (!silent) {
+        const n = document.getElementById('lastSyncNotice');
+        n.classList.remove('hidden');
+        n.innerText = 'Отправлено в '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+        setTimeout(()=>n.classList.add('hidden'),5000);
+      }
+      updateBatchUI(); calculateProduction();
+    }
+  } finally { busy = false; }
+}
+
+// ===== Закрытие партии =====
+function openClosePartyModal() {
+  if (!batch) return;
+  const isMix = batch.package_type==='mix';
+  document.getElementById('closeBoxFields').classList.toggle('hidden', isMix);
+  document.getElementById('closeMixFields').classList.toggle('hidden', !isMix);
+  if (isMix) {
+    document.getElementById('closeComp1').value = Math.max(batch.last_comp1||0, activeComp==='comp1'?getCurrentInputValue():0);
+    document.getElementById('closeComp2').value = Math.max(batch.last_comp2||0, activeComp==='comp2'?getCurrentInputValue():0);
+    document.getElementById('closeFinished').value = Math.max(batch.last_finished||0, activeComp==='finished'?getCurrentInputValue():0);
+  } else {
+    document.getElementById('closeUnitTo').value = Math.max(batch.last_unit||0, getCurrentInputValue());
+  }
+  document.getElementById('closeLastBoxWeight').value = '';
+  document.getElementById('closeDust').value = '';
+  updateClosePreview();
+  ['closeComp1','closeComp2','closeFinished','closeUnitTo','closeLastBoxWeight'].forEach(id=>{
+    document.getElementById(id).oninput = updateClosePreview;
+  });
+  openModal('modalCloseBatch');
+}
+
+function closeTargets() {
+  if (batch.package_type==='mix') {
+    return {
+      last_unit: 0,
+      last_comp1: parseInt(document.getElementById('closeComp1').value)||0,
+      last_comp2: parseInt(document.getElementById('closeComp2').value)||0,
+      last_finished: parseInt(document.getElementById('closeFinished').value)||0
+    };
+  }
+  return { last_unit: parseInt(document.getElementById('closeUnitTo').value)||0, last_comp1:0,last_comp2:0,last_finished:0 };
+}
+
+function updateClosePreview() {
+  if (!batch) return;
+  const t = closeTargets();
+  const lw = parseFloat(document.getElementById('closeLastBoxWeight').value)||20;
+  const snap = sentSnapshot||{last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
+  let kg = batch.package_type==='mix'
+    ? Math.max(0,t.last_comp1-(snap.last_comp1||0))*20 + Math.max(0,t.last_comp2-(snap.last_comp2||0))*20 + Math.max(0,t.last_finished-(snap.last_finished||0))*20
+    : Math.max(0,t.last_unit-(snap.last_unit||0))*20;
+  const hasNew = batch.package_type==='mix' ? t.last_finished>(snap.last_finished||0) : t.last_unit>(snap.last_unit||0);
+  if (lw!==20 && hasNew) kg = kg-20+lw;
+  // Предварительный информационный блок удалён по согласованному UX-решению.
+}
+
+async function closeBatch() {
+  if (busy) return;
+  const t = closeTargets();
+  const snap = sentSnapshot||{last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
+  if (batch.package_type==='mix') {
+    if (t.last_comp1<(batch.last_comp1||0)||t.last_comp2<(batch.last_comp2||0)||t.last_finished<(batch.last_finished||0)) {
+      showNotice('Номер не может быть меньше уже зафиксированного!'); return;
+    }
+    if (t.last_comp1+t.last_comp2+t.last_finished===0) { showNotice('Партия пустая — укажите номера'); return; }
+  } else {
+    if (t.last_unit<(batch.last_unit||0)) { showNotice('Номер не может быть меньше уже зафиксированного!'); return; }
+    if (t.last_unit===0) { showNotice('Укажите номер последней коробки'); return; }
+  }
+  const lw = parseFloat(document.getElementById('closeLastBoxWeight').value)||20;
+  if (lw<=0||lw>20) { showNotice('Вес последней коробки: от 0 до 20 кг'); return; }
+  const extraDust = parseFloat(document.getElementById('closeDust').value)||0;
+
+  busy = true;
+  const btn = document.getElementById('btnCloseBatch'); btn.innerText='Закрытие...';
+  try {
+    if (await pushDelta('PARTY_CLOSE', { target: t, lastWeight: lw, extraDust })) {
+      showNotice('Партия закрыта! Выработка засчитана в вашу смену.');
+      batch = null; myBaseline = null; sentSnapshot = null;
+      closeModal('modalCloseBatch');
+      updateBatchUI(); calculateProduction(); renderFoundBatch();
+    }
+  } finally { busy = false; btn.innerText='Подтвердить закрытие'; }
+}
+
+// ===== Брак / пыль =====
+function addDefect() {
+  const s = parseInt(document.getElementById('defStart').value), e = parseInt(document.getElementById('defEnd').value);
+  if (s && e && e>=s) {
+    local.defects.push({from:s,to:e,count:e-s+1,kg:(e-s+1)*UNIT_WEIGHT});
+    document.getElementById('defStart').value=''; document.getElementById('defEnd').value='';
+    saveLocal(); renderDefects(); calculateProduction();
+  } else showNotice('Укажите корректный диапазон');
+}
+function renderDefects() {
+  document.getElementById('badgeDefect').innerText = local.defects.reduce((s,d)=>s+d.kg,0)+' кг';
+  document.getElementById('defectList').innerHTML = local.defects.map((d,i)=>
+    `<div class="flex justify-between text-[#fca5a5]"><span>#${d.from}-#${d.to} (${d.count} шт = ${d.kg} кг)</span><span class="cursor-pointer font-bold" onclick="removeDefect(${i})">✕</span></div>`).join('');
+}
+function removeDefect(i){ local.defects.splice(i,1); saveLocal(); renderDefects(); calculateProduction(); }
+
+function addDust() {
+  const v = parseFloat(document.getElementById('dustInput').value);
+  if (v && v>0) { local.dust.push(v); document.getElementById('dustInput').value=''; saveLocal(); renderDust(); }
+}
+function renderDust() {
+  document.getElementById('badgeDust').innerText = local.dust.reduce((s,d)=>s+d,0).toFixed(1)+' кг';
+  document.getElementById('dustList').innerHTML = local.dust.map((d,i)=>
+    `<div class="flex justify-between text-[#94a3b8]"><span>Мешок #${i+1}: ${d} кг</span><span class="cursor-pointer font-bold" onclick="removeDust(${i})">✕</span></div>`).join('');
+}
+function removeDust(i){ local.dust.splice(i,1); saveLocal(); renderDust(); }
+
+// ===== Сдача смены =====
+function openSummary() {
+  const si = getShiftInfo();
+  const goodKg = myKgForDisplay();
+  const earned = goodKg * EARNING_RATE;
+  const dustKg = local.dust.reduce((s,d)=>s+d,0);
+  document.getElementById('summaryRows').innerHTML = `
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Линия / Смена:</span><b>№${local.line} (${si.name})</b></div>
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Оператор:</span><b>${local.operator}</b></div>
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Партия:</span><b>${batch?batch.batch_number+' (останется открытой)':'нет открытой'}</b></div>
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Код продукта:</span><b>${batch?(batch.product_code||'—'):'—'}</b></div>
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Ваша выработка:</span><b class="text-[#34d399]">${goodKg} кг</b></div>
+    <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Пыль:</span><b>${dustKg.toFixed(1)} кг</b></div>
+    <div class="flex justify-between py-1"><span class="text-gray-400">Стимулирующие выплаты:</span><b class="text-[#38bdf8]">${Math.round(earned)} ₽</b></div>`;
+  openModal('modalSummary');
+}
+
+async function submitFinalShift() {
+  if (busy) return; busy = true;
+  const btn = document.getElementById('btnFinalShift'); btn.innerText='Отправка...';
+  try {
+    if (await pushDelta('SHIFT_CLOSE')) {
+      showNotice('Смена сдана!'+(batch?' Партия остаётся открытой для следующего оператора.':''));
+      closeModal('modalSummary');
+      local.shiftAccepted=false; local.operator=''; local.defects=[]; local.dust=[]; local.handoverStatus=null;
+      saveLocal();
+      setTimeout(()=>location.reload(),1200);
+    }
+  } finally { busy=false; btn.innerText='Подтвердить и сдать'; }
+}
+
+// ===== Статистика =====
+function openStatsModal() {
+  const op = local.operator || document.getElementById('operatorName').value.trim();
+  if (!op) { showNotice('Сначала введите фамилию!'); return; }
+  document.getElementById('statsOperatorName').value = op;
+  openModal('statsModal'); loadStats();
+}
+
+async function loadStats() {
+  const op = document.getElementById('statsOperatorName').value;
+  const from = document.getElementById('customDateFrom').value, to = document.getElementById('customDateTo').value;
+  if (!op||!from||!to) return;
+  try {
+    const { data, error } = await client.from('shift_reports').select('*')
+      .eq('operator_name', op).in('event_type',['SHIFT_CLOSE','PARTY_CLOSE','PRODUCTION'])
+      .gte('created_at', from+'T00:00:00').lte('created_at', to+'T23:59:59');
+    if (error) throw error;
+    const rows = data||[];
+    const shifts = rows.filter(r=>r.event_type==='SHIFT_CLOSE');
+    let day=0,night=0;
+    shifts.forEach(r=>{ const h=new Date(r.created_at).getHours(); (h>=8&&h<20)?day++:night++; });
+    // кг: новые записи считаем по дельтам, старые (без shift_key) — по снимку SHIFT_CLOSE/PARTY_CLOSE
+    let kg=0;
+    rows.forEach(r=>{
+      if (r.shift_key) {
+        kg += (+r.delta_comp1_kg||0)+(+r.delta_comp2_kg||0)+(+r.delta_finished_kg||0)+(+r.delta_boxes_kg||0)-(+r.defect_kg||0);
+      } else if (r.event_type!=='PRODUCTION') {
+        const k=+r.total_good_kg||0; kg+=k;
+      }
+    });
+    const earned = Math.max(0, kg) * EARNING_RATE;
+    document.getElementById('stDayShifts').innerText = day;
+    document.getElementById('stNightShifts').innerText = night;
+    document.getElementById('stPaintKg').innerText = Math.max(0,kg).toLocaleString('ru-RU')+' кг';
+    document.getElementById('stEarnedRub').innerText = (Math.round(earned*100)/100).toLocaleString('ru-RU')+' ₽';
+  } catch(e){ console.error(e); }
+}
+
+async function loadPlanFromCloud() {
+  try {
+    const si = getShiftInfo();
+    const { data, error } = await client.from('shift_plans').select('plan_kg')
+      .eq('plan_date', si.planDate).eq('shift', si.name).eq('line_number', local.line).limit(1);
+    if (error) throw error;
+    local.planKg = (data && data.length && data[0].plan_kg) ? Number(data[0].plan_kg) : 0;
+    saveLocal();
+    await loadLineProgressFromCloud();
+  } catch(e) {
+    console.error('Не удалось загрузить план линии:', e);
+  }
+}
+
+async function loadLineProgressFromCloud() {
+  const si = getShiftInfo();
+  const { data, error } = await client.from('shift_reports').select('total_good_kg')
+    .eq('line_number', local.line).eq('shift_key', si.key)
+    .in('event_type', ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE']);
+  if (error) throw error;
+  const lineKg = (data || []).reduce((sum, row) => sum + (Number(row.total_good_kg) || 0), 0);
+  const planKg = Number(local.planKg) || 0;
+  const percent = planKg > 0 ? Math.round(lineKg / planKg * 100) : 0;
+  const remaining = Math.max(0, planKg - lineKg);
+
+  document.getElementById('linePlanTarget').innerText = planKg.toLocaleString('ru-RU') + ' кг';
+  document.getElementById('linePlanFact').innerText = lineKg.toLocaleString('ru-RU') + ' кг';
+  document.getElementById('linePlanPercent').innerText = planKg > 0 ? percent + '%' : '—';
+  document.getElementById('linePlanProgressBar').style.width = Math.min(100, percent) + '%';
+  document.getElementById('linePlanProgressBar').style.background = percent >= 100 ? '#fbbf24' : '#10b981';
+  const lang = getPrimatekLanguage();
+  const remainingLabel = lang === 'uz' ? 'Qoldi:' : lang === 'tg' ? 'Боқӣ монд:' : 'Осталось:';
+  document.getElementById('linePlanRemaining').innerText = planKg > 0
+    ? (remaining > 0 ? remainingLabel + ' ' + remaining.toLocaleString('ru-RU') + ' кг' : 'План выполнен!')
+    : 'План на эту смену ещё не задан';
+}
+
+let operatorRealtimeChannel = null;
+function startOperatorRealtime() {
+  if (operatorRealtimeChannel) return;
+  operatorRealtimeChannel = client.channel('operator-line-plan-progress')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_plans' }, () => {
+      if (local.shiftAccepted) loadPlanFromCloud();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_reports' }, payload => {
+      if (local.shiftAccepted && payload.new && Number(payload.new.line_number) === Number(local.line)) {
+        loadLineProgressFromCloud().catch(e => console.error('Не удалось обновить прогресс линии:', e));
+      }
+    })
+    .subscribe();
+}
+
+/* ===== PRIMATEK interface language =====
+   UI-only translation. Operational values stored in Supabase remain canonical Russian. */
+const PRIMATEK_I18N = {
+  uz: {
+    "Введите PIN-код":"PIN-kodni kiriting","Для входа в приложение оператора":"Operator ilovasiga kirish uchun","Войти":"Kirish","Проверка...":"Tekshirilmoqda...","Введите четыре цифры.":"To‘rtta raqamni kiriting.","Неверный PIN-код. Попробуйте ещё раз.":"PIN-kod noto‘g‘ri. Qayta urinib ko‘ring.","Слишком много попыток. Подождите 10 минут.":"Urinishlar soni oshib ketdi. 10 daqiqa kuting.","Не удалось проверить PIN. Проверьте соединение.":"PIN-kodni tekshirib bo‘lmadi. Internet aloqasini tekshiring.","ПОНЯТНО":"TUSHUNARLI","СМЕНА: —":"SMENA: —","Выработка":"Ishlab chiqarish",
+    "Приём смены и выбор линии":"Smenani qabul qilish va liniyani tanlash",
+    "ФИО Оператора":"Operatorning F.I.Sh.","Оператор, пиши сюда фамилию и имя":"Operator, familiya va ismingizni shu yerga yozing",
+    "Открытая партия на линии":"Liniyadagi ochiq partiya","Открытой партии нет — после приёмки откройте новую.":"Ochiq partiya yo‘q — smenani qabul qilgach, yangi partiya oching.",
+    "Статус линии при приёмке":"Smenani qabul qilishdagi liniya holati",
+    "В РАБОТЕ":"ISHLAMOQDA","ЧИСТКА":"TOZALASH","ПРОБЫ":"SINOV","РЕМОНТ":"TA’MIR",
+    "Причина ремонта":"Ta’mirlash sababi","Выберите причину...":"Sababni tanlang...",
+    "Замена сита":"Elakni almashtirish","Фасовка":"Qadoqlash","Нижний дозатор":"Pastki dozator","Кулер":"Sovitgich","Фидер":"Ta’minlagich","Остановка шнеков":"Shneklarning to‘xtashi","Ошибка на пульте":"Boshqaruv panelidagi xato",
+    "ПРИНЯТЬ СМЕНУ":"SMENANI QABUL QILISH","Выберите линию, введите ФИО и статус":"Liniyani tanlang, F.I.Sh. va holatni kiriting",
+    "Изменить ✎":"O‘zgartirish ✎","ВЫРАБОТКА ЗА СМЕНУ":"SMENADAGI ISHLAB CHIQARISH","СТИМУЛИРУЮЩИЕ ВЫПЛАТЫ":"RAG‘BATLANTIRISH TO‘LOVLARI",
+    "Расчёт: произведённые килограммы × 0,5 ₽":"Hisob: ishlab chiqarilgan kilogramm × 0,5 ₽",
+    "ПЛАН ВЫПОЛНЕНИЯ":"REJA BAJARILISHI","ВЫПОЛНЕНИЕ ПЛАНА":"REJA BAJARILISHI","Код продукта:":"Mahsulot kodi:","План линии":"Liniya rejasi","Факт линии":"Liniya bo‘yicha amaldagi ishlab chiqarish","План на эту смену ещё не задан":"Bu smena uchun reja hali belgilanmagan","План выполнен!":"Reja bajarildi!",
+    "Текущий статус линии":"Liniyaning joriy holati","+ Открыть новую партию":"+ Yangi partiya ochish",
+    "Партия:":"Partiya:","RAL:":"RAL:","Номер последней выпущенной коробки":"Oxirgi ishlab chiqarilgan quti raqami",
+    "Сейчас делаю:":"Hozir ishlab chiqarilmoqda:","Готовая":"Tayyor mahsulot","Номер последнего мешка":"Oxirgi qop raqami",
+    "Отправить на дашборд":"Boshqaruv paneliga yuborish","Закрыть партию":"Partiyani yopish",
+    "Пыль":"Chang","СДАТЬ СМЕНУ И ОТПРАВИТЬ ОТЧЁТ":"SMENANI TOPSHIRISH VA HISOBOT YUBORISH",
+    "Открытие партии":"Partiyani ochish","Состояние производства":"Ishlab chiqarish holati","Новая партия":"Yangi partiya","Уже производится":"Allaqachon ishlab chiqarilmoqda","Новая партия: первая коробка будет № 1.":"Yangi partiya: birinchi quti № 1 bo‘ladi.","Партия уже существует на линии, но ещё не зарегистрирована в PRIMATEK. Укажите первый номер, который произведёте.":"Partiya liniyada allaqachon mavjud, ammo PRIMATEK’da hali ro‘yxatdan o‘tmagan. Ishlab chiqaradigan birinchi raqamingizni kiriting.","С какого номера начинаете вы?":"Siz qaysi raqamdan boshlaysiz?","Первая коробка моей выработки":"Mening ishlab chiqarishimdagi birinchi quti","Укажите номер первой коробки или мешка, который произведёте. Предыдущие единицы останутся в общей нумерации партии, но не попадут в вашу выработку.":"Ishlab chiqaradigan birinchi quti yoki qop raqamini kiriting. Oldingi birliklar partiyaning umumiy raqamlanishida qoladi, lekin sizning ishlab chiqarishingizga qo‘shilmaydi.","Укажите корректный номер первой производимой единицы.":"Birinchi ishlab chiqariladigan birlikning to‘g‘ri raqamini kiriting.","№ Партии":"Partiya №","Код продукта":"Mahsulot kodi","Введите код продукта":"Mahsulot kodini kiriting",
+    "Цвет RAL":"RAL rangi","Тип партии":"Partiya turi","Смешение":"Aralashtirish","Начать работу":"Ishni boshlash","Отмена":"Bekor qilish",
+    "Закрытие партии":"Partiyani yopish","Номер последней коробки":"Oxirgi quti raqami","Последний мешок 1 п/ф":"1-yarim mahsulotning oxirgi qopi",
+    "Последний мешок 2 п/ф":"2-yarim mahsulotning oxirgi qopi","Последняя коробка готовой краски":"Tayyor bo‘yoqning oxirgi qutisi",
+    "Вес последней коробки (если не 20 кг)":"Oxirgi qutining vazni (20 kg bo‘lmasa)","Пыль при закрытии, кг (необязательно)":"Yopishda chang, kg (ixtiyoriy)",
+    "Подтвердить закрытие":"Yopishni tasdiqlash","Сброс пыли":"Changni tushirish","Вес мешка (кг)":"Qop vazni (kg)","Добавить мешок":"Qopni qo‘shish","Готово":"Tayyor",
+    "Сводка сдачи смены":"Smenani topshirish hisoboti","Партия останется открытой для следующего оператора.":"Partiya keyingi operator uchun ochiq qoladi.",
+    "Подтвердить и сдать":"Tasdiqlash va topshirish","Назад":"Orqaga","Моя выработка":"Mening ishlab chiqarishim",
+    "С даты":"Boshlanish sanasi","По дату":"Tugash sanasi","Дневные смены":"Kunduzgi smenalar","Ночные смены":"Tungi smenalar",
+    "Произведено краски":"Ishlab chiqarilgan bo‘yoq","Закрыть":"Yopish","Ваша выработка:":"Sizning ishlab chiqarishingiz:",
+    "нет открытой":"ochiq partiya yo‘q","Смена сдана!":"Smena topshirildi!","Отправка...":"Yuborilmoqda...",
+    "Сначала введите фамилию!":"Avval familiyangizni kiriting!","Выберите причину поломки...":"Nosozlik sababini tanlang...",
+    "Причина:":"Sabab:","Начало:":"Boshlanishi:","Понятно":"Tushunarli",
+    "Не удалось сохранить статус линии. Проверьте соединение и попробуйте ещё раз.":"Liniya holatini saqlab bo‘lmadi. Internet aloqasini tekshirib, qayta urinib ko‘ring.",
+    "Не удалось зафиксировать начало ремонта. Проверьте соединение.":"Ta’mirlash boshlanishini qayd etib bo‘lmadi. Internet aloqasini tekshiring.",
+    "Не удалось сохранить причину ремонта. Попробуйте ещё раз.":"Ta’mirlash sababini saqlab bo‘lmadi. Qayta urinib ko‘ring."
+  },
+  tg: {
+    "Введите PIN-код":"Рамзи PIN-ро ворид кунед","Для входа в приложение оператора":"Барои ворид шудан ба барномаи оператор","Войти":"Ворид шудан","Проверка...":"Санҷиш...","Введите четыре цифры.":"Чор рақамро ворид кунед.","Неверный PIN-код. Попробуйте ещё раз.":"Рамзи PIN нодуруст аст. Бори дигар кӯшиш кунед.","Слишком много попыток. Подождите 10 минут.":"Шумораи кӯшишҳо зиёд шуд. 10 дақиқа интизор шавед.","Не удалось проверить PIN. Проверьте соединение.":"PIN санҷида нашуд. Пайвасти интернетро санҷед.","ПОНЯТНО":"ФАҲМО","СМЕНА: —":"СМЕНА: —","Выработка":"Истеҳсол",
+    "Приём смены и выбор линии":"Қабули баст ва интихоби хат",
+    "ФИО Оператора":"Ному насаби оператор","Оператор, пиши сюда фамилию и имя":"Оператор, насаб ва номатро ин ҷо навис",
+    "Открытая партия на линии":"Партияи кушода дар хат","Открытой партии нет — после приёмки откройте новую.":"Партияи кушода нест — баъди қабули баст партияи нав кушоед.",
+    "Статус линии при приёмке":"Ҳолати хат ҳангоми қабули баст",
+    "В РАБОТЕ":"ДАР КОР","ЧИСТКА":"ТOЗАКУНӢ","ПРОБЫ":"САНҶИШ","РЕМОНТ":"ТАЪМИР",
+    "Причина ремонта":"Сабаби таъмир","Выберите причину...":"Сабабро интихоб кунед...",
+    "Замена сита":"Иваз кардани элак","Фасовка":"Бастабандӣ","Нижний дозатор":"Дозатори поёнӣ","Кулер":"Сардкунанда","Фидер":"Ғизодиҳанда","Остановка шнеков":"Қатъ шудани шнекҳо","Ошибка на пульте":"Хатои панели идоракунӣ",
+    "ПРИНЯТЬ СМЕНУ":"ҚАБУЛИ БАСТ","Выберите линию, введите ФИО и статус":"Хатро интихоб кунед, ному насаб ва ҳолатро ворид кунед",
+    "Изменить ✎":"Тағйир додан ✎","ВЫРАБОТКА ЗА СМЕНУ":"ИСТЕҲСОЛИ БАСТ","СТИМУЛИРУЮЩИЕ ВЫПЛАТЫ":"ПАРДОХТҲОИ ҲАВАСМАНДГАРДОНӢ",
+    "Расчёт: произведённые килограммы × 0,5 ₽":"Ҳисоб: килограммҳои истеҳсолшуда × 0,5 ₽",
+    "Текущий статус линии":"Ҳолати ҷории хат","+ Открыть новую партию":"+ Кушодани партияи нав",
+    "Партия:":"Партия:","RAL:":"RAL:","Номер последней выпущенной коробки":"Рақами қуттии охирини истеҳсолшуда",
+    "Сейчас делаю:":"Ҳоло истеҳсол мекунам:","Готовая":"Маҳсулоти тайёр","Номер последнего мешка":"Рақами халтаи охирин",
+    "Отправить на дашборд":"Ба панели идоракунӣ фиристодан","Закрыть партию":"Пӯшидани партия",
+    "Пыль":"Ғубор","СДАТЬ СМЕНУ И ОТПРАВИТЬ ОТЧЁТ":"СУПОРИДАНИ БАСТ ВА ФИРИСТОДАНИ ҲИСОБОТ",
+    "Открытие партии":"Кушодани партия","Состояние производства":"Ҳолати истеҳсолот","Новая партия":"Партияи нав","Уже производится":"Аллакай истеҳсол мешавад","Новая партия: первая коробка будет № 1.":"Партияи нав: қуттии аввал № 1 мешавад.","Партия уже существует на линии, но ещё не зарегистрирована в PRIMATEK. Укажите первый номер, который произведёте.":"Партия аллакай дар хат мавҷуд аст, аммо дар PRIMATEK сабт нашудааст. Рақами аввалин воҳидеро, ки истеҳсол мекунед, ворид намоед.","С какого номера начинаете вы?":"Шумо аз кадом рақам оғоз мекунед?","Первая коробка моей выработки":"Қуттии аввалини истеҳсоли ман","Укажите номер первой коробки или мешка, который произведёте. Предыдущие единицы останутся в общей нумерации партии, но не попадут в вашу выработку.":"Рақами қуттӣ ё халтаи аввалинеро, ки истеҳсол мекунед, ворид кунед. Воҳидҳои қаблӣ дар рақамгузории умумии партия мемонанд, аммо ба истеҳсоли шумо дохил намешаванд.","Укажите корректный номер первой производимой единицы.":"Рақами дурусти воҳиди аввалини истеҳсолшавандаро ворид кунед.","№ Партии":"№ партия","Код продукта":"Рамзи маҳсулот","Введите код продукта":"Рамзи маҳсулотро ворид кунед",
+    "Цвет RAL":"Ранги RAL","Тип партии":"Навъи партия","Смешение":"Омехта","Начать работу":"Оғози кор","Отмена":"Бекор кардан",
+    "Закрытие партии":"Пӯшидани партия","Номер последней коробки":"Рақами қуттии охирин","Последний мешок 1 п/ф":"Халтаи охирини ниммаҳсулоти 1",
+    "Последний мешок 2 п/ф":"Халтаи охирини ниммаҳсулоти 2","Последняя коробка готовой краски":"Қуттии охирини рангҳои тайёр",
+    "Вес последней коробки (если не 20 кг)":"Вазни қуттии охирин (агар 20 кг набошад)","Пыль при закрытии, кг (необязательно)":"Ғубор ҳангоми пӯшидан, кг (ихтиёрӣ)",
+    "Подтвердить закрытие":"Тасдиқи пӯшидан","Сброс пыли":"Холӣ кардани ғубор","Вес мешка (кг)":"Вазни халта (кг)","Добавить мешок":"Илова кардани халта","Готово":"Тайёр",
+    "Сводка сдачи смены":"Ҷамъбасти супоридани баст","Партия останется открытой для следующего оператора.":"Партия барои оператори навбатӣ кушода мемонад.",
+    "Подтвердить и сдать":"Тасдиқ ва супоридан","Назад":"Бозгашт","Моя выработка":"Истеҳсоли ман",
+    "С даты":"Аз санаи","По дату":"То санаи","Дневные смены":"Бастҳои рӯзона","Ночные смены":"Бастҳои шабона",
+    "Произведено краски":"Ранги истеҳсолшуда","Закрыть":"Пӯшидан","Ваша выработка:":"Истеҳсоли шумо:",
+    "нет открытой":"партияи кушода нест","Смена сдана!":"Баст супорида шуд!","Отправка...":"Фиристода мешавад...",
+    "Сначала введите фамилию!":"Аввал насаби худро ворид кунед!","Выберите причину поломки...":"Сабаби вайрониро интихоб кунед...",
+    "Причина:":"Сабаб:","Начало:":"Оғоз:","Понятно":"Фаҳмо",
+    "ПЛАН ВЫПОЛНЕНИЯ":"ИҶРОИ НАҚША","ВЫПОЛНЕНИЕ ПЛАНА":"ИҶРОИ НАҚША","Код продукта:":"Рамзи маҳсулот:","План линии":"Нақшаи хат","Факт линии":"Истеҳсоли воқеии хат","План на эту смену ещё не задан":"Нақша барои ин баст ҳанӯз муқаррар нашудааст","План выполнен!":"Нақша иҷро шуд!",
+    "Не удалось сохранить статус линии. Проверьте соединение и попробуйте ещё раз.":"Ҳолати хат сабт нашуд. Пайвасти интернетро санҷида, бори дигар кӯшиш кунед.",
+    "Не удалось зафиксировать начало ремонта. Проверьте соединение.":"Оғози таъмир сабт нашуд. Пайвасти интернетро санҷед.",
+    "Не удалось сохранить причину ремонта. Попробуйте ещё раз.":"Сабаби таъмир сабт нашуд. Бори дигар кӯшиш кунед."
+  }
+};
+const PRIMATEK_LANG_KEY = 'primatek_language_v1';
+function getPrimatekLanguage() {
+  const saved = localStorage.getItem(PRIMATEK_LANG_KEY);
+  return ['ru','uz','tg'].includes(saved) ? saved : 'ru';
+}
+function setPrimatekLanguage(lang) {
+  if (!['ru','uz','tg'].includes(lang)) lang = 'ru';
+  localStorage.setItem(PRIMATEK_LANG_KEY, lang);
+  applyPrimatekLanguage();
+  if (local.shiftAccepted) loadLineProgressFromCloud().catch(e => console.error('Не удалось обновить перевод прогресса:', e));
+}
+const PRIMATEK_TEXT_STATE = new WeakMap();
+function applyPrimatekLanguage() {
+  const lang = getPrimatekLanguage();
+  const dict = PRIMATEK_I18N[lang] || {};
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let node;
+  while ((node = walker.nextNode())) {
+    const current = node.nodeValue;
+    if (!current.trim()) continue;
+    let state = PRIMATEK_TEXT_STATE.get(node);
+    if (!state) {
+      state = { original: current, lastTranslated: current };
+      PRIMATEK_TEXT_STATE.set(node, state);
+    } else if (current !== state.lastTranslated) {
+      // The application may have replaced this text during a live update.
+      state.original = current;
+    }
+    const leading = state.original.match(/^\s*/)[0];
+    const trailing = state.original.match(/\s*$/)[0];
+    const key = state.original.trim();
+    const nextValue = leading + (dict[key] || key) + trailing;
+    if (node.nodeValue !== nextValue) node.nodeValue = nextValue;
+    state.lastTranslated = nextValue;
+  }
+  document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
+    const original = el.getAttribute('data-primatek-placeholder') || el.placeholder;
+    if (!el.hasAttribute('data-primatek-placeholder')) el.setAttribute('data-primatek-placeholder', original);
+    el.placeholder = dict[original] || original;
+  });
+  const selector = document.getElementById('languageSelect');
+  if (selector && selector.value !== lang) selector.value = lang;
+}
+function initPrimatekLanguage() {
+  const selector = document.getElementById('languageSelect');
+  if (selector) selector.value = getPrimatekLanguage();
+  applyPrimatekLanguage();
+  const observer = new MutationObserver(() => applyPrimatekLanguage());
+  observer.observe(document.body, { childList:true, subtree:true, characterData:true });
+}
+initPrimatekLanguage();
+
+</script>
+</body>
+</html>
