@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRIMATEK — Панель начальника</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #070c18; color: #f8fafc; padding: 18px; }
+    .container { max-width: 1440px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+
+    .header { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 16px 22px; border-radius: 14px; border: 1px solid #1e293b; box-shadow: 0 4px 15px rgba(0,0,0,0.3); flex-wrap: wrap; gap: 14px; }
+    .header-left { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+    .header-info { display: flex; flex-direction: column; gap: 4px; }
+    .date-badge { font-size: 14px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .shift-badge { font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 6px; background: #172554; color: #38bdf8; border: 1px solid #1e40af; width: fit-content; }
+    
+    .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .btn-excel { background: #059669; color: #fff; border: none; padding: 9px 16px; border-radius: 8px; font-weight: 800; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.15s; }
+    .btn-excel:hover { background: #10b981; }
+    .btn-refresh { background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 9px 14px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .btn-refresh:hover { background: #334155; }
+    
+    .shift-select { background: #070c18; border: 1px solid #334155; color: #fff; padding: 8px 12px; border-radius: 8px; font-weight: 700; font-size: 13px; outline: none; cursor: pointer; }
+    
+    .sync-time { font-size: 11px; color: #64748b; display: flex; flex-direction: column; }
+    .sync-err { font-size: 10px; color: #ef4444; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; display: inline-block; margin-right: 4px; animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+    .summary-grid { display: grid; grid-template-columns: 1.4fr 1.4fr 1.6fr 1fr 1fr 1.4fr; gap: 12px; }
+    @media (max-width: 1200px) { .summary-grid { grid-template-columns: 1fr 1fr 1fr; } }
+    @media (max-width: 700px) { .summary-grid { grid-template-columns: 1fr 1fr; } }
+    
+    .summary-card { background: #0f172a; border-radius: 12px; padding: 14px 18px; border: 1px solid #1e293b; display: flex; flex-direction: column; justify-content: space-between; border-left: 4px solid #334155; }
+    .card-title { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .card-val { font-size: 26px; font-weight: 900; color: #fff; }
+    .card-sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+    .plan-input-group { display: flex; align-items: center; gap: 6px; }
+    .plan-input { width: 120px; background: #070c18; border: 1px solid #334155; border-radius: 6px; padding: 4px 8px; color: #38bdf8; font-weight: 900; font-size: 18px; text-align: right; outline: none; }
+    .plan-input:focus { border-color: #0072ce; }
+    .btn-save-plan { background: #0072ce; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 800; cursor: pointer; }
+    .btn-save-plan:hover { background: #0284c7; }
+
+    .progress-bar-bg { width: 100%; height: 7px; background: #1e293b; border-radius: 4px; overflow: hidden; margin-top: 6px; }
+    .progress-bar-fill { height: 100%; background: #10b981; width: 0%; transition: width 0.4s; }
+
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; margin-bottom: 2px; }
+    .section-title { font-size: 16px; font-weight: 900; color: #f8fafc; letter-spacing: 0.4px; }
+    
+    .lines-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    @media (max-width: 1200px) { .lines-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 650px) { .lines-grid { grid-template-columns: 1fr; } }
+
+    .line-card { background: #0f172a; border-radius: 14px; padding: 16px; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 10px; transition: transform 0.15s, border-color 0.15s; }
+    .line-card:hover { border-color: #334155; transform: translateY(-2px); }
+    .line-card-top { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
+    .line-num { font-size: 20px; font-weight: 900; color: #fff; }
+
+    .status-badge { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .st-work { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .st-work .status-dot { background: #34d399; box-shadow: 0 0 8px #34d399; }
+    .st-clean { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .st-clean .status-dot { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
+    .st-sample { background: rgba(2, 132, 199, 0.15); color: #38bdf8; border: 1px solid rgba(2, 132, 199, 0.3); }
+    .st-sample .status-dot { background: #38bdf8; box-shadow: 0 0 8px #38bdf8; }
+    .st-repair { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .st-repair .status-dot { background: #f87171; box-shadow: 0 0 8px #f87171; }
+    .st-idle { background: #1e293b; color: #64748b; border: 1px solid #334155; }
+    .st-idle .status-dot { background: #64748b; }
+
+    .line-details { font-size: 13px; color: #94a3b8; display: flex; flex-direction: column; gap: 4px; }
+    .line-details b { color: #f8fafc; font-weight: 700; }
+    .ral-tag { background: #1e293b; color: #38bdf8; font-weight: 800; padding: 2px 7px; border-radius: 5px; font-size: 12px; border: 1px solid #334155; }
+
+    .line-output-box { background: #070c18; border: 1px solid #1e293b; border-radius: 10px; padding: 12px; text-align: center; display: flex; flex-direction: column; gap: 3px; }
+    .output-label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    .output-val { font-size: 24px; font-weight: 900; color: #34d399; }
+    .output-chips { font-size: 13px; font-weight: 800; color: #fbbf24; margin-top: 2px; }
+    .output-sub { font-size: 12px; color: #94a3b8; font-weight: 700; }
+    .output-time { font-size: 11px; color: #475569; margin-top: 2px; }
+
+    .line-plan-block { background: #070c18; border: 1px solid #1e293b; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+    .line-plan-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+    .line-plan-label { color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 10px; }
+    .line-plan-fact { color: #34d399; font-weight: 900; font-size: 14px; }
+    .line-plan-percent { color: #38bdf8; font-weight: 800; font-size: 12px; }
+    .line-progress-bg { width: 100%; height: 6px; background: #1e293b; border-radius: 3px; overflow: hidden; }
+    .line-progress-fill { height: 100%; background: #10b981; width: 0%; transition: width 0.4s; }
+    .line-progress-fill.gold { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+
+    .line-plan-input { background: transparent; border: 1px dashed #334155; color: #fff; font-weight: 900; width: 60px; text-align: right; outline: none; padding: 2px 4px; border-radius: 4px; font-size: 13px; }
+    .line-plan-input:focus { border-color: #0072ce; background: #0f172a; }
+    .btn-save-mini { background: #10b981; color: #fff; border: none; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 11px; font-weight: bold; display: none; }
+
+    .oem-total-card { background: #0f172a; border-radius: 12px; padding: 14px 18px; border: 1px solid #1e293b; border-left: 4px solid #6366f1; display: flex; flex-direction: column; justify-content: space-between; }
+    .oem-total-title { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .oem-total-value { font-size: 18px; font-weight: 900; color: #475569; font-style: italic; }
+
+    .table-card { background: #0f172a; border-radius: 14px; padding: 20px; border: 1px solid #1e293b; }
+    .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
+    .tabs-group { display: flex; gap: 6px; background: #070c18; padding: 4px; border-radius: 8px; border: 1px solid #1e293b; }
+    .tab-btn { padding: 6px 12px; font-size: 12px; font-weight: 800; border-radius: 6px; color: #64748b; cursor: pointer; border: none; background: transparent; }
+    .tab-btn.active { background: #0072ce; color: #fff; }
+    .filters-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .filter-select, .search-input { background: #070c18; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; color: #fff; font-size: 13px; outline: none; }
+    .search-input { width: 240px; }
+    
+    .scroll-table { overflow-x: auto; max-height: 440px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    th { background: #1e293b; color: #94a3b8; padding: 12px 14px; font-weight: 700; position: sticky; top: 0; z-index: 2; white-space: nowrap; }
+    td { padding: 12px 14px; border-bottom: 1px solid #1e293b; color: #cbd5e1; white-space: nowrap; }
+    tr:hover td { background: #172554; }
+    .tag-range { color: #facc15; font-family: monospace; font-weight: 800; background: rgba(250, 204, 21, 0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(250, 204, 21, 0.2); }
+  
+    /* Единый стиль уведомлений PRIMATEK */
+    #primatekNotice{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(2,6,23,.72);backdrop-filter:blur(5px);opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s ease}
+    #primatekNotice.show{opacity:1;visibility:visible}
+    #primatekNoticeCard{position:relative;width:min(100%,520px);min-height:280px;display:grid;grid-template-columns:minmax(115px,.9fr) 1.1fr;align-items:center;gap:16px;padding:26px 22px;border:2px solid #315b91;border-radius:26px;background:linear-gradient(145deg,#1a2944,#0b1426);box-shadow:0 24px 80px rgba(0,0,0,.72);transform:scale(.94) translateY(10px);transition:transform .22s ease;pointer-events:auto}
+    #primatekNotice.show #primatekNoticeCard{transform:scale(1) translateY(0)}
+    #primatekNotice.success #primatekNoticeCard{border-color:#10b981}
+    #primatekNotice.warning #primatekNoticeCard{border-color:#f59e0b}
+    #primatekNotice.error #primatekNoticeCard{border-color:#ef4444}
+    #primatekNotice.info #primatekNoticeCard{border-color:#38bdf8}
+    #primatekNoticeCard{align-items:center}
+    #primatekNoticeMascot{width:100%;max-width:210px;align-self:center;display:flex;align-items:center;justify-content:center;background:transparent}
+    #primatekNoticeMascot img{display:block;width:100%;height:auto;max-height:260px;object-fit:contain;object-position:center}
+     #primatekNoticeMascot{align-self:center;align-items:center}
+     #primatekNoticeMascot img{transform-origin:50% 85%;transition:filter .25s ease,transform .25s ease}
+     #primatekNoticeMascot[data-mood="success"] img{animation:mascotSuccess .65s ease both;filter:drop-shadow(0 5px 14px rgba(16,185,129,.28))}
+     #primatekNoticeMascot[data-mood="warning"] img{animation:mascotWarning .55s ease both;filter:drop-shadow(0 5px 14px rgba(245,158,11,.25))}
+     #primatekNoticeMascot[data-mood="error"] img{animation:mascotError .42s ease both;filter:drop-shadow(0 5px 14px rgba(239,68,68,.28))}
+     #primatekNoticeMascot[data-mood="info"] img{animation:mascotInfo .7s ease both;filter:drop-shadow(0 5px 14px rgba(56,189,248,.22))}
+     @keyframes mascotSuccess{0%{transform:translateY(8px) scale(.94)}55%{transform:translateY(-7px) scale(1.035)}100%{transform:translateY(0) scale(1)}}
+     @keyframes mascotWarning{0%{transform:rotate(0)}30%{transform:rotate(-5deg)}65%{transform:rotate(4deg)}100%{transform:rotate(0)}}
+     @keyframes mascotError{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+     @keyframes mascotInfo{0%{transform:translateY(5px) scale(.97)}50%{transform:translateY(-4px) scale(1.02)}100%{transform:translateY(0) scale(1)}}
+    #primatekNoticeContent{min-width:0;text-align:left;padding:16px 0}
+    #primatekNoticeMark{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:32px;font-weight:900;margin-bottom:14px;background:#064e3b;color:#6ee7b7}
+    #primatekNotice.warning #primatekNoticeMark{background:#78350f;color:#fde68a}
+    #primatekNotice.error #primatekNoticeMark{background:#7f1d1d;color:#fecaca}
+    #primatekNotice.info #primatekNoticeMark{background:#0c4a6e;color:#bae6fd}
+    #primatekNoticeTitle{font-size:clamp(17px,4vw,22px);font-weight:900;letter-spacing:.01em;color:#6ee7b7;margin:0 0 10px}
+    #primatekNotice.warning #primatekNoticeTitle{color:#fcd34d}
+    #primatekNotice.error #primatekNoticeTitle{color:#fca5a5}
+    #primatekNotice.info #primatekNoticeTitle{color:#7dd3fc}
+    #primatekNoticeText{font-size:clamp(14px,3.6vw,17px);line-height:1.45;color:#f8fafc;overflow-wrap:anywhere}
+    #primatekNoticeClose{margin-top:20px;min-width:130px;border:0;border-radius:12px;padding:12px 20px;background:#059669;color:#fff;font-size:14px;font-weight:900}
+    #primatekNotice.warning #primatekNoticeClose{background:#b45309}
+    #primatekNotice.error #primatekNoticeClose{background:#b91c1c}
+    #primatekNotice.info #primatekNoticeClose{background:#0369a1}
+    #primatekNotice.hidden{display:none}
+    @media(max-width:430px){#primatekNotice{padding:12px}#primatekNoticeCard{grid-template-columns:minmax(105px,.82fr) 1.18fr;gap:10px;padding:20px 14px;min-height:245px}#primatekNoticeMascot img{max-height:230px}#primatekNoticeMark{width:42px;height:42px;font-size:25px;margin-bottom:10px}#primatekNoticeClose{margin-top:14px;min-width:110px;padding:10px 12px}}
+</style>
+</head>
+<body>
+<div id="primatekNotice" class="hidden" role="status" aria-live="polite"><div id="primatekNoticeCard"><div id="primatekNoticeMascot" aria-hidden="true"><img src="https://raw.githubusercontent.com/gurusveta/primatek/main/assets/mascot-neutral.png" alt="Маскот PRIMATEK"></div><div class="min-w-0 flex-1"><div id="primatekNoticeContent"><div id="primatekNoticeMark" aria-hidden="true">✓</div><div id="primatekNoticeTitle">PRIMATEK</div><div id="primatekNoticeText"></div><button id="primatekNoticeClose" onclick="hideNotice()">ПОНЯТНО</button></div></div></div></div>
+
+<div class="container">
+  
+  <div class="header">
+    <div class="header-left">
+      <svg width="195" height="42" viewBox="0 0 230 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="6" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.5"/><circle cx="16" cy="11" r="3.2" fill="#0072ce" fill-opacity="0.8"/><circle cx="26" cy="11" r="3.2" fill="#0072ce"/>
+        <circle cx="6" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.6"/><circle cx="16" cy="22" r="3.2" fill="#0072ce" fill-opacity="0.9"/><circle cx="26" cy="22" r="3.2" fill="#0072ce"/>
+        <circle cx="6" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.4"/><circle cx="16" cy="33" r="3.2" fill="#0072ce" fill-opacity="0.7"/><circle cx="26" cy="33" r="3.2" fill="#0072ce"/>
+        <text x="36" y="34" font-family="'Arial Black', sans-serif" font-weight="900" font-size="31" fill="#0072ce" letter-spacing="1">PRIMATEK</text>
+        <text x="38" y="47" font-family="Arial, sans-serif" font-weight="600" font-size="8" fill="#94a3b8" letter-spacing="0.8">ИННОВАЦИИ В ПОКРЫТИЯХ</text>
+      </svg>
+      
+      <div class="header-info">
+        <div class="date-badge" id="currentDateText">Загрузка даты...</div>
+        <div class="flex items-center gap-2">
+          <div class="shift-badge" id="currentShiftBadge">СМЕНА: ДЕНЬ</div>
+          <select id="supervisorSelect" class="shift-select" onchange="saveSupervisor()">
+            <option value="">Начальник смены...</option>
+            <option value="Шарапов">Шарапов</option>
+            <option value="Токин">Токин</option>
+            <option value="Крылова">Крылова</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="sync-time" id="lastSyncTime">
+        <div><span class="live-dot"></span> Онлайн (Realtime)</div>
+        <div id="syncErrorMsg" class="sync-err hidden"></div>
+      </div>
+      <button class="btn-refresh" onclick="loadDashboardData()">Обновить</button>
+      <button class="btn-excel" onclick="exportToExcel()">Скачать смены в Excel</button>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card" style="border-left-color: #6366f1;">
+      <div class="card-title">ПЛАН НА СМЕНУ (ЦЕХ)</div>
+      <div class="plan-input-group">
+        <input type="number" id="shiftPlanInput" class="plan-input" value="20000" step="500">
+        <span style="font-weight: 800; font-size: 16px; color:#fff;">кг</span>
+        <button class="btn-save-plan" onclick="saveGeneralPlan()">Сохранить</button>
+      </div>
+      <div class="card-sub" id="planRemainingSub">Общий план для отчетности</div>
+    </div>
+
+    <div class="summary-card" style="border-left-color: #38bdf8;">
+      <div class="card-title">ИЗГОТОВЛЕНО ПО ФАКТУ</div>
+      <div class="card-val" id="sumLiveKg" style="color: #38bdf8;">0 кг</div>
+      <div class="card-sub" id="sumLivePcs">0 кор./меш. краски</div>
+    </div>
+
+    <div class="summary-card" style="border-left-color: #10b981;">
+      <div class="card-title">
+        <span>ВЫПОЛНЕНИЕ ПЛАНА</span>
+        <span id="sumPlanPercent" style="color: #34d399; font-weight: 900; font-size: 14px;">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div id="sumProgressBar" class="progress-bar-fill"></div>
+      </div>
+      <div class="card-sub" id="sumPaceText">Идет учет текущей смены</div>
+    </div>
+
+    <div class="summary-card" style="border-left-color: #ef4444;">
+      <div class="card-title">БРАК ЗА СМЕНУ</div>
+      <div class="card-val" id="sumDefectKg" style="color: #f87171;">0 кг</div>
+      <div class="card-sub" id="sumDefectBoxes">0 коробок</div>
+    </div>
+
+    <div class="summary-card" style="border-left-color: #f59e0b;">
+      <div class="card-title">ЧИПСЫ / П-Ф ЗА СМЕНУ</div>
+      <div class="card-val" id="sumChipsKg" style="color: #fbbf24;">0 кг</div>
+      <div class="card-sub" id="sumDustKg">Пыль: 0 кг</div>
+    </div>
+
+    <div class="oem-total-card">
+      <div class="oem-total-title">OEM ПО ЦЕХУ</div>
+      <div class="oem-total-value">в разработке</div>
+      <div class="card-sub" style="color: #6366f1;">Доступность линий</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-header">
+      <div class="section-title">Текущее состояние линий <span class="live-dot"></span></div>
+      <span style="font-size: 12px; color: #64748b;">Данные обновляются в реальном времени</span>
+    </div>
+    <div class="lines-grid" id="linesGrid"></div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-toolbar">
+      <div>
+        <div style="font-size: 16px; font-weight: 900; color: #fff;">Журнал событий (Архив)</div>
+        <div style="font-size: 11px; color: #64748b;">Закрытые партии и сданные смены</div>
+      </div>
+      
+      <div class="filters-group">
+        <div class="tabs-group">
+          <button id="tab-shifts" class="tab-btn active" onclick="setArchiveTab('shifts')">Смены</button>
+          <button id="tab-parties" class="tab-btn" onclick="setArchiveTab('parties')">Партии</button>
+        </div>
+        <select id="filterLine" class="filter-select" onchange="filterShiftsTable()">
+          <option value="all">Все линии</option>
+        </select>
+        <input type="text" id="searchInput" class="search-input" placeholder="Поиск (оператор, RAL, партия)..." oninput="filterShiftsTable()">
+      </div>
+    </div>
+
+    <div class="scroll-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Время</th>
+            <th>Линия</th>
+            <th>Оператор</th>
+            <th>Партия</th>
+            <th>Код продукта</th>
+            <th>Цвет RAL</th>
+            <th>Диапазон</th>
+            <th>Краска (кг)</th>
+            <th>Чипсы / П-ф</th>
+            <th>Брак</th>
+            <th>Пыль</th>
+            <th>План (кг)</th>
+            <th>Вып. плана (%)</th>
+            <th>Смена</th>
+          </tr>
+        </thead>
+        <tbody id="shiftsTableBody">
+          <tr><td colspan="14" style="text-align: center; color: #64748b; padding: 25px;">Загрузка истории...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const SUPABASE_URL = "https://oqhrzruxubqthqyxmdcg.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_m5YmzYjW1BpotrbaRpCdgA__kYvilf3";
+  const PRIMATEK_LINES = [1, 5, 6, 7, 8, 13, 14, 15];
+
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let rawReports = [];
+  let rawBatches = [];
+  let allBatches = [];
+  let rawPlans = [];
+  let currentArchiveTab = 'shifts';
+  let shiftPlanKg = 0;
+  let totalGeneralPlanKg = 0;
+  let dashboardRefreshInProgress = false;
+
+  window.onload = () => {
+    populateLineFilter();
+    updateDateAndShiftDisplay();
+    loadDashboardData();
+    setupRealtime();
+    // Длительность активного ремонта обновляется на карточках каждую минуту.
+    // Realtime остаётся основным каналом; таймер — резервная синхронизация раз в 30 секунд.
+    setInterval(() => {
+      updateDateAndShiftDisplay();
+      loadDashboardData();
+    }, 30000);
+    setInterval(() => {
+      if (rawReports.length) renderLiveLineCards();
+    }, 60000);
+    
+    const savedSup = localStorage.getItem('primatek_supervisor');
+    if (savedSup) document.getElementById('supervisorSelect').value = savedSup;
+  };
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      updateDateAndShiftDisplay();
+      loadDashboardData();
+    }
+  });
+  window.addEventListener("focus", () => loadDashboardData());
+
+  function saveSupervisor() {
+    const val = document.getElementById('supervisorSelect').value;
+    localStorage.setItem('primatek_supervisor', val);
+  }
+
+  function populateLineFilter() {
+    const sel = document.getElementById('filterLine');
+    sel.innerHTML = '<option value="all">Все линии</option>' +
+      PRIMATEK_LINES.map(l => `<option value="${l}">Линия №${l}</option>`).join('');
+  }
+
+  function getCurrentShiftInfo() {
+    const now = new Date();
+    const h = now.getHours();
+    let start = new Date(now);
+    let end = new Date(now);
+    let shiftName = 'ДЕНЬ';
+
+    if (h >= 8 && h < 20) {
+      shiftName = 'ДЕНЬ';
+      start.setHours(8, 0, 0, 0);
+      end.setHours(20, 0, 0, 0);
+    } else if (h >= 20) {
+      shiftName = 'НОЧЬ';
+      start.setHours(20, 0, 0, 0);
+      end.setDate(end.getDate() + 1);
+      end.setHours(8, 0, 0, 0);
+    } else {
+      shiftName = 'НОЧЬ';
+      start.setDate(start.getDate() - 1);
+      start.setHours(20, 0, 0, 0);
+      end.setHours(8, 0, 0, 0);
+    }
+    const yyyy = start.getFullYear();
+    const mm = String(start.getMonth() + 1).padStart(2, '0');
+    const dd = String(start.getDate()).padStart(2, '0');
+    const planDate = `${yyyy}-${mm}-${dd}`;
+    return { start, end, shiftName, planDate };
+  }
+
+  function updateDateAndShiftDisplay() {
+    const now = new Date();
+    document.getElementById('currentDateText').innerText = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    const { shiftName } = getCurrentShiftInfo();
+    document.getElementById('currentShiftBadge').innerText = 'СМЕНА: ' + (shiftName === 'ДЕНЬ' ? 'ДЕНЬ (08:00 – 20:00)' : 'НОЧЬ (20:00 – 08:00)');
+  }
+
+
+function getMascotAsset(message, kind) {
+  const value = String(message || '').toLowerCase();
+  if (/проб|образц|качеств|лаборатор|провер.*краск/.test(value)) return 'assets/mascot-quality-check.png';
+  if (/пыл|уборк|чистк|салфет|очист/.test(value)) return 'assets/mascot-cleaning.png';
+  if (/ремонт|неисправ|оборудован|поломк|инструмент/.test(value)) return 'assets/mascot-repair.png';
+  if (/поздрав|отличн|ура|побед|превосход/.test(value)) return 'assets/mascot-celebration.png';
+  if (kind === 'success') return 'assets/mascot-success.png';
+  if (kind === 'warning') return 'assets/mascot-warning.png';
+  if (kind === 'error') return 'assets/mascot-error.png';
+  if (kind === 'info') return 'assets/mascot-info.png';
+  return 'assets/mascot-neutral.png';
+}
+  function showNotice(message, type) {
+    const root=document.getElementById('primatekNotice');
+    if(!root)return;
+    const kind=type||(/ошибка|не удалось|нет данных/i.test(String(message))?'error':(/нет данных|проверьте/i.test(String(message))?'warning':'success'));
+    document.getElementById('primatekNoticeTitle').textContent=kind==='error'?'Не удалось выполнить действие':kind==='warning'?'Обрати внимание':kind==='success'?'Данные сохранены!':'Сообщение PRIMATEK';
+    document.getElementById('primatekNoticeMark').textContent=kind==='success'?'✓':kind==='warning'?'!':kind==='error'?'×':'i';
+    const mascotBox=document.getElementById('primatekNoticeMascot');
+    mascotBox.dataset.mood=kind;
+    const mascotImage=mascotBox.querySelector('img');
+    if(mascotImage) mascotImage.src=getMascotAsset(message,kind);
+    document.getElementById('primatekNoticeText').textContent=String(message);
+    root.className=kind; root.classList.remove('hidden');
+    requestAnimationFrame(()=>root.classList.add('show'));
+  }
+  function hideNotice(){
+    const root=document.getElementById('primatekNotice'); if(!root)return;
+    root.classList.remove('show');
+    setTimeout(()=>{if(!root.classList.contains('show'))root.classList.add('hidden');},220);
+  }
+
+  async function loadDashboardData() {
+    if (dashboardRefreshInProgress) return;
+    dashboardRefreshInProgress = true;
+    const syncText = document.getElementById('lastSyncTime');
+    const syncErr = document.getElementById('syncErrorMsg');
+    syncErr.classList.add('hidden');
+    
+    try {
+      syncText.innerHTML = `<div><span class="live-dot"></span> Синхронизация...</div>`;
+      const { planDate: today, shiftName } = getCurrentShiftInfo();
+
+      const { data: reports, error: repErr } = await client.from('shift_reports')
+        .select('*').order('created_at', { ascending: false }).limit(500);
+      
+      if (repErr) throw repErr;
+      rawReports = reports || [];
+
+      const { data: batches, error: batchErr } = await client.from('batches')
+        .select('*').order('opened_at', { ascending: false }).limit(500);
+      if (batchErr) throw batchErr;
+      allBatches = batches || [];
+      rawBatches = allBatches.filter(b => b.status === 'open');
+
+      const { data: plans, error: planErr } = await client.from('shift_plans')
+        .select('*').eq('plan_date', today).eq('shift', shiftName);
+      
+      if (planErr) throw planErr;
+      rawPlans = plans || [];
+
+      const genPlan = rawPlans.find(p => Number(p.line_number) === 0);
+      totalGeneralPlanKg = genPlan ? Number(genPlan.plan_kg) : 0;
+      
+      shiftPlanKg = rawPlans.filter(p => PRIMATEK_LINES.includes(Number(p.line_number))).reduce((sum, p) => sum + Number(p.plan_kg), 0);
+
+      document.getElementById('shiftPlanInput').value = totalGeneralPlanKg > 0 ? totalGeneralPlanKg : 20000;
+
+      renderTopSummary();
+      renderLiveLineCards();
+      filterShiftsTable();
+      
+      syncText.innerHTML = `<div><span class="live-dot"></span> Онлайн • автообновление 30 сек • ${new Date().toLocaleTimeString('ru-RU')}</div>`;
+    } catch (e) {
+      console.error(e);
+      syncText.innerHTML = `<div style="color:#ef4444; font-weight:bold;">Ошибка связи</div>`;
+      syncErr.innerText = 'Не удалось обновить данные. Проверьте соединение и попробуйте ещё раз.';
+      syncErr.classList.remove('hidden');
+    } finally {
+      dashboardRefreshInProgress = false;
+    }
+  }
+
+  function setupRealtime() {
+    client.channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_reports' }, () => loadDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'batches' }, () => loadDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_plans' }, () => loadDashboardData())
+      .subscribe();
+  }
+
+  async function saveGeneralPlan() {
+    const val = Number(document.getElementById('shiftPlanInput').value) || 0;
+    const { planDate: today, shiftName } = getCurrentShiftInfo();
+
+    try {
+      const { error } = await client.from('shift_plans').upsert({
+        plan_date: today,
+        shift: shiftName,
+        line_number: 0,
+        plan_kg: val
+      }, { onConflict: 'plan_date,shift,line_number' });
+      
+      if (error) throw error;
+      showNotice(`Общий план ${val} кг сохранен (для отчетности цеха).`);
+      loadDashboardData();
+    } catch (e) {
+      showNotice("Не удалось сохранить общий план. Проверьте соединение и попробуйте ещё раз.", "error");
+    }
+  }
+
+  async function saveLinePlan(lineNum, inputId) {
+    const input = document.getElementById(inputId);
+    const val = input ? Number(input.value) : NaN;
+    const line = Number(lineNum);
+    const { planDate: today, shiftName } = getCurrentShiftInfo();
+
+    if (!Number.isInteger(line) || !Number.isFinite(val) || val < 0) {
+      showNotice("Введите корректный план в килограммах.", "warning");
+      return;
+    }
+
+    const planRecord = {
+      plan_date: today,
+      shift: shiftName,
+      line_number: line,
+      plan_kg: val
+    };
+
+    try {
+      const { error } = await client.from('shift_plans').upsert(
+        planRecord,
+        { onConflict: 'plan_date,shift,line_number' }
+      );
+
+      if (error) {
+        // Иногда соединение обрывается уже после того, как сервер успел записать строку.
+        // Перепроверяем запись, чтобы не показывать ложную ошибку при успешном сохранении.
+        const { data: saved, error: verifyError } = await client.from('shift_plans')
+          .select('plan_kg')
+          .eq('plan_date', today)
+          .eq('shift', shiftName)
+          .eq('line_number', line)
+          .maybeSingle();
+
+        if (verifyError || !saved || Number(saved.plan_kg) !== val) throw error;
+      }
+    } catch (e) {
+      console.error('Ошибка сохранения плана линии:', e);
+      showNotice(
+        `Не удалось сохранить план линии №${line}. ${e && e.message ? e.message : 'Проверьте соединение и попробуйте ещё раз.'}`,
+        "error"
+      );
+      return;
+    }
+
+    const btn = document.getElementById(`savebtn-${line}`);
+    if (btn) btn.style.display = 'none';
+
+    // Сохранение подтверждено. Обновление дашборда — отдельная операция.
+    showNotice(`План линии №${line} на ${val.toLocaleString('ru-RU')} кг сохранён.`, "success");
+
+    try {
+      await loadDashboardData();
+    } catch (e) {
+      console.error('План сохранён, но обновить дашборд не удалось:', e);
+      showNotice("План сохранён. Не удалось обновить данные на экране — они обновятся при следующей синхронизации.", "warning");
+    }
+  }
+
+  function showSaveBtn(lineNum) {
+    const btn = document.getElementById(`savebtn-${lineNum}`);
+    if (btn) btn.style.display = 'inline-block';
+  }
+
+  function renderTopSummary() {
+    const { start: shiftStart, end: shiftEnd } = getCurrentShiftInfo();
+    
+    const shiftReports = rawReports.filter(r => {
+      if (!r.created_at) return false;
+      const t = new Date(r.created_at).getTime();
+      return t >= shiftStart.getTime() && t <= shiftEnd.getTime();
+    });
+
+    let totalLiveKg = 0, totalLivePcs = 0, shiftDefectKg = 0, shiftDefectBoxes = 0, shiftChipsKg = 0, shiftDustKg = 0;
+
+    // Каждая запись PRODUCTION / PARTY_CLOSE / SHIFT_CLOSE содержит прирост
+    // с момента предыдущей успешной отправки. Суммируем события смены,
+    // а не берём только последнюю запись (она часто бывает нулевой).
+    PRIMATEK_LINES.forEach(lineNum => {
+      const lineReports = shiftReports.filter(r =>
+        Number(r.line_number) === lineNum &&
+        ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type)
+      );
+
+      totalLiveKg += lineReports.reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
+      totalLivePcs += lineReports.reduce((sum, r) => sum + (Number(r.good_boxes || r.good_bags) || 0), 0);
+      shiftDefectKg += lineReports.reduce((sum, r) => sum + (Number(r.defect_kg) || 0), 0);
+      shiftDefectBoxes += lineReports.reduce((sum, r) => sum + (Number(r.defect_boxes) || 0), 0);
+      shiftChipsKg += lineReports.reduce((sum, r) => sum + (Number(r.chips_kg) || 0), 0);
+      shiftDustKg += lineReports.reduce((sum, r) => sum + (Number(r.dust_kg) || 0), 0);
+    });
+
+    document.getElementById('sumLiveKg').innerText = totalLiveKg.toLocaleString('ru-RU') + ' кг';
+    document.getElementById('sumLivePcs').innerText = `${totalLivePcs} кор./меш. краски`;
+    
+    const plan = totalGeneralPlanKg > 0 ? totalGeneralPlanKg : 1;
+    const percent = Math.min(100, Math.round((totalLiveKg / plan) * 100));
+    document.getElementById('sumPlanPercent').innerText = `${percent}%`;
+    document.getElementById('sumProgressBar').style.width = `${percent}%`;
+    const remaining = Math.max(0, plan - totalLiveKg);
+    document.getElementById('planRemainingSub').innerText = `Осталось: ${remaining.toLocaleString('ru-RU')} кг`;
+    
+    document.getElementById('sumDefectKg').innerText = `${shiftDefectKg.toLocaleString('ru-RU')} кг`;
+    document.getElementById('sumDefectBoxes').innerText = `${shiftDefectBoxes} коробок`;
+    document.getElementById('sumChipsKg').innerText = `${shiftChipsKg.toLocaleString('ru-RU')} кг`;
+    document.getElementById('sumDustKg').innerText = `Пыль: ${shiftDustKg.toFixed(1)} кг`;
+  }
+
+  function renderLiveLineCards() {
+    const grid = document.getElementById('linesGrid');
+    grid.innerHTML = '';
+    const { start: shiftStart } = getCurrentShiftInfo();
+
+    PRIMATEK_LINES.forEach(lineNum => {
+      const latestAny = rawReports.find(r => Number(r.line_number) === lineNum);
+      
+      let statusClass = 'st-idle';
+      let statusText = 'НЕТ ДАННЫХ';
+      let op = '—', batch = '—', ral = '—', boxText = '—', timeText = 'Замеров не было';
+      let shiftKg = 0, partyKg = 0, chipsKg = 0;
+      const activeBatch = rawBatches.find(b => Number(b.line_number) === lineNum) || null;
+      batch = activeBatch ? activeBatch.batch_number : '—';
+      ral = activeBatch ? activeBatch.ral_color : '—';
+
+      // Итог партии показываем независимо от того, были ли события в текущей смене.
+      // Начальные счётчики включают продукцию, которая уже находилась на линии
+      // до регистрации партии в PRIMATEK.
+      if (activeBatch) {
+        const initialUnits = activeBatch.package_type === 'mix'
+          ? (Number(activeBatch.initial_comp1)||0) + (Number(activeBatch.initial_comp2)||0) + (Number(activeBatch.initial_finished)||0)
+          : (Number(activeBatch.initial_unit)||0);
+        partyKg = initialUnits * 20 + rawReports
+          .filter(r => r.batch_id === activeBatch.id && ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type))
+          .reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
+      }
+
+      if (latestAny && new Date(latestAny.created_at) >= shiftStart) {
+        statusText = latestAny.line_status || 'В РАБОТЕ';
+        if (statusText === 'В РАБОТЕ') statusClass = 'st-work';
+        else if (statusText === 'ЧИСТКА') statusClass = 'st-clean';
+        else if (statusText === 'ПРОБЫ') statusClass = 'st-sample';
+        else if (statusText === 'РЕМОНТ') statusClass = 'st-repair';
+
+        op = latestAny.operator_name || 'Не указан';
+        const currentShiftEvents = rawReports.filter(r =>
+          Number(r.line_number) === lineNum &&
+          new Date(r.created_at) >= shiftStart &&
+          ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type)
+        );
+        shiftKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
+        chipsKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.chips_kg) || 0), 0);
+        if (latestAny.unit_from && latestAny.unit_to) boxText = `№ ${latestAny.unit_from} — № ${latestAny.unit_to}`;
+        
+        const t = new Date(latestAny.created_at);
+        timeText = `Данные в ${t.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}`;
+      } else if (latestAny) {
+        statusText = latestAny.line_status || 'В РАБОТЕ';
+        if (statusText === 'В РАБОТЕ') statusClass = 'st-work';
+        else if (statusText === 'ЧИСТКА') statusClass = 'st-clean';
+        else if (statusText === 'ПРОБЫ') statusClass = 'st-sample';
+        else if (statusText === 'РЕМОНТ') statusClass = 'st-repair';
+        
+        boxText = 'Ожидание данных...';
+        timeText = 'Нет данных за текущую смену';
+      }
+
+      const linePlanObj = rawPlans.find(p => Number(p.line_number) === lineNum);
+      const linePlan = linePlanObj ? Number(linePlanObj.plan_kg) : 0;
+      const planPercent = linePlan > 0 ? Math.min(999, Math.round((shiftKg / linePlan) * 100)) : 0;
+      const isOverPlan = linePlan > 0 && shiftKg > linePlan;
+      const progressClass = isOverPlan ? 'line-progress-fill gold' : 'line-progress-fill';
+
+      let repairInfoHtml = '';
+      if (statusText === 'РЕМОНТ') {
+        const latestStatusEvent = rawReports.find(r =>
+          Number(r.line_number) === lineNum &&
+          r.event_type === 'STATUS_CHANGE'
+        );
+        const repairEvent = latestStatusEvent && latestStatusEvent.line_status === 'РЕМОНТ'
+          ? latestStatusEvent : null;
+        if (repairEvent) {
+          const repairStart = new Date(repairEvent.created_at);
+          const elapsedMinutes = Math.max(0, Math.floor((Date.now() - repairStart.getTime()) / 60000));
+          const elapsedHours = Math.floor(elapsedMinutes / 60);
+          const elapsedRemainder = elapsedMinutes % 60;
+          const elapsedText = elapsedHours > 0 ? `${elapsedHours} ч ${elapsedRemainder} мин` : `${elapsedRemainder} мин`;
+          const startText = repairStart.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+          const reasonText = repairEvent.repair_reason || 'Причина не указана';
+          repairInfoHtml = `
+            <div class="line-output-box" style="margin-top:10px;border-color:rgba(239,68,68,.45);">
+              <div class="output-label" style="color:#f87171;">РЕМОНТ · ${elapsedText}</div>
+              <div class="output-sub">Причина: <b>${reasonText}</b></div>
+              <div class="output-time">Начало: ${startText}</div>
+            </div>`;
+        }
+      }
+
+      const card = document.createElement('div');
+      card.className = 'line-card';
+      card.innerHTML = `
+        <div class="line-card-top">
+          <span class="line-num">Линия №${lineNum}</span>
+          <span class="status-badge ${statusClass}"><span class="status-dot"></span>${statusText}</span>
+        </div>
+
+
+        <div class="line-details">
+          <div>Оператор: <b>${op}</b></div>
+          <div>Партия: <b>${batch}</b> | <span class="ral-tag">${ral}</span></div>
+        </div>
+        ${repairInfoHtml}
+
+        <div class="line-output-box">
+          <div class="output-label">ВЫРАБОТКА ЗА СМЕНУ</div>
+          <div class="output-val">${shiftKg.toLocaleString('ru-RU')} кг</div>
+          <div class="output-sub">${boxText}</div>
+          ${chipsKg > 0 ? `<div class="output-chips">Чипсы / п-ф: ${chipsKg.toLocaleString('ru-RU')} кг</div>` : ''}
+          <div class="output-time">${timeText}</div>
+        </div>
+        <div class="line-output-box" style="margin-top:10px;">
+          <div class="output-label">ВЫРАБОТКА ТЕКУЩЕЙ ПАРТИИ</div>
+          <div class="output-val">${activeBatch ? partyKg.toLocaleString('ru-RU') + ' кг' : 'Нет открытой партии'}</div>
+          <div class="output-sub">${activeBatch ? 'Партия №' + activeBatch.batch_number + ' · ' + (activeBatch.ral_color || 'RAL не указан') : 'Откройте партию для начала учёта'}</div>
+        </div>
+
+        <div class="line-plan-block">
+          <div class="line-plan-row">
+            <span class="line-plan-label">План:</span>
+            <div class="flex items-center gap-1">
+               <input type="number" id="plan-input-${lineNum}" class="line-plan-input" value="${linePlan || ''}" placeholder="0" oninput="showSaveBtn(${lineNum})" onkeypress="if(event.key === 'Enter') saveLinePlan(${lineNum}, 'plan-input-${lineNum}')">
+               <button id="savebtn-${lineNum}" class="btn-save-mini" onclick="saveLinePlan(${lineNum}, 'plan-input-${lineNum}')">✓</button>
+               <span style="font-size:10px; color:#64748b;">кг</span>
+            </div>
+          </div>
+          <div class="line-plan-row"><span class="line-plan-label">Факт:</span><span class="line-plan-fact">${shiftKg.toLocaleString('ru-RU')} кг <span class="line-plan-percent">(${planPercent}%)</span></span></div>
+          <div class="line-progress-bg"><div class="${progressClass}" style="width: ${Math.min(100, planPercent)}%"></div></div>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  function setArchiveTab(tab) {
+    currentArchiveTab = tab;
+    document.getElementById('tab-shifts').className = tab === 'shifts' ? 'tab-btn active' : 'tab-btn';
+    document.getElementById('tab-parties').className = tab === 'parties' ? 'tab-btn active' : 'tab-btn';
+    filterShiftsTable();
+  }
+
+  function filterShiftsTable() {
+    const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+    const lineVal = document.getElementById('filterLine').value;
+    if (currentArchiveTab === 'parties') {
+      const filteredBatches = allBatches.filter(b => {
+        if (b.status !== 'closed') return false;
+        const searchText = [b.batch_number, b.ral_color, b.product_code, b.closed_by, b.opened_by].join(' ').toLowerCase();
+        return (!searchVal || searchText.includes(searchVal)) &&
+          (lineVal === 'all' || String(b.line_number) === String(lineVal));
+      });
+      renderPartyArchive(filteredBatches);
+      return;
+    }
+
+    const filtered = rawReports.filter(r => {
+      if (r.event_type !== 'SHIFT_CLOSE') return false;
+      const op = (r.operator_name || '').toLowerCase();
+      const batch = (r.batch_number || '').toLowerCase();
+      const product = (r.product_code || '').toLowerCase();
+      const ral = (r.ral_color || '').toLowerCase();
+      const matchSearch = !searchVal || op.includes(searchVal) || batch.includes(searchVal) || product.includes(searchVal) || ral.includes(searchVal);
+      const matchLine = (lineVal === 'all') || (String(r.line_number) === String(lineVal));
+      return matchSearch && matchLine;
+    });
+    renderShiftsTable(filtered);
+  }
+
+  function renderPartyArchive(batches) {
+    const tbody = document.getElementById('shiftsTableBody');
+    if (!batches.length) {
+      tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;color:#64748b;padding:25px;">Закрытых партий не найдено</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = batches.map(b => {
+      const events = rawReports.filter(r => r.batch_id === b.id &&
+        ['PRODUCTION','PARTY_CLOSE','SHIFT_CLOSE'].includes(r.event_type));
+      const initialUnits = b.package_type === 'mix'
+        ? (Number(b.initial_comp1)||0) + (Number(b.initial_comp2)||0) + (Number(b.initial_finished)||0)
+        : (Number(b.initial_unit)||0);
+      const kg = initialUnits * 20 + events.reduce((sum,r) => sum + (Number(r.total_good_kg)||0),0);
+      const chips = events.reduce((sum,r) => sum + (Number(r.chips_kg)||0),0);
+      const dt = b.closed_at ? new Date(b.closed_at) : new Date(b.opened_at);
+      const time = dt.toLocaleDateString('ru-RU') + ' ' + dt.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+      return `<tr>
+        <td style="color:#94a3b8;font-family:monospace;">${time}</td>
+        <td><b>№${b.line_number}</b></td>
+        <td><b>${b.closed_by || b.opened_by || '—'}</b></td>
+        <td>${b.batch_number || '—'}</td>
+        <td><b>${b.product_code || '—'}</b></td>
+        <td><span class="ral-tag">${b.ral_color || '—'}</span></td>
+        <td>${b.package_type === 'mix' ? 'СМЕШЕНИЕ' : 'ПК'}</td>
+        <td><b style="color:#34d399;font-size:14px;">${kg.toLocaleString('ru-RU')} кг</b></td>
+        <td style="color:#fbbf24;font-weight:700;">${chips.toLocaleString('ru-RU')} кг</td>
+        <td>—</td><td>${Number(b.dust_kg||0).toFixed(1)} кг</td>
+        <td>—</td><td>—</td><td>—</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderShiftsTable(reports) {
+    const tbody = document.getElementById('shiftsTableBody');
+    if (!reports.length) {
+      tbody.innerHTML = `<tr><td colspan="14" style="text-align: center; color: #64748b; padding: 25px;">Записей не найдено</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = reports.map(r => {
+      const dt = new Date(r.created_at);
+      const timeStr = dt.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'}) + ' ' + dt.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
+      const boxHtml = (r.unit_from && r.unit_to) ? `<span class="tag-range">№ ${r.unit_from} — № ${r.unit_to}</span>` : `<span style="color:#64748b;">—</span>`;
+      const planKg = Number(r.plan_kg) || 0;
+      const planPercent = planKg > 0 ? Math.round((Number(r.total_good_kg || 0) / planKg) * 100) : 0;
+      const shiftType = r.event_type === 'SHIFT_CLOSE' ? ((new Date(r.created_at).getHours() >= 8 && new Date(r.created_at).getHours() < 20) ? 'ДЕНЬ' : 'НОЧЬ') : '—';
+
+      return `
+        <tr>
+          <td style="color: #94a3b8; font-family: monospace;">${timeStr}</td>
+          <td><b>№${r.line_number}</b></td>
+          <td><b>${r.operator_name || '—'}</b></td>
+          <td>${r.batch_number || '—'}</td>
+          <td><b>${r.product_code || '—'}</b></td>
+          <td><span class="ral-tag">${r.ral_color || '—'}</span></td>
+          <td>${boxHtml}</td>
+          <td><b style="color: #34d399; font-size:14px;">${r.total_good_kg || 0} кг</b></td>
+          <td style="color: #fbbf24; font-weight:700;">${r.chips_kg || 0} кг</td>
+          <td style="color: #f87171;">${r.defect_kg || 0} кг</td>
+          <td style="color: #94a3b8;">${Number(r.dust_kg || 0).toFixed(1)} кг</td>
+          <td style="color: #38bdf8; font-weight:700;">${planKg > 0 ? planKg + ' кг' : '—'}</td>
+          <td style="color: #10b981; font-weight:700;">${planKg > 0 ? planPercent + '%' : '—'}</td>
+          <td>${shiftType}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function exportToExcel() {
+    if (!rawReports.length) { showNotice("Нет данных для выгрузки"); return; }
+    const excelData = rawReports.filter(r => r.event_type === 'SHIFT_CLOSE' || r.event_type === 'PARTY_CLOSE').map(r => {
+      return {
+        "Дата и время": new Date(r.created_at).toLocaleString('ru-RU'),
+        "Тип записи": r.event_type === 'SHIFT_CLOSE' ? 'Сдача смены' : 'Закрытие партии',
+        "Линия": "№" + r.line_number, "Оператор": r.operator_name || "", "Партия": r.batch_number || "", "Код продукта": r.product_code || "", "Цвет RAL": r.ral_color || "",
+        "Диапазон": (r.unit_from && r.unit_to) ? `№ ${r.unit_from} — № ${r.unit_to}` : "",
+        "Краска (кг)": r.total_good_kg || 0, "Чипсы / П-ф (кг)": r.chips_kg || 0, "Брак (кг)": r.defect_kg || 0,
+        "Пыль (кг)": r.dust_kg || 0, "План (кг)": r.plan_kg || "",
+        "Выполнение плана (%)": r.plan_kg ? Math.round((Number(r.total_good_kg || 0) / r.plan_kg) * 100) : ""
+      };
+    });
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Журнал PRIMATEK");
+    XLSX.writeFile(workbook, `PRIMATEK_Дашборд_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+</script>
+
+</body>
+</html>
