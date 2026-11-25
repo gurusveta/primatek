@@ -741,17 +741,62 @@ async function restoreMySession() {
   try {
     const { data } = await client.from('shift_reports')
       .select('*').eq('line_number', local.line).eq('operator_name', local.operator)
-      .eq('shift_key', local.shiftKey).order('created_at', { ascending: false }).limit(20);
+      .eq('shift_key', local.shiftKey).order('created_at', { ascending: false }).limit(100);
     const rows = data || [];
-    const withNums = rows.find(r => r.comp1_to !== null || r.unit_to !== null);
-    if (withNums && batch) {
-      sentSnapshot = { last_unit: withNums.unit_to||0, last_comp1: withNums.comp1_to||0, last_comp2: withNums.comp2_to||0, last_finished: withNums.finished_to||0 };
-    } else if (batch) { sentSnapshot = snapshotOf(batch); }
-    // baseline: самая ранняя запись приёмки за смену — берём из первой STATUS_CHANGE или из снапшота
-    myBaseline = sentSnapshot ? {...sentSnapshot} : (batch ? snapshotOf(batch) : null);
-    // пересчитываем "мои кг" из дельт журнала
-    myDeltaKg = rows.filter(r=>r.event_type==='PRODUCTION'||r.event_type==='PARTY_CLOSE')
-      .reduce((s,r)=> s+(+r.delta_comp1_kg||0)+(+r.delta_comp2_kg||0)+(+r.delta_finished_kg||0)+(+r.delta_boxes_kg||0), 0);
+    // Снимок последней отправки ищем только в текущей партии: в течение смены оператор
+    // может закрыть одну партию и открыть следующую.
+    const batchRows = batch ? rows.filter(r => String(r.batch_id) === String(batch.id)) : [];
+    const withNums = batchRows.find(r =>
+      r.unit_to !== null && r.unit_to !== undefined ||
+      r.comp1_to !== null && r.comp1_to !== undefined ||
+      r.comp2_to !== null && r.comp2_to !== undefined ||
+      r.finished_to !== null && r.finished_to !== undefined
+    );
+    if (withNums) {
+      sentSnapshot = {
+        last_unit: Number(withNums.unit_to)||0,
+        last_comp1: Number(withNums.comp1_to)||0,
+        last_comp2: Number(withNums.comp2_to)||0,
+        last_finished: Number(withNums.finished_to)||0
+      };
+    } else if (batch) {
+      sentSnapshot = snapshotOf(batch);
+    } else {
+      sentSnapshot = null;
+    }
+
+    // Личный старт хранится отдельно от последнего отправленного номера.
+    // Поэтому после перезагрузки уже отправленная выработка не исчезает из разбивки mix.
+    const starts = batch && local.productionStarts &&
+      String(local.productionStarts.batchId) === String(batch.id)
+      ? local.productionStarts : null;
+    myBaseline = batch ? {
+      last_unit: starts && Number.isInteger(Number(starts.unit))
+        ? Number(starts.unit)-1 : Number(batch.initial_unit)||0,
+      last_comp1: starts && Number.isInteger(Number(starts.comp1))
+        ? Number(starts.comp1)-1 : Number(batch.initial_comp1)||0,
+      last_comp2: starts && Number.isInteger(Number(starts.comp2))
+        ? Number(starts.comp2)-1 : Number(batch.initial_comp2)||0,
+      last_finished: starts && Number.isInteger(Number(starts.finished))
+        ? Number(starts.finished)-1 : Number(batch.initial_finished)||0
+    } : null;
+
+    // Восстанавливаем суммарную личную выработку за смену по всем партиям.
+    myDeltaKg = rows.reduce((sum, r) => {
+      if (!['PRODUCTION','PARTY_CLOSE','SHIFT_CLOSE'].includes(r.event_type)) return sum;
+      const hasDeltas = r.delta_comp1_kg !== null && r.delta_comp1_kg !== undefined ||
+        r.delta_comp2_kg !== null && r.delta_comp2_kg !== undefined ||
+        r.delta_finished_kg !== null && r.delta_finished_kg !== undefined ||
+        r.delta_boxes_kg !== null && r.delta_boxes_kg !== undefined;
+      if (hasDeltas) {
+        return sum + Math.max(0,
+          (Number(r.delta_comp1_kg)||0) + (Number(r.delta_comp2_kg)||0) +
+          (Number(r.delta_finished_kg)||0) + (Number(r.delta_boxes_kg)||0) -
+          (Number(r.defect_kg)||0)
+        );
+      }
+      return sum + (r.event_type === 'PRODUCTION' ? 0 : Number(r.total_good_kg)||0);
+    }, 0);
     calculateProduction();
   } catch(e){ console.error(e); }
 }
@@ -955,7 +1000,16 @@ async function confirmOpenBatch() {
     }
     batch = data[0];
     myBaseline = snapshotOf(batch); sentSnapshot = snapshotOf(batch); myDeltaKg = 0;
-    local.productionStarts = null;
+    // Зафиксируем личную точку отсчёта и для создателя партии. Это нужно,
+    // чтобы после перезагрузки не принять общий счётчик партии за личную выработку.
+    local.productionStarts = newBatchPack === 'mix'
+      ? {
+          batchId: batch.id,
+          comp1: Number(initialCounters.initial_comp1||0) + 1,
+          comp2: Number(initialCounters.initial_comp2||0) + 1,
+          finished: Number(initialCounters.initial_finished||0) + 1
+        }
+      : { batchId: batch.id, unit: Number(initialCounters.initial_unit||0) + 1 };
     saveLocal();
     activeComp = 'comp1';
     if (local.lineStatus !== 'В РАБОТЕ') { local.lineStatus = 'В РАБОТЕ'; saveLocal(); highlightStatusButtons(); updateCompactBar(); await insertStatusEvent('В РАБОТЕ', null); }
