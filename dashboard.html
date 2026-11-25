@@ -628,6 +628,20 @@ function getMascotAsset(message, kind) {
       let op = '—', batch = '—', ral = '—', boxText = '—', timeText = 'Замеров не было';
       let shiftKg = 0, partyKg = 0, chipsKg = 0;
       const activeBatch = rawBatches.find(b => Number(b.line_number) === lineNum) || null;
+      batch = activeBatch ? activeBatch.batch_number : '—';
+      ral = activeBatch ? activeBatch.ral_color : '—';
+
+      // Итог партии показываем независимо от того, были ли события в текущей смене.
+      // Начальные счётчики включают продукцию, которая уже находилась на линии
+      // до регистрации партии в PRIMATEK.
+      if (activeBatch) {
+        const initialUnits = activeBatch.package_type === 'mix'
+          ? (Number(activeBatch.initial_comp1)||0) + (Number(activeBatch.initial_comp2)||0) + (Number(activeBatch.initial_finished)||0)
+          : (Number(activeBatch.initial_unit)||0);
+        partyKg = initialUnits * 20 + rawReports
+          .filter(r => r.batch_id === activeBatch.id && ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type))
+          .reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
+      }
 
       if (latestAny && new Date(latestAny.created_at) >= shiftStart) {
         statusText = latestAny.line_status || 'В РАБОТЕ';
@@ -637,8 +651,6 @@ function getMascotAsset(message, kind) {
         else if (statusText === 'РЕМОНТ') statusClass = 'st-repair';
 
         op = latestAny.operator_name || 'Не указан';
-        batch = activeBatch ? activeBatch.batch_number : '—';
-        ral = activeBatch ? activeBatch.ral_color : '—';
         const currentShiftEvents = rawReports.filter(r =>
           Number(r.line_number) === lineNum &&
           new Date(r.created_at) >= shiftStart &&
@@ -646,12 +658,6 @@ function getMascotAsset(message, kind) {
         );
         shiftKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
         chipsKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.chips_kg) || 0), 0);
-        if (activeBatch) {
-          partyKg = rawReports
-            .filter(r => r.batch_id === activeBatch.id && ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type))
-            .reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
-        }
-
         if (latestAny.unit_from && latestAny.unit_to) boxText = `№ ${latestAny.unit_from} — № ${latestAny.unit_to}`;
         
         const t = new Date(latestAny.created_at);
@@ -786,7 +792,10 @@ function getMascotAsset(message, kind) {
     tbody.innerHTML = batches.map(b => {
       const events = rawReports.filter(r => r.batch_id === b.id &&
         ['PRODUCTION','PARTY_CLOSE','SHIFT_CLOSE'].includes(r.event_type));
-      const kg = events.reduce((sum,r) => sum + (Number(r.total_good_kg)||0),0);
+      const initialUnits = b.package_type === 'mix'
+        ? (Number(b.initial_comp1)||0) + (Number(b.initial_comp2)||0) + (Number(b.initial_finished)||0)
+        : (Number(b.initial_unit)||0);
+      const kg = initialUnits * 20 + events.reduce((sum,r) => sum + (Number(r.total_good_kg)||0),0);
       const chips = events.reduce((sum,r) => sum + (Number(r.chips_kg)||0),0);
       const dt = b.closed_at ? new Date(b.closed_at) : new Date(b.opened_at);
       const time = dt.toLocaleDateString('ru-RU') + ' ' + dt.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
