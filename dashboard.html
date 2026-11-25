@@ -629,6 +629,18 @@ function getMascotAsset(message, kind) {
       let shiftKg = 0, partyKg = 0, chipsKg = 0;
       const activeBatch = rawBatches.find(b => Number(b.line_number) === lineNum) || null;
 
+      // Итог партии показываем независимо от того, были ли события в текущей смене.
+      // Начальные счётчики включают продукцию, которая уже находилась на линии
+      // до регистрации партии в PRIMATEK.
+      if (activeBatch) {
+        const initialUnits = activeBatch.package_type === 'mix'
+          ? (Number(activeBatch.initial_comp1)||0) + (Number(activeBatch.initial_comp2)||0) + (Number(activeBatch.initial_finished)||0)
+          : (Number(activeBatch.initial_unit)||0);
+        partyKg = initialUnits * 20 + rawReports
+          .filter(r => r.batch_id === activeBatch.id && ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type))
+          .reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
+      }
+
       if (latestAny && new Date(latestAny.created_at) >= shiftStart) {
         statusText = latestAny.line_status || 'В РАБОТЕ';
         if (statusText === 'В РАБОТЕ') statusClass = 'st-work';
@@ -646,15 +658,6 @@ function getMascotAsset(message, kind) {
         );
         shiftKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
         chipsKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.chips_kg) || 0), 0);
-        if (activeBatch) {
-          const initialUnits = activeBatch.package_type === 'mix'
-            ? (Number(activeBatch.initial_comp1)||0) + (Number(activeBatch.initial_comp2)||0) + (Number(activeBatch.initial_finished)||0)
-            : (Number(activeBatch.initial_unit)||0);
-          partyKg = initialUnits * 20 + rawReports
-            .filter(r => r.batch_id === activeBatch.id && ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type))
-            .reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
-        }
-
         if (latestAny.unit_from && latestAny.unit_to) boxText = `№ ${latestAny.unit_from} — № ${latestAny.unit_to}`;
         
         const t = new Date(latestAny.created_at);
