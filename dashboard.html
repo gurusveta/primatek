@@ -628,6 +628,8 @@ function getMascotAsset(message, kind) {
       let op = '—', batch = '—', ral = '—', boxText = '—', timeText = 'Замеров не было';
       let shiftKg = 0, partyKg = 0, chipsKg = 0;
       const activeBatch = rawBatches.find(b => Number(b.line_number) === lineNum) || null;
+      batch = activeBatch ? activeBatch.batch_number : '—';
+      ral = activeBatch ? activeBatch.ral_color : '—';
 
       // Итог партии показываем независимо от того, были ли события в текущей смене.
       // Начальные счётчики включают продукцию, которая уже находилась на линии
@@ -649,8 +651,6 @@ function getMascotAsset(message, kind) {
         else if (statusText === 'РЕМОНТ') statusClass = 'st-repair';
 
         op = latestAny.operator_name || 'Не указан';
-        batch = activeBatch ? activeBatch.batch_number : '—';
-        ral = activeBatch ? activeBatch.ral_color : '—';
         const currentShiftEvents = rawReports.filter(r =>
           Number(r.line_number) === lineNum &&
           new Date(r.created_at) >= shiftStart &&
