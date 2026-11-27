@@ -314,12 +314,12 @@ const COMP_NAMES = { comp1: '1 п/ф', comp2: '2 п/ф', finished: 'Готова
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ===== Локальное состояние: только настройки телефона, НЕ правда о партии =====
-let local = JSON.parse(localStorage.getItem('primatek_local_v2')) || {
+let local = JSON.parse(localStorage.getItem('primatek_preview_local_v2')) || {
   line: 6, operator: '', shiftAccepted: false, handoverStatus: null,
   lineStatus: 'В РАБОТЕ', repairReason: '', defects: [], dust: [], planKg: 0,
   shiftKey: null, shiftStartISO: null
 };
-function saveLocal() { localStorage.setItem('primatek_local_v2', JSON.stringify(local)); }
+function saveLocal() { localStorage.setItem('primatek_preview_local_v2', JSON.stringify(local)); }
 
 // ===== Серверная правда =====
 let batch = null;          // открытая партия линии из таблицы batches

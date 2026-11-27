@@ -98,6 +98,11 @@
       <input type="text" id="operatorName" placeholder="Оператор, пиши сюда фамилию и имя" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-[#0072ce] uppercase">
     </div>
 
+    <div>
+      <label for="handoverShift" class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Отчётная смена</label>
+      <select id="handoverShift" class="w-full bg-[#080d1a] border border-[#29385c] rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-[#0072ce]"></select>
+    </div>
+
     <!-- Найденная открытая партия -->
     <div id="foundBatchCard" class="hidden bg-[#080d1a] border border-[#10b981] rounded-xl p-3 space-y-1.5">
       <div class="text-[10px] font-extrabold text-[#34d399] uppercase">Открытая партия на линии</div>
@@ -128,13 +133,14 @@
       <label class="text-[10px] font-bold text-[#8fa0c2] uppercase block mb-1">Причина ремонта</label>
       <select id="handoverRepairReason" onchange="checkHandoverReady()" class="w-full bg-[#080d1a] border border-[#ef4444] text-white text-xs rounded-lg p-2 outline-none">
         <option value="">Выберите причину...</option>
-        <option>Замена сита</option>
-        <option>Фасовка</option>
-        <option>Нижний дозатор</option>
-        <option>Кулер</option>
-        <option>Фидер</option>
-        <option>Остановка шнеков</option>
-        <option>Ошибка на пульте</option>
+        <option value="Плановая замена сита">Плановая замена сита</option>
+        <option value="Разрыв сита">Разрыв сита</option>
+        <option value="Фасовка">Фасовка</option>
+        <option value="Нижний дозатор">Нижний дозатор</option>
+        <option value="Кулер">Кулер</option>
+        <option value="Фидер">Фидер</option>
+        <option value="Остановка шнеков">Остановка шнеков</option>
+        <option value="Ошибка на пульте">Ошибка на пульте</option>
       </select>
     </div>
 
@@ -148,14 +154,14 @@
       <span id="compactDot" class="w-2.5 h-2.5 rounded-full bg-[#10b981] animate-pulse"></span>
       <span id="compactInfo" class="text-xs font-bold text-white">—</span>
     </div>
-    <button onclick="reopenHandover()" class="text-[11px] font-bold text-[#38bdf8] underline btn-press">Изменить ✎</button>
+    <button onclick="document.querySelector('.st-btn').focus()" class="text-[11px] font-bold text-[#38bdf8] underline btn-press">Изменить ✎</button>
   </div>
 
   <!-- ГАМИФИКАЦИЯ -->
   <div id="gamificationBlock" class="hidden bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg">
     <div class="grid grid-cols-2 gap-3">
       <div>
-        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">ВЫРАБОТКА ЗА СМЕНУ</span>
+        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">ЛИЧНАЯ ВЫРАБОТКА ЗА СМЕНУ</span>
         <div class="text-xl font-black text-white" id="statDonePlan">0 кг</div>
       </div>
       <div class="text-right">
@@ -169,7 +175,7 @@
   <!-- ПРОГРЕСС ПЛАНА ЛИНИИ -->
   <div id="linePlanProgressBlock" class="hidden bg-[#131c31] border border-[#315b91] rounded-2xl p-4 shadow-lg space-y-3">
     <div class="flex items-center justify-between">
-      <span class="text-[11px] font-black text-[#38bdf8] uppercase tracking-wider">ВЫПОЛНЕНИЕ ПЛАНА</span>
+      <span class="text-[11px] font-black text-[#38bdf8] uppercase tracking-wider">ВЫПОЛНЕНИЕ ПЛАНА ЛИНИИ</span>
       <span id="linePlanPercent" class="text-lg font-black text-white">—</span>
     </div>
     <div class="grid grid-cols-2 gap-3">
@@ -197,13 +203,14 @@
       <div id="repairReasonWrap" class="hidden mt-2">
         <select id="repairReasonSelect" class="w-full bg-[#080d1a] border border-[#ef4444] text-white text-xs rounded-lg p-2 outline-none" onchange="submitRepairReason()">
           <option value="">Выберите причину поломки...</option>
-          <option>Замена сита</option>
-          <option>Фасовка</option>
-          <option>Нижний дозатор</option>
-          <option>Кулер</option>
-          <option>Фидер</option>
-          <option>Остановка шнеков</option>
-          <option>Ошибка на пульте</option>
+          <option value="Плановая замена сита">Плановая замена сита</option>
+          <option value="Разрыв сита">Разрыв сита</option>
+          <option value="Фасовка">Фасовка</option>
+          <option value="Нижний дозатор">Нижний дозатор</option>
+          <option value="Кулер">Кулер</option>
+          <option value="Фидер">Фидер</option>
+          <option value="Остановка шнеков">Остановка шнеков</option>
+          <option value="Ошибка на пульте">Ошибка на пульте</option>
         </select>
       </div>
     </div>
@@ -228,7 +235,7 @@
         <!-- КОРОБКИ -->
         <div id="boxInputWrap" class="hidden bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-center space-y-1">
           <label class="text-[10px] font-extrabold text-[#8fa0c2] uppercase block">Номер последней выпущенной коробки</label>
-          <input type="number" id="boxUnitInput" placeholder="№" oninput="onUnitInput()" class="w-full bg-[#131c31] border-2 border-[#0072ce] rounded-xl py-3 text-center text-3xl font-black text-white outline-none">
+          <input type="number" id="boxUnitInput" placeholder="№" oninput="onUnitInput(true)" class="w-full bg-[#131c31] border-2 border-[#0072ce] rounded-xl py-3 text-center text-3xl font-black text-white outline-none">
           <div class="text-[11px] text-[#8fa0c2]" id="boxDeltaText">—</div>
         </div>
 
@@ -242,7 +249,7 @@
           </div>
           <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-center space-y-1">
             <label class="text-[10px] font-extrabold text-[#8fa0c2] uppercase block" id="mixUnitLabel">Номер последнего мешка</label>
-            <input type="number" id="mixUnitInput" placeholder="№" oninput="onUnitInput()" class="w-full bg-[#131c31] border-2 border-[#0072ce] rounded-xl py-3 text-center text-3xl font-black text-white outline-none">
+            <input type="number" id="mixUnitInput" placeholder="№" oninput="onUnitInput(true)" class="w-full bg-[#131c31] border-2 border-[#0072ce] rounded-xl py-3 text-center text-3xl font-black text-white outline-none">
             <div class="text-[11px] text-[#8fa0c2]" id="mixDeltaText">—</div>
           </div>
           <div class="bg-[#080d1a] border border-[#233152] rounded-xl p-3 text-xs space-y-1" id="mixTotals"></div>
@@ -468,22 +475,69 @@ function saveLocal() { localStorage.setItem('primatek_local_v2', JSON.stringify(
 
 // ===== Серверная правда =====
 let batch = null;          // открытая партия линии из таблицы batches
-let myBaseline = null;     // последние номера на момент моей приёмки (для "вы за смену")
 let sentSnapshot = null;   // номера на момент последней отправки (для дельт)
 let activeComp = 'comp1';
 let newBatchPack = 'box';
 let newBatchMode = 'new';
 let busy = false;
+let batchVerified = false;
+let refreshingWork = false;
+
+function draftNumber(key) {
+  return Number(local.unitDrafts?.[batch?.id]?.[key]) || 0;
+}
+
+const CLOSE_NUMBER_FIELDS = { unit: 'closeUnitTo', comp1: 'closeComp1', comp2: 'closeComp2', finished: 'closeFinished' };
+
+function closeDraftValue(field) {
+  return Number(local.closeDrafts?.[batch?.id]?.[field]) || 0;
+}
+
+function getReportPeriod() {
+  if (!local.shiftAccepted || !local.shiftKey) return getShiftInfo();
+  const [planDate, name] = local.shiftKey.split('|');
+  return { key: local.shiftKey, planDate, name };
+}
 
 // ===== Окно смены =====
-function getShiftInfo() {
-  const now = new Date(); const h = now.getHours();
+function getShiftInfo(now = new Date()) {
+  const h = now.getHours();
   let start = new Date(now), end = new Date(now), name = 'ДЕНЬ';
   if (h >= 8 && h < 20) { start.setHours(8,0,0,0); end.setHours(20,0,0,0); }
   else if (h >= 20) { name='НОЧЬ'; start.setHours(20,0,0,0); end.setDate(end.getDate()+1); end.setHours(8,0,0,0); }
   else { name='НОЧЬ'; start.setDate(start.getDate()-1); start.setHours(20,0,0,0); end.setHours(8,0,0,0); }
   const d = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;
   return { start, end, name, planDate: d, key: `${d}|${name}` };
+}
+
+function renderHandoverPeriods() {
+  const current = getShiftInfo();
+  const next = getShiftInfo(current.end);
+  const select = document.getElementById('handoverShift');
+  select.replaceChildren(...[current, next].map(period => {
+    const option = document.createElement('option');
+    option.value = period.key;
+    option.textContent = period.name;
+    option.append(' · ' + period.planDate);
+    return option;
+  }));
+}
+
+async function refreshWorkSession() {
+  if (busy || refreshingWork || !navigator.onLine) return;
+  refreshingWork = true;
+  try {
+    if (local.pendingProduction) {
+      await resolvePendingProduction();
+      if (!local.shiftAccepted) return;
+    }
+    if (await refreshBatch() && local.shiftAccepted) {
+      await restoreMySession();
+      await loadPlanFromCloud();
+    } else if (local.shiftAccepted) {
+      batchVerified = false;
+    }
+  } finally { refreshingWork = false; }
 }
 
 window.onload = async () => {
@@ -493,22 +547,24 @@ window.onload = async () => {
   document.getElementById('customDateFrom').value = today;
   document.getElementById('customDateTo').value = today;
 
-  // Смена в localStorage устарела (пересекли границу 8/20)? Сбрасываем приёмку.
-  if (local.shiftAccepted && local.shiftKey !== getShiftInfo().key) {
-    local.shiftAccepted = false; local.operator = ''; local.defects = []; local.dust = [];
-  }
-  // После сдачи смены не показываем ФИО предыдущего оператора.
-  if (!local.shiftAccepted) local.operator = '';
-  document.getElementById('operatorName').value = local.shiftAccepted ? (local.operator || '') : '';
-  saveLocal();
-
-  await refreshBatch();
-
-  if (local.shiftAccepted) {
-    enterWorkMode(false);
-  } else {
+  if (!local.shiftAccepted) {
+    local.operator = '';
+    renderHandoverPeriods();
     document.getElementById('operatorName').addEventListener('input', checkHandoverReady);
+    await refreshBatch();
+  } else {
+    batch = local.cachedBatch || null;
+    sentSnapshot = batch ? snapshotOf(batch) : null;
+    myDeltaKg = Number(local.confirmedKg) || 0;
+    document.getElementById('operatorName').value = local.operator;
+    enterWorkMode();
+    await refreshWorkSession();
   }
+  window.addEventListener('online', refreshWorkSession);
+  window.addEventListener('pageshow', event => { if (event.persisted) refreshWorkSession(); });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshWorkSession();
+  });
   setInterval(updateShiftBadge, 60000);
   startOperatorRealtime();
   setInterval(() => { if (local.shiftAccepted) loadPlanFromCloud(); }, 60000);
@@ -528,7 +584,7 @@ function getMascotAsset(message, kind) {
   return 'assets/mascot-neutral.png';
 }
 
-function showNotice(message, type) {
+function showNotice(message, type, details = "") {
   const text = String(message || 'Готово');
   const inferred = type || (/не удалось|ошибка|не подтверждены|не обновил|не повторяйте/i.test(text) ? 'error' :
     (/проверьте|уже есть|нет новых|не может|укажите|заполните|пустая|сначала/i.test(text) ? 'warning' :
@@ -545,6 +601,7 @@ function showNotice(message, type) {
   const mascotImage = mascot.querySelector('img');
   if (mascotImage) mascotImage.src = getMascotAsset(text, inferred);
   body.textContent = text;
+  if (details) body.append(" · " + details);
   root.classList.remove('hidden');
   requestAnimationFrame(() => root.classList.add('show'));
 }
@@ -556,7 +613,7 @@ function hideNotice() {
 }
 
 function updateShiftBadge() {
-  document.getElementById('shiftBadge').innerText = 'СМЕНА: ' + getShiftInfo().name;
+  document.getElementById('shiftBadge').innerText = 'СМЕНА: ' + getReportPeriod().name;
 }
 
 function renderLines() {
@@ -565,22 +622,77 @@ function renderLines() {
 }
 
 async function selectLine(num) {
+  if (local.shiftAccepted || busy) return;
   local.line = num; saveLocal(); renderLines();
   await refreshBatch();
   checkHandoverReady();
   loadPlanFromCloud();
 }
 
+function keepDraftsFromPreviousBatch() {
+  const currentId = String(batch?.id);
+  const adjustmentId = local.adjustmentsBatchId == null ? null : String(local.adjustmentsBatchId);
+  const draftIds = new Set([
+    ...Object.keys(local.unitDrafts || {}),
+    ...Object.keys(local.closeDrafts || {}),
+    ...(adjustmentId ? [adjustmentId] : [])
+  ]);
+  const archived = [];
+  for (const id of draftIds) {
+    if (id === currentId) continue;
+    const numbers = local.unitDrafts?.[id] || {};
+    const close = local.closeDrafts?.[id] || {};
+    const defects = id === adjustmentId ? local.defects : [];
+    const dust = id === adjustmentId ? local.dust : [];
+    if (Object.keys(numbers).length || Object.keys(close).length || defects.length || dust.length) {
+      archived.push({ batchId: id, sessionId: local.sessionId, shiftKey: local.shiftKey, numbers, close, defects, dust });
+    }
+    if (local.unitDrafts) delete local.unitDrafts[id];
+    if (local.closeDrafts) delete local.closeDrafts[id];
+    if (id === adjustmentId) {
+      local.defects = [];
+      local.dust = [];
+      local.adjustmentsBatchId = null;
+    }
+  }
+  if (archived.length) (local.detachedDrafts ||= []).push(...archived);
+  return archived;
+}
+
 // ===== Поиск открытой партии: ТОЛЬКО по статусу =====
 async function refreshBatch() {
+  const line = local.line;
+  batchVerified = false;
   try {
     const { data, error } = await client.from('batches')
-      .select('*').eq('line_number', local.line).eq('status', 'open').limit(1);
+      .select('*').eq('line_number', line).eq('status', 'open').limit(1);
+    if (line !== local.line) return false;
     if (error) throw error;
-    batch = (data && data.length) ? data[0] : null;
-  } catch (e) { console.error(e); batch = null; }
-  renderFoundBatch();
-  updateBatchUI();
+    batch = data?.[0] || null;
+    sentSnapshot = batch ? snapshotOf(batch) : null;
+    if (local.shiftAccepted) {
+      const archived = local.pendingProduction ? [] : keepDraftsFromPreviousBatch();
+      local.cachedBatch = batch;
+      saveLocal();
+      if (archived.length) {
+        renderDefects();
+        renderDust();
+        const details = archived.flatMap(draft => [
+          ...Object.values(draft.numbers).map(number => '№' + number),
+          ...draft.defects.map(range => '№' + range.from + '–' + range.to),
+          ...draft.dust.map(kg => kg + ' кг')
+        ]).join(', ');
+        showNotice('Партия изменилась. Сверьте сохранённые номера с начальником смены.', 'warning', details);
+      }
+    }
+    batchVerified = true;
+    renderFoundBatch();
+    updateBatchUI();
+    return true;
+  } catch (error) {
+    console.error('Не удалось загрузить партию:', error);
+    return false;
+  }
 }
 
 function renderFoundBatch() {
@@ -660,13 +772,14 @@ function checkHandoverReady() {
 }
 
 async function acceptHandover() {
-  if (busy) return; busy = true;
+  if (busy || local.shiftAccepted) return;
+  busy = true;
   const btn = document.getElementById('btnAcceptHandover');
   btn.innerText = 'Отправка...'; btn.disabled = true;
   try {
     const enteredStarts = readHandoverProductionStarts();
     if (enteredStarts === false) { btn.innerText = 'ПРИНЯТЬ СМЕНУ'; checkHandoverReady(); return; }
-    await refreshBatch(); // ещё раз проверяем сервер прямо перед приёмкой
+    if (!await refreshBatch()) throw new Error('Ошибка чтения партии');
     if (batch && (!enteredStarts || String(enteredStarts.batchId) !== String(batch.id))) {
       showNotice('На линии изменилась открытая партия. Проверьте начальные номера и примите смену ещё раз.', 'warning');
       btn.innerText = 'ПРИНЯТЬ СМЕНУ'; checkHandoverReady(); return;
@@ -677,39 +790,51 @@ async function acceptHandover() {
         if (enteredStarts[key] <= last) throw new Error('Пока вы принимали смену, счётчик партии изменился. Проверьте начальные номера и примите смену ещё раз.');
       }
     }
-    const si = getShiftInfo();
+    const selectedKey = document.getElementById('handoverShift').value;
+    const current = getShiftInfo();
+    const si = [current, getShiftInfo(current.end)].find(period => period.key === selectedKey);
+    if (!si) {
+      renderHandoverPeriods();
+      throw new Error('Выбранный период больше недоступен');
+    }
     local.operator = document.getElementById('operatorName').value.trim().toUpperCase();
     local.lineStatus = local.handoverStatus;
     local.repairReason = local.handoverStatus === 'РЕМОНТ' ? document.getElementById('handoverRepairReason').value : '';
-    local.shiftAccepted = true;
     local.shiftKey = si.key;
+    local.sessionId = crypto.randomUUID();
     local.shiftStartISO = si.start.toISOString();
     local.productionStarts = batch ? (enteredStarts || null) : null;
-    local.defects = []; local.dust = [];
-    saveLocal();
 
     // База: последние номера на момент приёмки = моя отправная точка
-    myBaseline = batch ? snapshotOf(batch) : null;
     sentSnapshot = batch ? snapshotOf(batch) : null;
     if (batch) activeComp = batch.active_component || 'comp1';
 
     if (local.lineStatus === 'РЕМОНТ') {
       local.repairEventId = await ensureRepairEvent(local.repairReason || null);
-      saveLocal();
     } else {
       const { error } = await client.from('shift_reports').insert([{
         line_number: local.line, operator_name: local.operator, event_type: 'STATUS_CHANGE',
         line_status: local.lineStatus,
         batch_id: batch ? batch.id : null, batch_number: batch ? batch.batch_number : null,
         ral_color: batch ? batch.ral_color : null, package_type: batch ? batch.package_type : null,
-        shift_key: si.key
+        shift_key: si.key, operator_session_id: local.sessionId
       }]);
       if (error) throw error;
       local.repairEventId = null;
-      saveLocal();
     }
 
-    enterWorkMode(true);
+    local.shiftAccepted = true;
+    local.cachedBatch = batch;
+    local.unitDrafts = {};
+    local.closeDrafts = {};
+    local.adjustmentsBatchId = null;
+    myDeltaKg = 0;
+    local.defects = [];
+    local.dust = [];
+    local.confirmedKg = 0;
+    saveLocal();
+    enterWorkMode();
+    loadPlanFromCloud();
   } catch (err) {
     console.error('Ошибка приёма смены:', err);
     showNotice('Не удалось принять смену. Проверьте соединение и попробуйте ещё раз.');
@@ -722,27 +847,34 @@ function snapshotOf(b) {
   return { last_unit: b.last_unit||0, last_comp1: b.last_comp1||0, last_comp2: b.last_comp2||0, last_finished: b.last_finished||0 };
 }
 
-function enterWorkMode(fromAccept) {
+function enterWorkMode() {
   document.getElementById('handoverSection').classList.add('hidden');
   document.getElementById('handoverCompact').classList.remove('hidden');
   document.getElementById('gamificationBlock').classList.remove('hidden');
   document.getElementById('linePlanProgressBlock').classList.remove('hidden');
   document.getElementById('workArea').classList.remove('hidden');
-  loadPlanFromCloud();
-  if (!fromAccept && batch) {
-    // Восстановление после перезагрузки: база = последние отправленные мной номера из журнала
-    restoreMySession();
-  }
+  updateShiftBadge();
   updateCompactBar(); updateBatchUI(); renderDefects(); renderDust(); calculateProduction();
   highlightStatusButtons();
 }
 
 async function restoreMySession() {
   try {
-    const { data } = await client.from('shift_reports')
-      .select('*').eq('line_number', local.line).eq('operator_name', local.operator)
-      .eq('shift_key', local.shiftKey).order('created_at', { ascending: false }).limit(100);
-    const rows = data || [];
+    const rows = [];
+    const pageSize = 200;
+    for (let offset = 0; ; offset += pageSize) {
+      let query = client.from('shift_reports').select('*')
+        .eq('line_number', local.line).eq('operator_name', local.operator)
+        .eq('shift_key', local.shiftKey);
+      if (local.sessionId) query = query.eq('operator_session_id', local.sessionId);
+      const { data, error } = await query.order('created_at', { ascending: false })
+        .order('id', { ascending: false }).range(offset, offset + pageSize - 1);
+      if (error) throw error;
+      const page = data || [];
+      const lastClose = page.findIndex(row => row.event_type === 'SHIFT_CLOSE');
+      rows.push(...(lastClose < 0 ? page : page.slice(0, lastClose)));
+      if (lastClose >= 0 || page.length < pageSize) break;
+    }
     // Снимок последней отправки ищем только в текущей партии: в течение смены оператор
     // может закрыть одну партию и открыть следующую.
     const batchRows = batch ? rows.filter(r => String(r.batch_id) === String(batch.id)) : [];
@@ -754,10 +886,10 @@ async function restoreMySession() {
     );
     if (withNums) {
       sentSnapshot = {
-        last_unit: Number(withNums.unit_to)||0,
-        last_comp1: Number(withNums.comp1_to)||0,
-        last_comp2: Number(withNums.comp2_to)||0,
-        last_finished: Number(withNums.finished_to)||0
+        last_unit: Math.max(Number(withNums.unit_to) || 0, Number(batch.last_unit) || 0),
+        last_comp1: Math.max(Number(withNums.comp1_to) || 0, Number(batch.last_comp1) || 0),
+        last_comp2: Math.max(Number(withNums.comp2_to) || 0, Number(batch.last_comp2) || 0),
+        last_finished: Math.max(Number(withNums.finished_to) || 0, Number(batch.last_finished) || 0)
       };
     } else if (batch) {
       sentSnapshot = snapshotOf(batch);
@@ -765,46 +897,13 @@ async function restoreMySession() {
       sentSnapshot = null;
     }
 
-    // Личный старт хранится отдельно от последнего отправленного номера.
-    // Поэтому после перезагрузки уже отправленная выработка не исчезает из разбивки mix.
-    const starts = batch && local.productionStarts &&
-      String(local.productionStarts.batchId) === String(batch.id)
-      ? local.productionStarts : null;
-    myBaseline = batch ? {
-      last_unit: starts && Number.isInteger(Number(starts.unit))
-        ? Number(starts.unit)-1 : Number(batch.initial_unit)||0,
-      last_comp1: starts && Number.isInteger(Number(starts.comp1))
-        ? Number(starts.comp1)-1 : Number(batch.initial_comp1)||0,
-      last_comp2: starts && Number.isInteger(Number(starts.comp2))
-        ? Number(starts.comp2)-1 : Number(batch.initial_comp2)||0,
-      last_finished: starts && Number.isInteger(Number(starts.finished))
-        ? Number(starts.finished)-1 : Number(batch.initial_finished)||0
-    } : null;
-
-    // Восстанавливаем суммарную личную выработку за смену по всем партиям.
-    myDeltaKg = rows.reduce((sum, r) => {
-      if (!['PRODUCTION','PARTY_CLOSE','SHIFT_CLOSE'].includes(r.event_type)) return sum;
-      const hasDeltas = r.delta_comp1_kg !== null && r.delta_comp1_kg !== undefined ||
-        r.delta_comp2_kg !== null && r.delta_comp2_kg !== undefined ||
-        r.delta_finished_kg !== null && r.delta_finished_kg !== undefined ||
-        r.delta_boxes_kg !== null && r.delta_boxes_kg !== undefined;
-      if (hasDeltas) {
-        return sum + Math.max(0,
-          (Number(r.delta_comp1_kg)||0) + (Number(r.delta_comp2_kg)||0) +
-          (Number(r.delta_finished_kg)||0) + (Number(r.delta_boxes_kg)||0) -
-          (Number(r.defect_kg)||0)
-        );
-      }
-      return sum + (r.event_type === 'PRODUCTION' ? 0 : Number(r.total_good_kg)||0);
-    }, 0);
-    calculateProduction();
+    myDeltaKg = rows.reduce((total, report) =>
+      ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(report.event_type)
+        ? total + (Number(report.total_good_kg) || 0) : total, 0);
+    local.confirmedKg = myDeltaKg;
+    saveLocal();
+    onUnitInput();
   } catch(e){ console.error(e); }
-}
-
-function reopenHandover() {
-  document.getElementById('handoverSection').classList.remove('hidden');
-  document.getElementById('handoverCompact').classList.add('hidden');
-  refreshBatch();
 }
 
 function updateCompactBar() {
@@ -823,7 +922,9 @@ function highlightStatusButtons() {
 }
 
 async function setLineStatus(status, btn) {
+  if (!local.shiftAccepted || local.pendingProduction) return;
   local.lineStatus = status;
+  saveLocal();
   highlightStatusButtons(); updateCompactBar();
   if (status === 'РЕМОНТ') {
     try {
@@ -856,7 +957,7 @@ async function submitRepairReason() {
 }
 
 async function ensureRepairEvent(reason) {
-  // Если ремонт уже начался до приёмки смены, сохраняем исходное время начала.
+  // Сохраняем начало текущего ремонта, пока его причина не меняется.
   const { data: latest, error: latestError } = await client.from('shift_reports')
     .select('id, line_status, repair_reason')
     .eq('line_number', local.line)
@@ -866,14 +967,16 @@ async function ensureRepairEvent(reason) {
     .maybeSingle();
   if (latestError) throw latestError;
 
-  if (latest && latest.line_status === 'РЕМОНТ') {
-    if (reason && latest.repair_reason !== reason) {
-      const { error } = await client.from('shift_reports')
+  if (latest?.line_status === 'РЕМОНТ') {
+    if (!reason || latest.repair_reason === reason) return latest.id;
+    if (!latest.repair_reason) {
+      const { data: updated, error } = await client.from('shift_reports')
         .update({ repair_reason: reason })
-        .eq('id', latest.id);
+        .eq('id', latest.id).is('repair_reason', null)
+        .select('id').maybeSingle();
       if (error) throw error;
+      if (updated) return updated.id;
     }
-    return latest.id;
   }
 
   const { data, error } = await client.from('shift_reports').insert([{
@@ -886,7 +989,7 @@ async function ensureRepairEvent(reason) {
     batch_number: batch ? batch.batch_number : null,
     ral_color: batch ? batch.ral_color : null,
     package_type: batch ? batch.package_type : null,
-    shift_key: local.shiftKey || getShiftInfo().key
+    shift_key: local.shiftKey || getShiftInfo().key, operator_session_id: local.sessionId || null
   }]).select('id').single();
   if (error) throw error;
   return data.id;
@@ -896,7 +999,8 @@ async function insertStatusEvent(status, reason) {
   const { error } = await client.from('shift_reports').insert([{
     line_number: local.line, operator_name: local.operator, event_type: 'STATUS_CHANGE',
     line_status: status, repair_reason: status === 'РЕМОНТ' ? (reason || null) : null,
-    batch_id: batch ? batch.id : null, shift_key: getShiftInfo().key
+    batch_id: batch ? batch.id : null, shift_key: getReportPeriod().key,
+    operator_session_id: local.sessionId || null
   }]);
   if (error) {
     console.error('Не удалось записать статус линии:', error);
@@ -955,6 +1059,7 @@ function setNewBatchPack(type, btn) {
 }
 
 async function confirmOpenBatch() {
+  if (!navigator.onLine || !batchVerified || refreshingWork || local.pendingProduction) { showNotice('Проверьте соединение.', 'warning'); return; }
   if (busy) return;
   const bNum = document.getElementById('newBatchNum').value.trim();
   const productCode = document.getElementById('newProductCode').value.trim();
@@ -999,7 +1104,9 @@ async function confirmOpenBatch() {
       throw error;
     }
     batch = data[0];
-    myBaseline = snapshotOf(batch); sentSnapshot = snapshotOf(batch); myDeltaKg = 0;
+    batchVerified = true;
+    local.cachedBatch = batch;
+    sentSnapshot = snapshotOf(batch);
     // Зафиксируем личную точку отсчёта и для создателя партии. Это нужно,
     // чтобы после перезагрузки не принять общий счётчик партии за личную выработку.
     local.productionStarts = newBatchPack === 'mix'
@@ -1032,10 +1139,9 @@ function updateBatchUI() {
   if (batch.package_type === 'mix') {
     document.getElementById('boxInputWrap').classList.add('hidden');
     document.getElementById('mixInputWrap').classList.remove('hidden');
-    activeComp = batch.active_component || activeComp;
+    activeComp = local.activeComponents?.[batch.id] || batch.active_component || 'comp1';
     highlightCompButtons();
     fillUnitInputs();
-    renderMixTotals();
   } else {
     document.getElementById('boxInputWrap').classList.remove('hidden');
     document.getElementById('mixInputWrap').classList.add('hidden');
@@ -1047,12 +1153,12 @@ function updateBatchUI() {
 function fillUnitInputs() {
   if (!batch) return;
   if (batch.package_type === 'mix') {
-    const last = batch['last_' + activeComp] || 0;
+    const last = draftNumber(activeComp) || batch['last_' + activeComp] || 0;
     document.getElementById('mixUnitInput').value = last > 0 ? last : '';
     document.getElementById('mixUnitLabel').innerText =
       activeComp === 'finished' ? 'Номер последней коробки готовой краски' : `Номер последнего мешка ${COMP_NAMES[activeComp]}`;
   } else {
-    document.getElementById('boxUnitInput').value = batch.last_unit > 0 ? batch.last_unit : '';
+    document.getElementById('boxUnitInput').value = draftNumber('unit') || batch.last_unit || '';
   }
 }
 
@@ -1064,14 +1170,23 @@ function highlightCompButtons() {
 }
 
 async function setComponent(comp, btn) {
-  if (!batch || batch.package_type !== 'mix') return;
+  if (busy || refreshingWork || local.pendingProduction || !batch || batch.package_type !== 'mix') return;
   // Перед переключением сохраняем введённый номер текущего компонента, если он больше серверного
-  await flushCurrentInputIfNeeded();
+  if (batchVerified && navigator.onLine) await flushCurrentInputIfNeeded();
+  if (local.pendingProduction) return;
   activeComp = comp;
+  (local.activeComponents ||= {})[batch.id] = comp;
+  saveLocal();
   highlightCompButtons();
   fillUnitInputs();
   onUnitInput();
-  try { await client.from('batches').update({ active_component: comp }).eq('id', batch.id); batch.active_component = comp; } catch(e){}
+  if (batchVerified && navigator.onLine) {
+    try {
+      const { error } = await client.from('batches').update({ active_component: comp }).eq('id', batch.id);
+      if (error) throw error;
+      batch.active_component = comp;
+    } catch (error) { console.error(error); }
+  }
 }
 
 async function flushCurrentInputIfNeeded() {
@@ -1083,65 +1198,61 @@ async function flushCurrentInputIfNeeded() {
 function getCurrentInputValue() {
   if (!batch) return 0;
   const el = batch.package_type === 'mix' ? document.getElementById('mixUnitInput') : document.getElementById('boxUnitInput');
-  return parseInt(el.value) || 0;
+  const value = Number(el.value);
+  return Number.isSafeInteger(value) && value > 0 ? value : 0;
 }
 
 let myDeltaKg = 0; // подтверждённые сервером кг за мою смену
 
-function pendingDelta() {
-  // сколько кг добавлено в поле, но ещё не отправлено
-  if (!batch || !sentSnapshot) return { kg: 0, count: 0, from: 0, to: 0 };
-  const val = getCurrentInputValue();
-  if (batch.package_type === 'mix') {
-    const base = personalStartBase(activeComp, sentSnapshot);
-    if (val > base) return { kg: (val - base) * UNIT_WEIGHT, count: val - base, from: base + 1, to: val };
-    return { kg: 0, count: 0, from: 0, to: 0 };
-  } else {
-    const base = personalStartBase('unit', sentSnapshot);
-    if (val > base) return { kg: (val - base) * UNIT_WEIGHT, count: val - base, from: base + 1, to: val };
-    return { kg: 0, count: 0, from: 0, to: 0 };
-  }
+function pendingDelta(key = batch?.package_type === 'mix' ? activeComp : 'unit', forHandover = false) {
+  const empty = { kg: 0, count: 0, from: 0, to: 0 };
+  if (!batch || !sentSnapshot) return empty;
+  const currentKey = batch.package_type === 'mix' ? activeComp : 'unit';
+  const entered = key === currentKey ? getCurrentInputValue() : draftNumber(key);
+  const val = forHandover ? Math.max(entered, closeDraftValue(CLOSE_NUMBER_FIELDS[key])) : entered;
+  const base = personalStartBase(key, sentSnapshot);
+  if (val <= base) return empty;
+  return { kg: (val - base) * UNIT_WEIGHT, count: val - base, from: base + 1, to: val };
 }
 
-function onUnitInput() {
+function pendingKg(forHandover = false) {
+  const keys = batch?.package_type === 'mix' ? ['comp1', 'comp2', 'finished'] : ['unit'];
+  return keys.reduce((total, key) => total + pendingDelta(key, forHandover).kg, 0);
+}
+
+function onUnitInput(recordDraft = false) {
+  if (recordDraft && local.pendingProduction) {
+    fillUnitInputs();
+  } else if (recordDraft && local.shiftAccepted && batch) {
+    const key = batch.package_type === 'mix' ? activeComp : 'unit';
+    const value = getCurrentInputValue();
+    const drafts = ((local.unitDrafts ||= {})[batch.id] ||= {});
+    if (value > (batch['last_' + key] || 0)) drafts[key] = value;
+    else delete drafts[key];
+    saveLocal();
+  }
   const d = pendingDelta();
   const txt = d.kg > 0 ? `+${d.count} шт (№${d.from}–${d.to}) = +${d.kg} кг к отправке` : 'Введите номер больше предыдущего';
   if (batch && batch.package_type === 'mix') {
     document.getElementById('mixDeltaText').innerText = txt;
-    renderMixTotals();
+    renderMixCounters();
   } else {
     document.getElementById('boxDeltaText').innerText = txt;
   }
   calculateProduction();
 }
 
-function batchTotalKg() {
-  if (!batch) return 0;
-  return batch.package_type === 'mix'
-    ? ((batch.last_comp1||0)+(batch.last_comp2||0)+(batch.last_finished||0)) * UNIT_WEIGHT
-    : (batch.last_unit||0) * UNIT_WEIGHT;
-}
-
-function renderMixTotals() {
-  if (!batch || batch.package_type !== 'mix') return;
-  const base = myBaseline || { last_comp1:0, last_comp2:0, last_finished:0 };
-  const rows = ['comp1','comp2','finished'].map(k => {
-    const cur = batch['last_'+k]||0;
-    const mineBase = Math.max(Number(base['last_'+k]||0), personalStartBase(k, base));
-    const mine = Math.max(0, cur - mineBase);
-    const pend = (k === activeComp) ? pendingDelta().count : 0;
-    return `<div class="flex justify-between"><span class="text-[#8fa0c2]">${COMP_NAMES[k]}:</span>
-      <span><b class="text-white">${(cur+pend)*UNIT_WEIGHT} кг</b> <span class="text-[#34d399]">/ вы: ${(mine+pend)*UNIT_WEIGHT} кг</span></span></div>`;
+function renderMixCounters() {
+  document.getElementById('mixTotals').innerHTML = ['comp1', 'comp2', 'finished'].map(key => {
+    const number = Number(batch['last_' + key]) || 0;
+    return `<div class="flex justify-between"><span class="text-[#8fa0c2]">${COMP_NAMES[key]}:</span>
+      <span class="font-bold text-white">${number ? '№' + number : '—'}</span></div>`;
   }).join('');
-  const total = batchTotalKg() + pendingDelta().kg;
-  const mineTotal = myKgForDisplay();
-  document.getElementById('mixTotals').innerHTML = rows +
-    `<div class="border-t border-[#233152] pt-1 mt-1 flex justify-between"><span class="font-extrabold text-[#38bdf8]">ИТОГО:</span><span class="font-black text-white">${total} кг <span class="text-[#34d399] font-bold">/ вы: ${mineTotal} кг</span></span></div>`;
 }
 
-function myKgForDisplay() {
+function myKgForDisplay(forHandover = false) {
   const defectKg = local.defects.reduce((s,d)=>s+d.kg,0);
-  return Math.max(0, myDeltaKg + pendingDelta().kg - defectKg);
+  return myDeltaKg + Math.max(0, pendingKg(forHandover) - defectKg);
 }
 
 function calculateProduction() {
@@ -1155,19 +1266,36 @@ function calculateProduction() {
 
 // ===== Отправка дельты (PRODUCTION / PARTY_CLOSE / SHIFT_CLOSE) =====
 async function pushDelta(eventType, closeOpts = null) {
+  if (!local.shiftAccepted || refreshingWork) return false;
+  if (local.pendingProduction) {
+    if (local.pendingProduction.report.event_type !== eventType) {
+      showNotice('Данные ожидают подтверждения. Повторите предыдущую отправку.', 'warning');
+      return false;
+    }
+    return resolvePendingProduction();
+  }
   if (!batch && eventType !== 'SHIFT_CLOSE') { showNotice('Нет открытой партии'); return false; }
-  const si = getShiftInfo();
+  if (!navigator.onLine || !batchVerified) {
+    showNotice('Проверьте соединение.', 'warning');
+    return false;
+  }
+  const si = getReportPeriod();
   const defectKg = local.defects.reduce((s,d)=>s+d.kg,0);
-  const dustKg = local.dust.reduce((s,d)=>s+d,0) + (closeOpts?.extraDust||0);
+  const extraDust = eventType === 'SHIFT_CLOSE' ? closeDraftValue('closeDust') : closeOpts?.extraDust;
+  const dustKg = local.dust.reduce((sum, kg) => sum + kg, 0) + Math.max(0, extraDust || 0);
 
   // целевые номера: из полей ввода (или из модалки закрытия)
   let target = batch ? snapshotOf(batch) : {last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
   if (closeOpts) {
     target = closeOpts.target;
   } else if (batch) {
-    const val = getCurrentInputValue();
-    if (batch.package_type === 'mix') target['last_'+activeComp] = Math.max(val, target['last_'+activeComp]);
-    else target.last_unit = Math.max(val, target.last_unit);
+    const keys = batch.package_type === 'mix' ? ['comp1', 'comp2', 'finished'] : ['unit'];
+    for (const key of keys) {
+      const currentKey = batch.package_type === 'mix' ? activeComp : 'unit';
+      const value = key === currentKey ? getCurrentInputValue() : draftNumber(key);
+      const closeNumber = eventType === 'SHIFT_CLOSE' ? closeDraftValue(CLOSE_NUMBER_FIELDS[key]) : 0;
+      target['last_' + key] = Math.max(value, closeNumber, target['last_' + key]);
+    }
   }
 
   const snap = sentSnapshot || {last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
@@ -1195,7 +1323,7 @@ async function pushDelta(eventType, closeOpts = null) {
     batch_id: batch?batch.id:null, batch_number: batch?batch.batch_number:null,
     product_code: batch?batch.product_code:null,
     ral_color: batch?batch.ral_color:null, package_type: batch?batch.package_type:null,
-    shift_key: si.key,
+    shift_key: si.key, operator_session_id: local.sessionId || null,
     delta_comp1_kg: dComp1, delta_comp2_kg: dComp2, delta_finished_kg: dFin, delta_boxes_kg: dBox,
     comp1_to: batch&&batch.package_type==='mix'?target.last_comp1:null,
     comp2_to: batch&&batch.package_type==='mix'?target.last_comp2:null,
@@ -1205,37 +1333,95 @@ async function pushDelta(eventType, closeOpts = null) {
     total_good_kg: goodDelta,
     chips_kg: dComp1+dComp2,
     defect_kg: defectKg, defect_boxes: local.defects.reduce((s,d)=>s+d.count,0),
-    dust_kg: dustKg, plan_kg: local.planKg>0?local.planKg:null
+    dust_kg: dustKg, plan_kg: local.planKey === si.key && local.planLine === local.line && local.planKg > 0 ? local.planKg : null
   };
 
-  const { error } = await client.from('shift_reports').insert([payload]);
-  if (error) { console.error('Ошибка отправки данных:', error); showNotice('Не удалось отправить данные. Они пока не подтверждены сервером. Попробуйте ещё раз.'); return false; }
-
-  // обновляем счётчики партии на сервере
-  if (batch) {
-    const upd = batch.package_type==='mix'
-      ? { last_comp1: target.last_comp1, last_comp2: target.last_comp2, last_finished: target.last_finished, active_component: activeComp }
-      : { last_unit: target.last_unit };
-    if (eventType==='PARTY_CLOSE') {
-      upd.status='closed'; upd.closed_by=local.operator; upd.closed_at=new Date().toISOString();
-      upd.last_box_weight=closeOpts?.lastWeight||20; upd.dust_kg=dustKg;
-    }
-    const { error: upErr } = await client.from('batches').update(upd).eq('id', batch.id);
-    if (upErr) { console.error('Журнал записан, но не обновилась партия:', upErr); showNotice('Запись сохранена, но счётчики партии не обновились. Не повторяйте ввод — сообщите начальнику смены.'); return false; }
-    Object.assign(batch, upd);
-    sentSnapshot = {...target};
+  const update = batch ? (batch.package_type === 'mix'
+    ? { last_comp1: target.last_comp1, last_comp2: target.last_comp2, last_finished: target.last_finished, active_component: activeComp }
+    : { last_unit: target.last_unit }) : null;
+  if (eventType === 'PARTY_CLOSE') {
+    Object.assign(update, {
+      status: 'closed', closed_by: local.operator, closed_at: new Date().toISOString(),
+      last_box_weight: closeOpts?.lastWeight || 20, dust_kg: dustKg
+    });
   }
-  myDeltaKg += goodDelta;
-  local.defects = []; local.dust = []; saveLocal();
-  renderDefects(); renderDust();
-  if (local.shiftAccepted) loadLineProgressFromCloud().catch(e => console.error("Не удалось обновить прогресс после отправки:", e));
+  local.pendingProduction = {
+    id: crypto.randomUUID(), report: payload, expected: batch ? snapshotOf(batch) : null, update
+  };
+  saveLocal();
+  return resolvePendingProduction();
+}
+
+async function resolvePendingProduction() {
+  const operation = local.pendingProduction;
+  if (!operation) return false;
+  try {
+    const { error } = await client.rpc('record_operator_production', {
+      p_operation_id: operation.id, p_report: operation.report,
+      p_expected: operation.expected, p_update: operation.update
+    });
+    if (error) throw error;
+  } catch (error) {
+    console.error('Ошибка отправки данных:', error);
+    if (error.code === 'P0001' && error.message === 'primatek_batch_changed') {
+      local.pendingProduction = null;
+      saveLocal();
+      showNotice('Партия изменилась. Сверьте сохранённые номера с начальником смены.', 'warning');
+      await refreshBatch();
+    } else {
+      showNotice('Не удалось отправить данные. Они пока не подтверждены сервером. Попробуйте ещё раз.');
+    }
+    return false;
+  }
+
+  const { event_type: event, batch_id: batchId } = operation.report;
+  if (batch && String(batch.id) === String(batchId)) {
+    Object.assign(batch, operation.update);
+    sentSnapshot = snapshotOf(batch);
+  }
+  if (event === 'PARTY_CLOSE') {
+    batch = null;
+    sentSnapshot = null;
+  }
+  myDeltaKg += Number(operation.report.total_good_kg) || 0;
+  local.confirmedKg = myDeltaKg;
+  if (local.unitDrafts) delete local.unitDrafts[batchId];
+  if (event === 'PARTY_CLOSE' && local.closeDrafts) delete local.closeDrafts[batchId];
+  local.adjustmentsBatchId = null;
+  local.cachedBatch = batch?.status === 'open' ? batch : null;
+  local.defects = [];
+  local.dust = [];
+  local.pendingProduction = null;
+  if (event === 'SHIFT_CLOSE') {
+    Object.assign(local, {
+      shiftAccepted: false, operator: '', handoverStatus: null, shiftKey: null,
+      shiftStartISO: null, sessionId: null, productionStarts: null, cachedBatch: null,
+      unitDrafts: {}, closeDrafts: {}, activeComponents: {}, confirmedKg: 0
+    });
+  }
+  saveLocal();
+  renderDefects();
+  renderDust();
+  if (event === 'SHIFT_CLOSE') {
+    showNotice('Смена сдана!' + (batchId ? ' Партия остаётся открытой для следующего оператора.' : ''));
+    closeModal('modalSummary');
+    setTimeout(() => location.reload(), 1200);
+  } else {
+    if (event === 'PARTY_CLOSE') {
+      closeModal('modalCloseBatch');
+      renderFoundBatch();
+      showNotice('Партия закрыта! Выработка засчитана в вашу смену.');
+    }
+    updateBatchUI();
+    loadPlanFromCloud();
+  }
   return true;
 }
 
 async function sendCheckpoint(silent = false) {
-  if (busy) return;
-  if (!batch) { showNotice('Сначала откройте партию!'); return; }
-  if (pendingDelta().kg === 0 && local.defects.length===0 && local.dust.length===0) {
+  if (busy || refreshingWork) return;
+  if (!batch && !local.pendingProduction) { showNotice('Сначала откройте партию!'); return; }
+  if (!local.pendingProduction && pendingKg() === 0 && local.defects.length === 0 && local.dust.length === 0) {
     if (!silent) showNotice('Нет новых данных для отправки'); return;
   }
   busy = true;
@@ -1259,18 +1445,28 @@ function openClosePartyModal() {
   document.getElementById('closeBoxFields').classList.toggle('hidden', isMix);
   document.getElementById('closeMixFields').classList.toggle('hidden', !isMix);
   if (isMix) {
-    document.getElementById('closeComp1').value = Math.max(batch.last_comp1||0, activeComp==='comp1'?getCurrentInputValue():0);
-    document.getElementById('closeComp2').value = Math.max(batch.last_comp2||0, activeComp==='comp2'?getCurrentInputValue():0);
-    document.getElementById('closeFinished').value = Math.max(batch.last_finished||0, activeComp==='finished'?getCurrentInputValue():0);
+    document.getElementById('closeComp1').value = Math.max(batch.last_comp1||0, activeComp==='comp1'?getCurrentInputValue():draftNumber('comp1'));
+    document.getElementById('closeComp2').value = Math.max(batch.last_comp2||0, activeComp==='comp2'?getCurrentInputValue():draftNumber('comp2'));
+    document.getElementById('closeFinished').value = Math.max(batch.last_finished||0, activeComp==='finished'?getCurrentInputValue():draftNumber('finished'));
   } else {
     document.getElementById('closeUnitTo').value = Math.max(batch.last_unit||0, getCurrentInputValue());
   }
   document.getElementById('closeLastBoxWeight').value = '';
   document.getElementById('closeDust').value = '';
+  const draft = local.closeDrafts?.[batch.id] || {};
+  const fields = isMix ? ['closeComp1', 'closeComp2', 'closeFinished'] : ['closeUnitTo'];
+  for (const id of [...fields, 'closeLastBoxWeight', 'closeDust']) {
+    const input = document.getElementById(id);
+    if (id in draft) input.value = draft[id];
+    input.oninput = () => {
+      if (!local.pendingProduction) {
+        ((local.closeDrafts ||= {})[batch.id] ||= {})[id] = input.value;
+        saveLocal();
+      }
+      updateClosePreview();
+    };
+  }
   updateClosePreview();
-  ['closeComp1','closeComp2','closeFinished','closeUnitTo','closeLastBoxWeight'].forEach(id=>{
-    document.getElementById(id).oninput = updateClosePreview;
-  });
   openModal('modalCloseBatch');
 }
 
@@ -1300,7 +1496,13 @@ function updateClosePreview() {
 }
 
 async function closeBatch() {
-  if (busy) return;
+  if (busy || refreshingWork) return;
+  if (local.pendingProduction) {
+    busy = true;
+    try { await pushDelta('PARTY_CLOSE'); } finally { busy = false; }
+    return;
+  }
+  if (!batch) return;
   const t = closeTargets();
   const snap = sentSnapshot||{last_unit:0,last_comp1:0,last_comp2:0,last_finished:0};
   if (batch.package_type==='mix') {
@@ -1319,19 +1521,16 @@ async function closeBatch() {
   busy = true;
   const btn = document.getElementById('btnCloseBatch'); btn.innerText='Закрытие...';
   try {
-    if (await pushDelta('PARTY_CLOSE', { target: t, lastWeight: lw, extraDust })) {
-      showNotice('Партия закрыта! Выработка засчитана в вашу смену.');
-      batch = null; myBaseline = null; sentSnapshot = null;
-      closeModal('modalCloseBatch');
-      updateBatchUI(); calculateProduction(); renderFoundBatch();
-    }
+    await pushDelta('PARTY_CLOSE', { target: t, lastWeight: lw, extraDust });
   } finally { busy = false; btn.innerText='Подтвердить закрытие'; }
 }
 
 // ===== Брак / пыль =====
 function addDefect() {
+  if (local.pendingProduction) return;
   const s = parseInt(document.getElementById('defStart').value), e = parseInt(document.getElementById('defEnd').value);
   if (s && e && e>=s) {
+    local.adjustmentsBatchId ??= batch?.id ?? null;
     local.defects.push({from:s,to:e,count:e-s+1,kg:(e-s+1)*UNIT_WEIGHT});
     document.getElementById('defStart').value=''; document.getElementById('defEnd').value='';
     saveLocal(); renderDefects(); calculateProduction();
@@ -1342,25 +1541,41 @@ function renderDefects() {
   document.getElementById('defectList').innerHTML = local.defects.map((d,i)=>
     `<div class="flex justify-between text-[#fca5a5]"><span>#${d.from}-#${d.to} (${d.count} шт = ${d.kg} кг)</span><span class="cursor-pointer font-bold" onclick="removeDefect(${i})">✕</span></div>`).join('');
 }
-function removeDefect(i){ local.defects.splice(i,1); saveLocal(); renderDefects(); calculateProduction(); }
+function removeDefect(i){
+  if (local.pendingProduction) return;
+  local.defects.splice(i, 1);
+  if (!local.defects.length && !local.dust.length) local.adjustmentsBatchId = null;
+  saveLocal(); renderDefects(); calculateProduction();
+}
 
 function addDust() {
+  if (local.pendingProduction) return;
   const v = parseFloat(document.getElementById('dustInput').value);
-  if (v && v>0) { local.dust.push(v); document.getElementById('dustInput').value=''; saveLocal(); renderDust(); }
+  if (v && v > 0) {
+    local.adjustmentsBatchId ??= batch?.id ?? null;
+    local.dust.push(v);
+    document.getElementById('dustInput').value = '';
+    saveLocal(); renderDust();
+  }
 }
 function renderDust() {
   document.getElementById('badgeDust').innerText = local.dust.reduce((s,d)=>s+d,0).toFixed(1)+' кг';
   document.getElementById('dustList').innerHTML = local.dust.map((d,i)=>
     `<div class="flex justify-between text-[#94a3b8]"><span>Мешок #${i+1}: ${d} кг</span><span class="cursor-pointer font-bold" onclick="removeDust(${i})">✕</span></div>`).join('');
 }
-function removeDust(i){ local.dust.splice(i,1); saveLocal(); renderDust(); }
+function removeDust(i){
+  if (local.pendingProduction) return;
+  local.dust.splice(i, 1);
+  if (!local.defects.length && !local.dust.length) local.adjustmentsBatchId = null;
+  saveLocal(); renderDust();
+}
 
 // ===== Сдача смены =====
 function openSummary() {
-  const si = getShiftInfo();
-  const goodKg = myKgForDisplay();
+  const si = getReportPeriod();
+  const goodKg = myKgForDisplay(true);
   const earned = goodKg * EARNING_RATE;
-  const dustKg = local.dust.reduce((s,d)=>s+d,0);
+  const dustKg = local.dust.reduce((sum, kg) => sum + kg, 0) + Math.max(0, closeDraftValue('closeDust'));
   document.getElementById('summaryRows').innerHTML = `
     <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Линия / Смена:</span><b>№${local.line} (${si.name})</b></div>
     <div class="flex justify-between py-1 border-b border-[#1c2742]"><span class="text-gray-400">Оператор:</span><b>${local.operator}</b></div>
@@ -1373,16 +1588,11 @@ function openSummary() {
 }
 
 async function submitFinalShift() {
-  if (busy) return; busy = true;
+  if (busy || refreshingWork) return;
+  busy = true;
   const btn = document.getElementById('btnFinalShift'); btn.innerText='Отправка...';
   try {
-    if (await pushDelta('SHIFT_CLOSE')) {
-      showNotice('Смена сдана!'+(batch?' Партия остаётся открытой для следующего оператора.':''));
-      closeModal('modalSummary');
-      local.shiftAccepted=false; local.operator=''; local.defects=[]; local.dust=[]; local.handoverStatus=null;
-      saveLocal();
-      setTimeout(()=>location.reload(),1200);
-    }
+    await pushDelta('SHIFT_CLOSE');
   } finally { busy=false; btn.innerText='Подтвердить и сдать'; }
 }
 
@@ -1406,7 +1616,12 @@ async function loadStats() {
     const rows = data||[];
     const shifts = rows.filter(r=>r.event_type==='SHIFT_CLOSE');
     let day=0,night=0;
-    shifts.forEach(r=>{ const h=new Date(r.created_at).getHours(); (h>=8&&h<20)?day++:night++; });
+    shifts.forEach(r => {
+      const h = new Date(r.created_at).getHours();
+      const name = r.shift_key?.split('|')[1] || (h >= 8 && h < 20 ? 'ДЕНЬ' : 'НОЧЬ');
+      if (name === 'ДЕНЬ') day++;
+      else night++;
+    });
     // кг: новые записи считаем по дельтам, старые (без shift_key) — по снимку SHIFT_CLOSE/PARTY_CLOSE
     let kg=0;
     rows.forEach(r=>{
@@ -1424,28 +1639,45 @@ async function loadStats() {
   } catch(e){ console.error(e); }
 }
 
+let planRequest = 0;
+
 async function loadPlanFromCloud() {
+  const request = ++planRequest;
+  const si = getReportPeriod();
+  const line = local.line;
   try {
-    const si = getShiftInfo();
-    const { data, error } = await client.from('shift_plans').select('plan_kg')
-      .eq('plan_date', si.planDate).eq('shift', si.name).eq('line_number', local.line).limit(1);
-    if (error) throw error;
-    local.planKg = (data && data.length && data[0].plan_kg) ? Number(data[0].plan_kg) : 0;
+    const [plan, lineKg] = await Promise.all([
+      client.from('shift_plans').select('plan_kg')
+        .eq('plan_date', si.planDate).eq('shift', si.name).eq('line_number', line).limit(1),
+      readLineProduction(line, si.key)
+    ]);
+    if (plan.error) throw plan.error;
+    if (request !== planRequest || line !== local.line || si.key !== getReportPeriod().key) return;
+    const planKg = Number(plan.data?.[0]?.plan_kg) || 0;
+    Object.assign(local, { planKg, planKey: si.key, planLine: line });
     saveLocal();
-    await loadLineProgressFromCloud();
-  } catch(e) {
-    console.error('Не удалось загрузить план линии:', e);
+    renderLineProgress(planKg, lineKg);
+  } catch (error) {
+    console.error('Не удалось загрузить план линии:', error);
   }
 }
 
-async function loadLineProgressFromCloud() {
-  const si = getShiftInfo();
-  const { data, error } = await client.from('shift_reports').select('total_good_kg')
-    .eq('line_number', local.line).eq('shift_key', si.key)
-    .in('event_type', ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE']);
-  if (error) throw error;
-  const lineKg = (data || []).reduce((sum, row) => sum + (Number(row.total_good_kg) || 0), 0);
-  const planKg = Number(local.planKg) || 0;
+async function readLineProduction(line, key) {
+  const pageSize = 500;
+  let kg = 0;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await client.from('shift_reports').select('total_good_kg')
+      .eq('line_number', line).eq('shift_key', key)
+      .in('event_type', ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'])
+      .order('id').range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    const rows = data || [];
+    kg += rows.reduce((sum, row) => sum + (Number(row.total_good_kg) || 0), 0);
+    if (rows.length < pageSize) return kg;
+  }
+}
+
+function renderLineProgress(planKg, lineKg) {
   const percent = planKg > 0 ? Math.round(lineKg / planKg * 100) : 0;
   const remaining = Math.max(0, planKg - lineKg);
 
@@ -1470,7 +1702,7 @@ function startOperatorRealtime() {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_reports' }, payload => {
       if (local.shiftAccepted && payload.new && Number(payload.new.line_number) === Number(local.line)) {
-        loadLineProgressFromCloud().catch(e => console.error('Не удалось обновить прогресс линии:', e));
+        loadPlanFromCloud();
       }
     })
     .subscribe();
@@ -1480,6 +1712,10 @@ function startOperatorRealtime() {
    UI-only translation. Operational values stored in Supabase remain canonical Russian. */
 const PRIMATEK_I18N = {
   uz: {
+    "ЛИЧНАЯ ВЫРАБОТКА ЗА СМЕНУ":"SMENADAGI SHAXSIY ISHLAB CHIQARISH","ВЫПОЛНЕНИЕ ПЛАНА ЛИНИИ":"LINIYA REJASINING BAJARILISHI",
+    "Данные ожидают подтверждения. Повторите предыдущую отправку.":"Ma’lumotlar tasdiqlanishini kutmoqda. Avvalgi yuborishni takrorlang.",
+    "ДЕНЬ":"KUN","НОЧЬ":"TUN","Проверьте соединение.":"Internet aloqasini tekshiring.",
+    "Отчётная смена":"Hisobot smenasi","Партия изменилась. Сверьте сохранённые номера с начальником смены.":"Partiya o‘zgardi. Saqlangan raqamlarni smena boshlig‘i bilan tekshiring.",
     "Введите PIN-код":"PIN-kodni kiriting","Для входа в приложение оператора":"Operator ilovasiga kirish uchun","Войти":"Kirish","Проверка...":"Tekshirilmoqda...","Введите четыре цифры.":"To‘rtta raqamni kiriting.","Неверный PIN-код. Попробуйте ещё раз.":"PIN-kod noto‘g‘ri. Qayta urinib ko‘ring.","Слишком много попыток. Подождите 10 минут.":"Urinishlar soni oshib ketdi. 10 daqiqa kuting.","Не удалось проверить PIN. Проверьте соединение.":"PIN-kodni tekshirib bo‘lmadi. Internet aloqasini tekshiring.","ПОНЯТНО":"TUSHUNARLI","СМЕНА: —":"SMENA: —","Выработка":"Ishlab chiqarish",
     "Приём смены и выбор линии":"Smenani qabul qilish va liniyani tanlash",
     "ФИО Оператора":"Operatorning F.I.Sh.","Оператор, пиши сюда фамилию и имя":"Operator, familiya va ismingizni shu yerga yozing",
@@ -1487,7 +1723,7 @@ const PRIMATEK_I18N = {
     "Статус линии при приёмке":"Smenani qabul qilishdagi liniya holati",
     "В РАБОТЕ":"ISHLAMOQDA","ЧИСТКА":"TOZALASH","ПРОБЫ":"SINOV","РЕМОНТ":"TA’MIR",
     "Причина ремонта":"Ta’mirlash sababi","Выберите причину...":"Sababni tanlang...",
-    "Замена сита":"Elakni almashtirish","Фасовка":"Qadoqlash","Нижний дозатор":"Pastki dozator","Кулер":"Sovitgich","Фидер":"Ta’minlagich","Остановка шнеков":"Shneklarning to‘xtashi","Ошибка на пульте":"Boshqaruv panelidagi xato",
+    "Плановая замена сита":"Elakni rejali almashtirish","Разрыв сита":"Elakning yirtilishi","Фасовка":"Qadoqlash","Нижний дозатор":"Pastki dozator","Кулер":"Sovitgich","Фидер":"Ta’minlagich","Остановка шнеков":"Shneklarning to‘xtashi","Ошибка на пульте":"Boshqaruv panelidagi xato",
     "ПРИНЯТЬ СМЕНУ":"SMENANI QABUL QILISH","Выберите линию, введите ФИО и статус":"Liniyani tanlang, F.I.Sh. va holatni kiriting",
     "Изменить ✎":"O‘zgartirish ✎","ВЫРАБОТКА ЗА СМЕНУ":"SMENADAGI ISHLAB CHIQARISH","СТИМУЛИРУЮЩИЕ ВЫПЛАТЫ":"RAG‘BATLANTIRISH TO‘LOVLARI",
     "Расчёт: произведённые килограммы × 0,5 ₽":"Hisob: ishlab chiqarilgan kilogramm × 0,5 ₽",
@@ -1515,6 +1751,10 @@ const PRIMATEK_I18N = {
     "Не удалось сохранить причину ремонта. Попробуйте ещё раз.":"Ta’mirlash sababini saqlab bo‘lmadi. Qayta urinib ko‘ring."
   },
   tg: {
+    "ЛИЧНАЯ ВЫРАБОТКА ЗА СМЕНУ":"ИСТЕҲСОЛИ ШАХСӢ ДАР БАСТ","ВЫПОЛНЕНИЕ ПЛАНА ЛИНИИ":"ИҶРОИ НАҚШАИ ХАТ",
+    "Данные ожидают подтверждения. Повторите предыдущую отправку.":"Маълумот дар интизори тасдиқ аст. Ирсоли пешинаро такрор кунед.",
+    "ДЕНЬ":"РӮЗ","НОЧЬ":"ШАБ","Проверьте соединение.":"Пайвасти интернетро санҷед.",
+    "Отчётная смена":"Басти ҳисоботӣ","Партия изменилась. Сверьте сохранённые номера с начальником смены.":"Партия иваз шуд. Рақамҳои захирашударо бо сардори баст санҷед.",
     "Введите PIN-код":"Рамзи PIN-ро ворид кунед","Для входа в приложение оператора":"Барои ворид шудан ба барномаи оператор","Войти":"Ворид шудан","Проверка...":"Санҷиш...","Введите четыре цифры.":"Чор рақамро ворид кунед.","Неверный PIN-код. Попробуйте ещё раз.":"Рамзи PIN нодуруст аст. Бори дигар кӯшиш кунед.","Слишком много попыток. Подождите 10 минут.":"Шумораи кӯшишҳо зиёд шуд. 10 дақиқа интизор шавед.","Не удалось проверить PIN. Проверьте соединение.":"PIN санҷида нашуд. Пайвасти интернетро санҷед.","ПОНЯТНО":"ФАҲМО","СМЕНА: —":"СМЕНА: —","Выработка":"Истеҳсол",
     "Приём смены и выбор линии":"Қабули баст ва интихоби хат",
     "ФИО Оператора":"Ному насаби оператор","Оператор, пиши сюда фамилию и имя":"Оператор, насаб ва номатро ин ҷо навис",
@@ -1522,7 +1762,7 @@ const PRIMATEK_I18N = {
     "Статус линии при приёмке":"Ҳолати хат ҳангоми қабули баст",
     "В РАБОТЕ":"ДАР КОР","ЧИСТКА":"ТOЗАКУНӢ","ПРОБЫ":"САНҶИШ","РЕМОНТ":"ТАЪМИР",
     "Причина ремонта":"Сабаби таъмир","Выберите причину...":"Сабабро интихоб кунед...",
-    "Замена сита":"Иваз кардани элак","Фасовка":"Бастабандӣ","Нижний дозатор":"Дозатори поёнӣ","Кулер":"Сардкунанда","Фидер":"Ғизодиҳанда","Остановка шнеков":"Қатъ шудани шнекҳо","Ошибка на пульте":"Хатои панели идоракунӣ",
+    "Плановая замена сита":"Ивазкунии нақшавии элак","Разрыв сита":"Канда шудани элак","Фасовка":"Бастабандӣ","Нижний дозатор":"Дозатори поёнӣ","Кулер":"Сардкунанда","Фидер":"Ғизодиҳанда","Остановка шнеков":"Қатъ шудани шнекҳо","Ошибка на пульте":"Хатои панели идоракунӣ",
     "ПРИНЯТЬ СМЕНУ":"ҚАБУЛИ БАСТ","Выберите линию, введите ФИО и статус":"Хатро интихоб кунед, ному насаб ва ҳолатро ворид кунед",
     "Изменить ✎":"Тағйир додан ✎","ВЫРАБОТКА ЗА СМЕНУ":"ИСТЕҲСОЛИ БАСТ","СТИМУЛИРУЮЩИЕ ВЫПЛАТЫ":"ПАРДОХТҲОИ ҲАВАСМАНДГАРДОНӢ",
     "Расчёт: произведённые килограммы × 0,5 ₽":"Ҳисоб: килограммҳои истеҳсолшуда × 0,5 ₽",
@@ -1559,7 +1799,7 @@ function setPrimatekLanguage(lang) {
   if (!['ru','uz','tg'].includes(lang)) lang = 'ru';
   localStorage.setItem(PRIMATEK_LANG_KEY, lang);
   applyPrimatekLanguage();
-  if (local.shiftAccepted) loadLineProgressFromCloud().catch(e => console.error('Не удалось обновить перевод прогресса:', e));
+  if (local.shiftAccepted) loadPlanFromCloud();
 }
 const PRIMATEK_TEXT_STATE = new WeakMap();
 function applyPrimatekLanguage() {
@@ -1601,6 +1841,9 @@ function initPrimatekLanguage() {
   observer.observe(document.body, { childList:true, subtree:true, characterData:true });
 }
 initPrimatekLanguage();
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(error => console.error(error));
+}
 
 </script>
 </body>
