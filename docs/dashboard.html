@@ -571,14 +571,15 @@ function getMascotAsset(message, kind) {
     if (btn) btn.style.display = 'inline-block';
   }
 
+  function inReportPeriod(report, period) {
+    if (report.shift_key) return report.shift_key === `${period.planDate}|${period.shiftName}`;
+    const timestamp = new Date(report.created_at).getTime();
+    return timestamp >= period.start.getTime() && timestamp < period.end.getTime();
+  }
+
   function renderTopSummary() {
-    const { start: shiftStart, end: shiftEnd } = getCurrentShiftInfo();
-    
-    const shiftReports = rawReports.filter(r => {
-      if (!r.created_at) return false;
-      const t = new Date(r.created_at).getTime();
-      return t >= shiftStart.getTime() && t <= shiftEnd.getTime();
-    });
+    const period = getCurrentShiftInfo();
+    const shiftReports = rawReports.filter(report => inReportPeriod(report, period));
 
     let totalLiveKg = 0, totalLivePcs = 0, shiftDefectKg = 0, shiftDefectBoxes = 0, shiftChipsKg = 0, shiftDustKg = 0;
 
@@ -618,7 +619,7 @@ function getMascotAsset(message, kind) {
   function renderLiveLineCards() {
     const grid = document.getElementById('linesGrid');
     grid.innerHTML = '';
-    const { start: shiftStart } = getCurrentShiftInfo();
+    const period = getCurrentShiftInfo();
 
     PRIMATEK_LINES.forEach(lineNum => {
       const latestAny = rawReports.find(r => Number(r.line_number) === lineNum);
@@ -643,7 +644,14 @@ function getMascotAsset(message, kind) {
           .reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
       }
 
-      if (latestAny && new Date(latestAny.created_at) >= shiftStart) {
+      const currentShiftEvents = rawReports.filter(r =>
+        Number(r.line_number) === lineNum && inReportPeriod(r, period) &&
+        ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type)
+      );
+      shiftKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
+      chipsKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.chips_kg) || 0), 0);
+
+      if (latestAny && (inReportPeriod(latestAny, period) || new Date(latestAny.created_at) >= period.start)) {
         statusText = latestAny.line_status || 'В РАБОТЕ';
         if (statusText === 'В РАБОТЕ') statusClass = 'st-work';
         else if (statusText === 'ЧИСТКА') statusClass = 'st-clean';
@@ -651,13 +659,6 @@ function getMascotAsset(message, kind) {
         else if (statusText === 'РЕМОНТ') statusClass = 'st-repair';
 
         op = latestAny.operator_name || 'Не указан';
-        const currentShiftEvents = rawReports.filter(r =>
-          Number(r.line_number) === lineNum &&
-          new Date(r.created_at) >= shiftStart &&
-          ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type)
-        );
-        shiftKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
-        chipsKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.chips_kg) || 0), 0);
         if (latestAny.unit_from && latestAny.unit_to) boxText = `№ ${latestAny.unit_from} — № ${latestAny.unit_to}`;
         
         const t = new Date(latestAny.created_at);
@@ -828,7 +829,7 @@ function getMascotAsset(message, kind) {
       const boxHtml = (r.unit_from && r.unit_to) ? `<span class="tag-range">№ ${r.unit_from} — № ${r.unit_to}</span>` : `<span style="color:#64748b;">—</span>`;
       const planKg = Number(r.plan_kg) || 0;
       const planPercent = planKg > 0 ? Math.round((Number(r.total_good_kg || 0) / planKg) * 100) : 0;
-      const shiftType = r.event_type === 'SHIFT_CLOSE' ? ((new Date(r.created_at).getHours() >= 8 && new Date(r.created_at).getHours() < 20) ? 'ДЕНЬ' : 'НОЧЬ') : '—';
+      const shiftType = r.event_type === 'SHIFT_CLOSE' ? (r.shift_key?.split('|')[1] || (dt.getHours() >= 8 && dt.getHours() < 20 ? 'ДЕНЬ' : 'НОЧЬ')) : '—';
 
       return `
         <tr>
