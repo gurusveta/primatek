@@ -160,7 +160,7 @@
   <div id="gamificationBlock" class="hidden bg-[#131c31] border border-[#233152] rounded-2xl p-4 shadow-lg">
     <div class="grid grid-cols-2 gap-3">
       <div>
-        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">ВЫРАБОТКА ЗА СМЕНУ</span>
+        <span class="text-[10px] font-extrabold text-[#8fa0c2] uppercase tracking-wider block">ЛИЧНАЯ ВЫРАБОТКА ЗА СМЕНУ</span>
         <div class="text-xl font-black text-white" id="statDonePlan">0 кг</div>
       </div>
       <div class="text-right">
@@ -174,7 +174,7 @@
   <!-- ПРОГРЕСС ПЛАНА ЛИНИИ -->
   <div id="linePlanProgressBlock" class="hidden bg-[#131c31] border border-[#315b91] rounded-2xl p-4 shadow-lg space-y-3">
     <div class="flex items-center justify-between">
-      <span class="text-[11px] font-black text-[#38bdf8] uppercase tracking-wider">ВЫПОЛНЕНИЕ ПЛАНА</span>
+      <span class="text-[11px] font-black text-[#38bdf8] uppercase tracking-wider">ВЫПОЛНЕНИЕ ПЛАНА ЛИНИИ</span>
       <span id="linePlanPercent" class="text-lg font-black text-white">—</span>
     </div>
     <div class="grid grid-cols-2 gap-3">
@@ -473,7 +473,6 @@ function saveLocal() { localStorage.setItem('primatek_local_v2', JSON.stringify(
 
 // ===== Серверная правда =====
 let batch = null;          // открытая партия линии из таблицы batches
-let myBaseline = null;     // последние номера на момент моей приёмки (для "вы за смену")
 let sentSnapshot = null;   // номера на момент последней отправки (для дельт)
 let activeComp = 'comp1';
 let newBatchPack = 'box';
@@ -667,9 +666,7 @@ async function refreshBatch() {
       .select('*').eq('line_number', line).eq('status', 'open').limit(1);
     if (line !== local.line) return false;
     if (error) throw error;
-    const previousId = batch?.id;
     batch = data?.[0] || null;
-    if (String(previousId) !== String(batch?.id)) myBaseline = null;
     sentSnapshot = batch ? snapshotOf(batch) : null;
     if (local.shiftAccepted) {
       const archived = local.pendingProduction ? [] : keepDraftsFromPreviousBatch();
@@ -807,7 +804,6 @@ async function acceptHandover() {
     local.productionStarts = batch ? (enteredStarts || null) : null;
 
     // База: последние номера на момент приёмки = моя отправная точка
-    myBaseline = batch ? snapshotOf(batch) : null;
     sentSnapshot = batch ? snapshotOf(batch) : null;
     if (batch) activeComp = batch.active_component || 'comp1';
 
@@ -834,6 +830,7 @@ async function acceptHandover() {
     local.defects = [];
     local.dust = [];
     local.confirmedKg = 0;
+    local.confirmedByBatch = {};
     saveLocal();
     enterWorkMode();
     loadPlanFromCloud();
@@ -899,39 +896,15 @@ async function restoreMySession() {
       sentSnapshot = null;
     }
 
-    // Личный старт хранится отдельно от последнего отправленного номера.
-    // Поэтому после перезагрузки уже отправленная выработка не исчезает из разбивки mix.
-    const starts = batch && local.productionStarts &&
-      String(local.productionStarts.batchId) === String(batch.id)
-      ? local.productionStarts : null;
-    myBaseline = batch ? {
-      last_unit: starts && Number.isInteger(Number(starts.unit))
-        ? Number(starts.unit)-1 : Number(batch.initial_unit)||0,
-      last_comp1: starts && Number.isInteger(Number(starts.comp1))
-        ? Number(starts.comp1)-1 : Number(batch.initial_comp1)||0,
-      last_comp2: starts && Number.isInteger(Number(starts.comp2))
-        ? Number(starts.comp2)-1 : Number(batch.initial_comp2)||0,
-      last_finished: starts && Number.isInteger(Number(starts.finished))
-        ? Number(starts.finished)-1 : Number(batch.initial_finished)||0
-    } : null;
-
-    // Восстанавливаем суммарную личную выработку за смену по всем партиям.
-    myDeltaKg = rows.reduce((sum, r) => {
-      if (!['PRODUCTION','PARTY_CLOSE','SHIFT_CLOSE'].includes(r.event_type)) return sum;
-      const hasDeltas = r.delta_comp1_kg !== null && r.delta_comp1_kg !== undefined ||
-        r.delta_comp2_kg !== null && r.delta_comp2_kg !== undefined ||
-        r.delta_finished_kg !== null && r.delta_finished_kg !== undefined ||
-        r.delta_boxes_kg !== null && r.delta_boxes_kg !== undefined;
-      if (hasDeltas) {
-        return sum + Math.max(0,
-          (Number(r.delta_comp1_kg)||0) + (Number(r.delta_comp2_kg)||0) +
-          (Number(r.delta_finished_kg)||0) + (Number(r.delta_boxes_kg)||0) -
-          (Number(r.defect_kg)||0)
-        );
-      }
-      return sum + (r.event_type === 'PRODUCTION' ? 0 : Number(r.total_good_kg)||0);
-    }, 0);
-    local.confirmedKg = myDeltaKg;
+    const confirmedByBatch = {};
+    let confirmedKg = 0;
+    for (const report of rows) {
+      if (!['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(report.event_type)) continue;
+      confirmedKg += accumulateProduction(confirmedByBatch, report);
+    }
+    myDeltaKg = confirmedKg;
+    local.confirmedKg = confirmedKg;
+    local.confirmedByBatch = confirmedByBatch;
     saveLocal();
     onUnitInput();
   } catch(e){ console.error(e); }
@@ -1135,7 +1108,7 @@ async function confirmOpenBatch() {
     batch = data[0];
     batchVerified = true;
     local.cachedBatch = batch;
-    myBaseline = snapshotOf(batch); sentSnapshot = snapshotOf(batch);
+    sentSnapshot = snapshotOf(batch);
     // Зафиксируем личную точку отсчёта и для создателя партии. Это нужно,
     // чтобы после перезагрузки не принять общий счётчик партии за личную выработку.
     local.productionStarts = newBatchPack === 'mix'
@@ -1279,26 +1252,37 @@ function batchTotalKg() {
     : (batch.last_unit||0) * UNIT_WEIGHT;
 }
 
+function accumulateProduction(byBatch, report) {
+  const goodKg = Number(report.total_good_kg) || 0;
+  if (report.batch_id != null) {
+    const totals = (byBatch[report.batch_id] ||= { comp1: 0, comp2: 0, finished: 0, goodKg: 0 });
+    for (const key of ['comp1', 'comp2', 'finished']) {
+      totals[key] += Number(report['delta_' + key + '_kg']) || 0;
+    }
+    totals.goodKg += goodKg;
+  }
+  return goodKg;
+}
+
 function renderMixTotals() {
   if (!batch || batch.package_type !== 'mix') return;
-  const base = myBaseline || { last_comp1:0, last_comp2:0, last_finished:0 };
-  const rows = ['comp1','comp2','finished'].map(k => {
-    const cur = batch['last_'+k]||0;
-    const mineBase = Math.max(Number(base['last_'+k]||0), personalStartBase(k, base));
-    const mine = Math.max(0, cur - mineBase);
-    const pend = pendingDelta(k).count;
-    return `<div class="flex justify-between"><span class="text-[#8fa0c2]">${COMP_NAMES[k]}:</span>
-      <span><b class="text-white">${(cur+pend)*UNIT_WEIGHT} кг</b> <span class="text-[#34d399]">/ вы: ${(mine+pend)*UNIT_WEIGHT} кг</span></span></div>`;
+  const confirmed = local.confirmedByBatch?.[batch.id];
+  const rows = ['comp1', 'comp2', 'finished'].map(key => {
+    const partyKg = (Number(batch['last_' + key]) || 0) * UNIT_WEIGHT;
+    const personalKg = (confirmed?.[key] || 0) + pendingDelta(key).kg;
+    return `<div class="flex justify-between"><span class="text-[#8fa0c2]">${COMP_NAMES[key]}:</span>
+      <span><b class="text-white">${partyKg} кг</b> <span class="text-[#34d399]">/ вы: ${personalKg} кг</span></span></div>`;
   }).join('');
-  const total = batchTotalKg() + pendingKg();
-  const mineTotal = myKgForDisplay();
-  document.getElementById('mixTotals').innerHTML = rows +
-    `<div class="border-t border-[#233152] pt-1 mt-1 flex justify-between"><span class="font-extrabold text-[#38bdf8]">ИТОГО:</span><span class="font-black text-white">${total} кг <span class="text-[#34d399] font-bold">/ вы: ${mineTotal} кг</span></span></div>`;
+  const defectKg = local.defects.reduce((sum, defect) => sum + defect.kg, 0);
+  const mineTotal = (confirmed?.goodKg || 0) + Math.max(0, pendingKg() - defectKg);
+  document.getElementById('mixTotals').innerHTML =
+    '<div class="text-[#8fa0c2]">Счётчики партии / ваш вклад в партию</div>' + rows +
+    `<div class="border-t border-[#233152] pt-1 mt-1 flex justify-between"><span class="font-extrabold text-[#38bdf8]">ИТОГО:</span><span class="font-black text-white">${batchTotalKg()} кг <span class="text-[#34d399] font-bold">/ вы: ${mineTotal} кг</span></span></div>`;
 }
 
 function myKgForDisplay(forHandover = false) {
   const defectKg = local.defects.reduce((s,d)=>s+d.kg,0);
-  return Math.max(0, myDeltaKg + pendingKg(forHandover) - defectKg);
+  return myDeltaKg + Math.max(0, pendingKg(forHandover) - defectKg);
 }
 
 function calculateProduction() {
@@ -1379,7 +1363,7 @@ async function pushDelta(eventType, closeOpts = null) {
     total_good_kg: goodDelta,
     chips_kg: dComp1+dComp2,
     defect_kg: defectKg, defect_boxes: local.defects.reduce((s,d)=>s+d.count,0),
-    dust_kg: dustKg, plan_kg: local.planKg>0?local.planKg:null
+    dust_kg: dustKg, plan_kg: local.planKey === si.key && local.planLine === local.line && local.planKg > 0 ? local.planKg : null
   };
 
   const update = batch ? (batch.package_type === 'mix'
@@ -1420,17 +1404,16 @@ async function resolvePendingProduction() {
     return false;
   }
 
-  const { event_type: event, batch_id: batchId, total_good_kg: goodKg } = operation.report;
+  const { event_type: event, batch_id: batchId } = operation.report;
   if (batch && String(batch.id) === String(batchId)) {
     Object.assign(batch, operation.update);
     sentSnapshot = snapshotOf(batch);
   }
   if (event === 'PARTY_CLOSE') {
     batch = null;
-    myBaseline = null;
     sentSnapshot = null;
   }
-  myDeltaKg += goodKg;
+  myDeltaKg += accumulateProduction(local.confirmedByBatch ||= {}, operation.report);
   local.confirmedKg = myDeltaKg;
   if (local.unitDrafts) delete local.unitDrafts[batchId];
   if (event === 'PARTY_CLOSE' && local.closeDrafts) delete local.closeDrafts[batchId];
@@ -1443,7 +1426,7 @@ async function resolvePendingProduction() {
     Object.assign(local, {
       shiftAccepted: false, operator: '', handoverStatus: null, shiftKey: null,
       shiftStartISO: null, sessionId: null, productionStarts: null, cachedBatch: null,
-      unitDrafts: {}, closeDrafts: {}, activeComponents: {}, confirmedKg: 0
+      unitDrafts: {}, closeDrafts: {}, activeComponents: {}, confirmedKg: 0, confirmedByBatch: {}
     });
   }
   saveLocal();
@@ -1460,7 +1443,7 @@ async function resolvePendingProduction() {
       showNotice('Партия закрыта! Выработка засчитана в вашу смену.');
     }
     updateBatchUI();
-    loadLineProgressFromCloud().catch(error => console.error(error));
+    loadPlanFromCloud();
   }
   return true;
 }
@@ -1686,28 +1669,45 @@ async function loadStats() {
   } catch(e){ console.error(e); }
 }
 
+let planRequest = 0;
+
 async function loadPlanFromCloud() {
+  const request = ++planRequest;
+  const si = getReportPeriod();
+  const line = local.line;
   try {
-    const si = getReportPeriod();
-    const { data, error } = await client.from('shift_plans').select('plan_kg')
-      .eq('plan_date', si.planDate).eq('shift', si.name).eq('line_number', local.line).limit(1);
-    if (error) throw error;
-    local.planKg = (data && data.length && data[0].plan_kg) ? Number(data[0].plan_kg) : 0;
+    const [plan, lineKg] = await Promise.all([
+      client.from('shift_plans').select('plan_kg')
+        .eq('plan_date', si.planDate).eq('shift', si.name).eq('line_number', line).limit(1),
+      readLineProduction(line, si.key)
+    ]);
+    if (plan.error) throw plan.error;
+    if (request !== planRequest || line !== local.line || si.key !== getReportPeriod().key) return;
+    const planKg = Number(plan.data?.[0]?.plan_kg) || 0;
+    Object.assign(local, { planKg, planKey: si.key, planLine: line });
     saveLocal();
-    await loadLineProgressFromCloud();
-  } catch(e) {
-    console.error('Не удалось загрузить план линии:', e);
+    renderLineProgress(planKg, lineKg);
+  } catch (error) {
+    console.error('Не удалось загрузить план линии:', error);
   }
 }
 
-async function loadLineProgressFromCloud() {
-  const si = getReportPeriod();
-  const { data, error } = await client.from('shift_reports').select('total_good_kg')
-    .eq('line_number', local.line).eq('shift_key', si.key)
-    .in('event_type', ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE']);
-  if (error) throw error;
-  const lineKg = (data || []).reduce((sum, row) => sum + (Number(row.total_good_kg) || 0), 0);
-  const planKg = Number(local.planKg) || 0;
+async function readLineProduction(line, key) {
+  const pageSize = 500;
+  let kg = 0;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await client.from('shift_reports').select('total_good_kg')
+      .eq('line_number', line).eq('shift_key', key)
+      .in('event_type', ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'])
+      .order('id').range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    const rows = data || [];
+    kg += rows.reduce((sum, row) => sum + (Number(row.total_good_kg) || 0), 0);
+    if (rows.length < pageSize) return kg;
+  }
+}
+
+function renderLineProgress(planKg, lineKg) {
   const percent = planKg > 0 ? Math.round(lineKg / planKg * 100) : 0;
   const remaining = Math.max(0, planKg - lineKg);
 
@@ -1732,7 +1732,7 @@ function startOperatorRealtime() {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_reports' }, payload => {
       if (local.shiftAccepted && payload.new && Number(payload.new.line_number) === Number(local.line)) {
-        loadLineProgressFromCloud().catch(e => console.error('Не удалось обновить прогресс линии:', e));
+        loadPlanFromCloud();
       }
     })
     .subscribe();
@@ -1742,6 +1742,7 @@ function startOperatorRealtime() {
    UI-only translation. Operational values stored in Supabase remain canonical Russian. */
 const PRIMATEK_I18N = {
   uz: {
+    "ЛИЧНАЯ ВЫРАБОТКА ЗА СМЕНУ":"SMENADAGI SHAXSIY ISHLAB CHIQARISH","ВЫПОЛНЕНИЕ ПЛАНА ЛИНИИ":"LINIYA REJASINING BAJARILISHI","Счётчики партии / ваш вклад в партию":"Partiya hisoblagichlari / partiyaga hissangiz",
     "Данные ожидают подтверждения. Повторите предыдущую отправку.":"Ma’lumotlar tasdiqlanishini kutmoqda. Avvalgi yuborishni takrorlang.",
     "ДЕНЬ":"KUN","НОЧЬ":"TUN","Проверьте соединение.":"Internet aloqasini tekshiring.",
     "Отчётная смена":"Hisobot smenasi","Партия изменилась. Сверьте сохранённые номера с начальником смены.":"Partiya o‘zgardi. Saqlangan raqamlarni smena boshlig‘i bilan tekshiring.",
@@ -1780,6 +1781,7 @@ const PRIMATEK_I18N = {
     "Не удалось сохранить причину ремонта. Попробуйте ещё раз.":"Ta’mirlash sababini saqlab bo‘lmadi. Qayta urinib ko‘ring."
   },
   tg: {
+    "ЛИЧНАЯ ВЫРАБОТКА ЗА СМЕНУ":"ИСТЕҲСОЛИ ШАХСӢ ДАР БАСТ","ВЫПОЛНЕНИЕ ПЛАНА ЛИНИИ":"ИҶРОИ НАҚШАИ ХАТ","Счётчики партии / ваш вклад в партию":"Ҳисобкунакҳои партия / саҳми шумо дар партия",
     "Данные ожидают подтверждения. Повторите предыдущую отправку.":"Маълумот дар интизори тасдиқ аст. Ирсоли пешинаро такрор кунед.",
     "ДЕНЬ":"РӮЗ","НОЧЬ":"ШАБ","Проверьте соединение.":"Пайвасти интернетро санҷед.",
     "Отчётная смена":"Басти ҳисоботӣ","Партия изменилась. Сверьте сохранённые номера с начальником смены.":"Партия иваз шуд. Рақамҳои захирашударо бо сардори баст санҷед.",
@@ -1827,7 +1829,7 @@ function setPrimatekLanguage(lang) {
   if (!['ru','uz','tg'].includes(lang)) lang = 'ru';
   localStorage.setItem(PRIMATEK_LANG_KEY, lang);
   applyPrimatekLanguage();
-  if (local.shiftAccepted) loadLineProgressFromCloud().catch(e => console.error('Не удалось обновить перевод прогресса:', e));
+  if (local.shiftAccepted) loadPlanFromCloud();
 }
 const PRIMATEK_TEXT_STATE = new WeakMap();
 function applyPrimatekLanguage() {

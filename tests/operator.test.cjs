@@ -18,7 +18,7 @@ const mockSDK = `
     constructor(table) { this.table = table; this.filters = {}; }
     select() { return this; }
     eq(key, value) { this.filters[key] = value; return this; }
-    in() { return this; }
+    in(key, values) { this.filters[key] = values; return this; }
     order() { return this; }
     limit() { return this; }
     range() { return this; }
@@ -56,6 +56,10 @@ function fixture(pack = 'box') {
 function handleRequest({ method, table, args }) {
   database.requests.push({ method, table, args });
   if (method === 'insert') {
+    if (table === 'batches') {
+      database.batch = { id: database.batch.id + 1, opened_at: '2026-11-27T16:00:00Z', ...args.rows[0] };
+      return { data: [database.batch] };
+    }
     database.reports.unshift(...args.rows);
     return {};
   }
@@ -79,9 +83,9 @@ function handleRequest({ method, table, args }) {
   if (table === 'batches' && database.failBatchRead) return { error: { message: 'connection unavailable' } };
   const rows = {
     batches: [database.batch], shift_reports: database.reports,
-    shift_plans: [{ plan_kg: 1000 }]
+    shift_plans: database.plans || []
   }[table];
-  return { data: rows.filter(row => Object.entries(args.filters).every(([key, value]) => row[key] === value)) };
+  return { data: rows.filter(row => Object.entries(args.filters).every(([key, value]) => Array.isArray(value) ? value.includes(row[key]) : row[key] === value)) };
 }
 
 before(async () => {
@@ -300,4 +304,76 @@ test('a failed party read while the browser is online keeps the cached party and
   await page.evaluate(() => refreshWorkSession());
   await page.evaluate(() => sendCheckpoint());
   assert.equal(database.reports[0].unit_to, 361);
+});
+
+for (const [time, oldKey, nextKey] of [
+  ['2026-11-26T19:50:00+03:00', '2026-11-26|ДЕНЬ', '2026-11-26|НОЧЬ'],
+  ['2026-11-27T07:50:00+03:00', '2026-11-26|НОЧЬ', '2026-11-27|ДЕНЬ']
+]) {
+  test('early handover uses the selected period for plan and fact: ' + nextKey, async t => {
+    const { page } = await openApp(t, time);
+    const work = { line_number: 6, event_type: 'PRODUCTION', batch_id: 1, operator_name: 'ДРУГОЙ ОПЕРАТОР' };
+    database.reports = [
+      { ...work, shift_key: oldKey, total_good_kg: 160 },
+      { ...work, shift_key: oldKey, total_good_kg: 20 },
+      { ...work, shift_key: nextKey, total_good_kg: 40 }
+    ];
+    const [plan_date, shift] = nextKey.split('|');
+    database.plans = [{ plan_date, shift, line_number: 6, plan_kg: 200 }];
+    await accept(page, nextKey);
+    await page.waitForFunction(() => document.getElementById('linePlanPercent').innerText === '20%');
+    assert.equal(await page.locator('#linePlanFact').innerText(), '40 кг');
+    assert.equal(await page.locator('#statDonePlan').innerText(), '0 кг');
+    await page.reload();
+    await page.waitForFunction(() => document.getElementById('linePlanFact').innerText === '40 кг');
+    assert.equal(await page.locator('#statDonePlan').innerText(), '0 кг');
+  });
+}
+
+test('day line fact retains genuine 180 kg while the new operator starts at zero', async t => {
+  const { page } = await openApp(t, '2026-11-26T19:50:00+03:00');
+  const shift_key = '2026-11-26|ДЕНЬ';
+  database.reports = [
+    { line_number: 6, event_type: 'PARTY_CLOSE', shift_key, total_good_kg: 160 },
+    { line_number: 6, event_type: 'PRODUCTION', shift_key, total_good_kg: 20 }
+  ];
+  await accept(page, shift_key);
+  await page.waitForFunction(() => document.getElementById('linePlanFact').innerText === '180 кг');
+  assert.equal(await page.locator('#statDonePlan').innerText(), '0 кг');
+  assert.equal(await page.locator('#linePlanPercent').innerText(), '—');
+});
+
+test('total personal production spans two parties and mixing breakdown excludes somebody else’s output', async t => {
+  const { page } = await openApp(t, '2026-11-27T19:30:00+03:00', { pack: 'mix' });
+  await accept(page, '2026-11-27|НОЧЬ');
+  await page.locator('#mixUnitInput').fill('5');
+  await page.evaluate(() => { openClosePartyModal(); });
+  await page.evaluate(() => closeBatch());
+  assert.equal(await page.locator('#statDonePlan').innerText(), '40 кг');
+
+  await page.evaluate(() => {
+    openNewBatchModal();
+    setNewBatchPack('mix', document.querySelector('.new-pack-btn'));
+    document.getElementById('newBatchNum').value = 'SECOND';
+    document.getElementById('newProductCode').value = 'TEST';
+    document.getElementById('newRal').value = '9005';
+  });
+  await page.evaluate(() => confirmOpenBatch());
+  assert.equal(await page.locator('#statDonePlan').innerText(), '40 кг');
+  assert.match(await page.locator('#mixTotals').innerText(), /ИТОГО:.*0 кг.*вы: 0 кг/s);
+
+  await page.locator('#mixUnitInput').fill('2');
+  await page.evaluate(() => sendCheckpoint());
+  const session = (await localState(page)).sessionId;
+  const batch = database.batch;
+  database.reports.unshift({
+    line_number: 6, event_type: 'PRODUCTION', operator_name: 'ДРУГОЙ ОПЕРАТОР', shift_key: '2026-11-27|НОЧЬ',
+    operator_session_id: session + '-other', batch_id: batch.id, total_good_kg: 60, delta_comp1_kg: 60
+  });
+  batch.last_comp1 = 5;
+  await page.reload();
+  await page.waitForFunction(() => batchVerified && !refreshingWork);
+  assert.equal(await page.locator('#statDonePlan').innerText(), '80 кг');
+  assert.match(await page.locator('#mixTotals').innerText(), /ИТОГО:.*100 кг.*вы: 40 кг/s);
+  assert.equal(await page.locator('#linePlanFact').innerText(), '140 кг');
 });
