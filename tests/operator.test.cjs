@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { createServer } = require('node:http');
+const { randomUUID } = require('node:crypto');
 const { after, before, test } = require('node:test');
 const { chromium } = require('playwright-core');
 
@@ -57,7 +58,7 @@ function handleRequest({ method, table, args }) {
   database.requests.push({ method, table, args });
   if (method === 'insert') {
     if (table === 'batches') {
-      database.batch = { id: database.batch.id + 1, opened_at: '2026-11-27T16:00:00Z', ...args.rows[0] };
+      database.batch = { id: randomUUID(), opened_at: '2026-11-27T16:00:00Z', ...args.rows[0] };
       return { data: [database.batch] };
     }
     database.reports.unshift(...args.rows);
@@ -99,12 +100,15 @@ before(async () => {
     } else if (pathname === '/mock-sdk.js' || pathname === '/mock-css.js') {
       response.setHeader('content-type', 'text/javascript');
       response.end(pathname === '/mock-sdk.js' ? mockSDK : '');
-    } else if (['/', '/index.html', '/sw.js', '/docs/', '/docs/index.html', '/docs/sw.js'].includes(pathname)) {
+    } else if (['/', '/index.html', '/sw.js', '/docs/', '/docs/index.html', '/docs/sw.js', '/docs/dashboard.html'].includes(pathname)) {
       const file = pathname.endsWith('/') ? pathname + 'index.html' : pathname;
       response.setHeader('content-type', file.endsWith('.html') ? 'text/html; charset=utf-8' : 'text/javascript');
       const origin = 'http://' + request.headers.host;
-      response.end(readFileSync('.' + file, 'utf8')
+      const version = file === '/docs/index.html' && database?.previousOperatorFile
+        ? database.previousOperatorFile : '.' + file;
+      response.end(readFileSync(version, 'utf8')
         .replaceAll(sdkURL, origin + '/mock-sdk.js')
+        .replace('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js', origin + '/mock-css.js')
         .replaceAll(cssURL + '/', origin + '/mock-css.js')
         .replaceAll(cssURL, origin + '/mock-css.js')
         .replaceAll('https://raw.githubusercontent.com/gurusveta/primatek/main/assets/', '/assets/'));
@@ -125,9 +129,13 @@ after(async () => {
   server?.close();
 });
 
-async function openApp(t, time, { legacy, path = '/docs/', pack = 'box' } = {}) {
+async function openApp(t, time, { legacy, path = '/docs/', pack = 'box', previousOperatorFile, mobile = false } = {}) {
   database = fixture(pack);
-  const context = await browser.newContext({ timezoneId: 'Europe/Moscow' });
+  database.previousOperatorFile = previousOperatorFile;
+  const context = await browser.newContext({
+    timezoneId: 'Europe/Moscow',
+    ...(mobile ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : {})
+  });
   t.after(() => context.close());
   const page = await context.newPage();
   const errors = [];
@@ -139,7 +147,11 @@ async function openApp(t, time, { legacy, path = '/docs/', pack = 'box' } = {}) 
   }, { legacy, stateKey });
   await page.clock.install({ time: new Date(time) });
   await page.goto(url + path);
-  await page.waitForFunction(() => typeof batchVerified !== 'undefined' && batchVerified && !refreshingWork);
+  if (previousOperatorFile) {
+    await page.waitForFunction(() => document.getElementById('workArea').classList.contains('hidden') === false);
+  } else {
+    await page.waitForFunction(() => typeof batchVerified !== 'undefined' && batchVerified && !refreshingWork);
+  }
   return { page, context };
 }
 
@@ -343,7 +355,7 @@ test('day line fact retains genuine 180 kg while the new operator starts at zero
   assert.equal(await page.locator('#linePlanPercent').innerText(), '—');
 });
 
-test('total personal production spans two parties and mixing breakdown excludes somebody else’s output', async t => {
+test('operator sees shift totals and counters, dashboard sees contributors to the current party', async t => {
   const { page } = await openApp(t, '2026-11-27T19:30:00+03:00', { pack: 'mix' });
   await accept(page, '2026-11-27|НОЧЬ');
   await page.locator('#mixUnitInput').fill('5');
@@ -360,7 +372,7 @@ test('total personal production spans two parties and mixing breakdown excludes 
   });
   await page.evaluate(() => confirmOpenBatch());
   assert.equal(await page.locator('#statDonePlan').innerText(), '40 кг');
-  assert.match(await page.locator('#mixTotals').innerText(), /ИТОГО:.*0 кг.*вы: 0 кг/s);
+  assert.doesNotMatch(await page.locator('#mixTotals').innerText(), /кг|вы:|%/);
 
   await page.locator('#mixUnitInput').fill('2');
   await page.evaluate(() => sendCheckpoint());
@@ -374,6 +386,42 @@ test('total personal production spans two parties and mixing breakdown excludes 
   await page.reload();
   await page.waitForFunction(() => batchVerified && !refreshingWork);
   assert.equal(await page.locator('#statDonePlan').innerText(), '80 кг');
-  assert.match(await page.locator('#mixTotals').innerText(), /ИТОГО:.*100 кг.*вы: 40 кг/s);
+  const counters = await page.locator('#mixTotals').innerText();
+  assert.match(counters, /№5/);
+  assert.doesNotMatch(counters, /кг|вы:|%/);
+  assert.equal(await page.locator('#statMoney').innerText(), '40 ₽');
   assert.equal(await page.locator('#linePlanFact').innerText(), '140 кг');
+  await page.goto(url + '/docs/dashboard.html');
+  await page.getByRole('button', { name: 'Вклад операторов' }).click();
+  const list = page.locator('#batchContributionList');
+  await list.getByText('ТЕСТ ОПЕРАТОР · годное: 40 кг · 1 п/ф: 40 кг', { exact: false }).waitFor();
+  assert.match(await list.innerText(), /ДРУГОЙ ОПЕРАТОР · годное: 60 кг/);
+  assert.doesNotMatch(await list.innerText(), /80 кг/);
+});
+
+test('updating in the existing mobile browser profile preserves an accepted shift, PIN, language and adjustments', async t => {
+  const legacy = {
+    line: 6, operator: 'ТЕСТ', shiftAccepted: true, shiftKey: '2026-11-26|ДЕНЬ',
+    lineStatus: 'В РАБОТЕ', defects: [{ from: 360, to: 360, count: 1, kg: 20 }], dust: [2]
+  };
+  const previousOperatorFile = process.env.PRIMATEK_UPGRADE_FROM;
+  const { page } = await openApp(t, '2026-11-26T19:55:00+03:00', { legacy, previousOperatorFile, mobile: true });
+  await page.evaluate(() => {
+    localStorage.setItem('primatek_language_v1', 'uz');
+    localStorage.setItem('primatek_pin_verified_v1', '1');
+  });
+  await page.locator('#boxUnitInput').fill('362');
+  assert.equal(await page.locator('#boxUnitInput').inputValue(), '362');
+
+  database.previousOperatorFile = undefined;
+  await page.clock.setSystemTime(new Date('2026-11-26T20:04:00+03:00'));
+  await page.reload();
+  await page.waitForFunction(() => batchVerified && !refreshingWork);
+  assert.equal((await localState(page)).shiftKey, '2026-11-26|ДЕНЬ');
+  assert.equal(await page.locator('#operatorName').inputValue(), 'ТЕСТ');
+  assert.equal(await page.locator('#pinGate').evaluate(node => node.classList.contains('hidden')), true);
+  assert.equal(await page.locator('#languageSelect').inputValue(), 'uz');
+  assert.equal(await page.locator('#badgeDust').innerText(), '2.0 кг');
+  assert.equal(await page.locator('#badgeDefect').innerText(), '20 кг');
+  assert.equal(await page.locator('#boxUnitInput').inputValue(), previousOperatorFile ? '359' : '362');
 });

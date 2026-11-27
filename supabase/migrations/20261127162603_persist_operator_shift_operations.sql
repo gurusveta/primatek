@@ -13,6 +13,9 @@ create unique index if not exists shift_reports_operator_session_close
   on public.shift_reports (operator_session_id)
   where operator_session_id is not null and event_type = 'SHIFT_CLOSE';
 
+create index if not exists shift_reports_batch_history
+  on public.shift_reports (batch_id, id) where batch_id is not null;
+
 create or replace function public.record_operator_production(
   p_operation_id uuid,
   p_report jsonb,

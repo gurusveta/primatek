@@ -830,7 +830,6 @@ async function acceptHandover() {
     local.defects = [];
     local.dust = [];
     local.confirmedKg = 0;
-    local.confirmedByBatch = {};
     saveLocal();
     enterWorkMode();
     loadPlanFromCloud();
@@ -896,15 +895,10 @@ async function restoreMySession() {
       sentSnapshot = null;
     }
 
-    const confirmedByBatch = {};
-    let confirmedKg = 0;
-    for (const report of rows) {
-      if (!['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(report.event_type)) continue;
-      confirmedKg += accumulateProduction(confirmedByBatch, report);
-    }
-    myDeltaKg = confirmedKg;
-    local.confirmedKg = confirmedKg;
-    local.confirmedByBatch = confirmedByBatch;
+    myDeltaKg = rows.reduce((total, report) =>
+      ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(report.event_type)
+        ? total + (Number(report.total_good_kg) || 0) : total, 0);
+    local.confirmedKg = myDeltaKg;
     saveLocal();
     onUnitInput();
   } catch(e){ console.error(e); }
@@ -1144,7 +1138,6 @@ function updateBatchUI() {
     activeComp = local.activeComponents?.[batch.id] || batch.active_component || 'comp1';
     highlightCompButtons();
     fillUnitInputs();
-    renderMixTotals();
   } else {
     document.getElementById('boxInputWrap').classList.remove('hidden');
     document.getElementById('mixInputWrap').classList.add('hidden');
@@ -1238,46 +1231,19 @@ function onUnitInput(recordDraft = false) {
   const txt = d.kg > 0 ? `+${d.count} шт (№${d.from}–${d.to}) = +${d.kg} кг к отправке` : 'Введите номер больше предыдущего';
   if (batch && batch.package_type === 'mix') {
     document.getElementById('mixDeltaText').innerText = txt;
-    renderMixTotals();
+    renderMixCounters();
   } else {
     document.getElementById('boxDeltaText').innerText = txt;
   }
   calculateProduction();
 }
 
-function batchTotalKg() {
-  if (!batch) return 0;
-  return batch.package_type === 'mix'
-    ? ((batch.last_comp1||0)+(batch.last_comp2||0)+(batch.last_finished||0)) * UNIT_WEIGHT
-    : (batch.last_unit||0) * UNIT_WEIGHT;
-}
-
-function accumulateProduction(byBatch, report) {
-  const goodKg = Number(report.total_good_kg) || 0;
-  if (report.batch_id != null) {
-    const totals = (byBatch[report.batch_id] ||= { comp1: 0, comp2: 0, finished: 0, goodKg: 0 });
-    for (const key of ['comp1', 'comp2', 'finished']) {
-      totals[key] += Number(report['delta_' + key + '_kg']) || 0;
-    }
-    totals.goodKg += goodKg;
-  }
-  return goodKg;
-}
-
-function renderMixTotals() {
-  if (!batch || batch.package_type !== 'mix') return;
-  const confirmed = local.confirmedByBatch?.[batch.id];
-  const rows = ['comp1', 'comp2', 'finished'].map(key => {
-    const partyKg = (Number(batch['last_' + key]) || 0) * UNIT_WEIGHT;
-    const personalKg = (confirmed?.[key] || 0) + pendingDelta(key).kg;
+function renderMixCounters() {
+  document.getElementById('mixTotals').innerHTML = ['comp1', 'comp2', 'finished'].map(key => {
+    const number = Number(batch['last_' + key]) || 0;
     return `<div class="flex justify-between"><span class="text-[#8fa0c2]">${COMP_NAMES[key]}:</span>
-      <span><b class="text-white">${partyKg} кг</b> <span class="text-[#34d399]">/ вы: ${personalKg} кг</span></span></div>`;
+      <span class="font-bold text-white">${number ? '№' + number : '—'}</span></div>`;
   }).join('');
-  const defectKg = local.defects.reduce((sum, defect) => sum + defect.kg, 0);
-  const mineTotal = (confirmed?.goodKg || 0) + Math.max(0, pendingKg() - defectKg);
-  document.getElementById('mixTotals').innerHTML =
-    '<div class="text-[#8fa0c2]">Счётчики партии / ваш вклад в партию</div>' + rows +
-    `<div class="border-t border-[#233152] pt-1 mt-1 flex justify-between"><span class="font-extrabold text-[#38bdf8]">ИТОГО:</span><span class="font-black text-white">${batchTotalKg()} кг <span class="text-[#34d399] font-bold">/ вы: ${mineTotal} кг</span></span></div>`;
 }
 
 function myKgForDisplay(forHandover = false) {
@@ -1413,7 +1379,7 @@ async function resolvePendingProduction() {
     batch = null;
     sentSnapshot = null;
   }
-  myDeltaKg += accumulateProduction(local.confirmedByBatch ||= {}, operation.report);
+  myDeltaKg += Number(operation.report.total_good_kg) || 0;
   local.confirmedKg = myDeltaKg;
   if (local.unitDrafts) delete local.unitDrafts[batchId];
   if (event === 'PARTY_CLOSE' && local.closeDrafts) delete local.closeDrafts[batchId];
@@ -1426,7 +1392,7 @@ async function resolvePendingProduction() {
     Object.assign(local, {
       shiftAccepted: false, operator: '', handoverStatus: null, shiftKey: null,
       shiftStartISO: null, sessionId: null, productionStarts: null, cachedBatch: null,
-      unitDrafts: {}, closeDrafts: {}, activeComponents: {}, confirmedKg: 0, confirmedByBatch: {}
+      unitDrafts: {}, closeDrafts: {}, activeComponents: {}, confirmedKg: 0
     });
   }
   saveLocal();
@@ -1742,7 +1708,7 @@ function startOperatorRealtime() {
    UI-only translation. Operational values stored in Supabase remain canonical Russian. */
 const PRIMATEK_I18N = {
   uz: {
-    "ЛИЧНАЯ ВЫРАБОТКА ЗА СМЕНУ":"SMENADAGI SHAXSIY ISHLAB CHIQARISH","ВЫПОЛНЕНИЕ ПЛАНА ЛИНИИ":"LINIYA REJASINING BAJARILISHI","Счётчики партии / ваш вклад в партию":"Partiya hisoblagichlari / partiyaga hissangiz",
+    "ЛИЧНАЯ ВЫРАБОТКА ЗА СМЕНУ":"SMENADAGI SHAXSIY ISHLAB CHIQARISH","ВЫПОЛНЕНИЕ ПЛАНА ЛИНИИ":"LINIYA REJASINING BAJARILISHI",
     "Данные ожидают подтверждения. Повторите предыдущую отправку.":"Ma’lumotlar tasdiqlanishini kutmoqda. Avvalgi yuborishni takrorlang.",
     "ДЕНЬ":"KUN","НОЧЬ":"TUN","Проверьте соединение.":"Internet aloqasini tekshiring.",
     "Отчётная смена":"Hisobot smenasi","Партия изменилась. Сверьте сохранённые номера с начальником смены.":"Partiya o‘zgardi. Saqlangan raqamlarni smena boshlig‘i bilan tekshiring.",
@@ -1781,7 +1747,7 @@ const PRIMATEK_I18N = {
     "Не удалось сохранить причину ремонта. Попробуйте ещё раз.":"Ta’mirlash sababini saqlab bo‘lmadi. Qayta urinib ko‘ring."
   },
   tg: {
-    "ЛИЧНАЯ ВЫРАБОТКА ЗА СМЕНУ":"ИСТЕҲСОЛИ ШАХСӢ ДАР БАСТ","ВЫПОЛНЕНИЕ ПЛАНА ЛИНИИ":"ИҶРОИ НАҚШАИ ХАТ","Счётчики партии / ваш вклад в партию":"Ҳисобкунакҳои партия / саҳми шумо дар партия",
+    "ЛИЧНАЯ ВЫРАБОТКА ЗА СМЕНУ":"ИСТЕҲСОЛИ ШАХСӢ ДАР БАСТ","ВЫПОЛНЕНИЕ ПЛАНА ЛИНИИ":"ИҶРОИ НАҚШАИ ХАТ",
     "Данные ожидают подтверждения. Повторите предыдущую отправку.":"Маълумот дар интизори тасдиқ аст. Ирсоли пешинаро такрор кунед.",
     "ДЕНЬ":"РӮЗ","НОЧЬ":"ШАБ","Проверьте соединение.":"Пайвасти интернетро санҷед.",
     "Отчётная смена":"Басти ҳисоботӣ","Партия изменилась. Сверьте сохранённые номера с начальником смены.":"Партия иваз шуд. Рақамҳои захирашударо бо сардори баст санҷед.",

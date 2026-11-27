@@ -305,6 +305,14 @@
 
 </div>
 
+<dialog id="batchContributionDialog" class="rounded-xl border border-[#233152] bg-[#131c31] p-5 text-white max-w-sm w-[calc(100%-2rem)]">
+  <form method="dialog" class="space-y-3">
+    <h2 class="font-black">Вклад операторов в партию</h2>
+    <ul id="batchContributionList" class="max-h-[50vh] overflow-auto space-y-2 text-sm" aria-live="polite"></ul>
+    <button class="rounded-lg bg-[#1c2742] px-3 py-2 text-sm font-bold">Закрыть</button>
+  </form>
+</dialog>
+
 <script>
   const SUPABASE_URL = "https://oqhrzruxubqthqyxmdcg.supabase.co";
   const SUPABASE_KEY = "sb_publishable_m5YmzYjW1BpotrbaRpCdgA__kYvilf3";
@@ -731,6 +739,7 @@ function getMascotAsset(message, kind) {
           <div class="output-label">ВЫРАБОТКА ТЕКУЩЕЙ ПАРТИИ</div>
           <div class="output-val">${activeBatch ? partyKg.toLocaleString('ru-RU') + ' кг' : 'Нет открытой партии'}</div>
           <div class="output-sub">${activeBatch ? 'Партия №' + activeBatch.batch_number + ' · ' + (activeBatch.ral_color || 'RAL не указан') : 'Откройте партию для начала учёта'}</div>
+          ${activeBatch ? batchContributionButton(activeBatch.id) : ''}
         </div>
 
         <div class="line-plan-block">
@@ -784,6 +793,60 @@ function getMascotAsset(message, kind) {
     renderShiftsTable(filtered);
   }
 
+  function batchContributionButton(id) {
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return '';
+    return `<button type="button" class="output-sub underline" onclick="showBatchContributions('${id}')">Вклад операторов</button>`;
+  }
+
+  function summarizeBatchContributions(reports) {
+    const totalsByOperator = new Map();
+    for (const report of reports) {
+      const operator = report.operator_name?.trim() || 'Оператор не указан';
+      const totals = totalsByOperator.get(operator) || { operator, goodKg: 0, comp1: 0, comp2: 0, finished: 0 };
+      totals.goodKg += Number(report.total_good_kg) || 0;
+      for (const key of ['comp1', 'comp2', 'finished']) {
+        totals[key] += Number(report['delta_' + key + '_kg']) || 0;
+      }
+      totalsByOperator.set(operator, totals);
+    }
+    return [...totalsByOperator.values()].sort((a, b) => b.goodKg - a.goodKg);
+  }
+
+  let contributionRequest = 0;
+  async function showBatchContributions(id) {
+    const request = ++contributionRequest;
+    const dialog = document.getElementById('batchContributionDialog');
+    const list = document.getElementById('batchContributionList');
+    list.textContent = 'Загрузка…';
+    dialog.showModal();
+    try {
+      const rows = [];
+      const pageSize = 500;
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await client.from('shift_reports')
+          .select('operator_name,total_good_kg,delta_comp1_kg,delta_comp2_kg,delta_finished_kg')
+          .eq('batch_id', id).in('event_type', ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'])
+          .order('id').range(offset, offset + pageSize - 1);
+        if (request !== contributionRequest || !dialog.open) return;
+        if (error) throw error;
+        rows.push(...data);
+        if (data.length < pageSize) break;
+      }
+      const totals = summarizeBatchContributions(rows);
+      list.replaceChildren(...totals.map(row => {
+        const item = document.createElement('li');
+        const mix = row.comp1 || row.comp2 || row.finished
+          ? ` · 1 п/ф: ${row.comp1} кг · 2 п/ф: ${row.comp2} кг · готовая: ${row.finished} кг` : '';
+        item.textContent = `${row.operator} · годное: ${row.goodKg.toLocaleString('ru-RU')} кг${mix}`;
+        return item;
+      }));
+      if (!totals.length) list.textContent = 'Подтверждённого выпуска по партии пока нет.';
+    } catch (error) {
+      console.error('Не удалось загрузить вклад операторов:', error);
+      if (request === contributionRequest) list.textContent = 'Не удалось загрузить данные партии. Попробуйте ещё раз.';
+    }
+  }
+
   function renderPartyArchive(batches) {
     const tbody = document.getElementById('shiftsTableBody');
     if (!batches.length) {
@@ -808,7 +871,7 @@ function getMascotAsset(message, kind) {
         <td><b>${b.product_code || '—'}</b></td>
         <td><span class="ral-tag">${b.ral_color || '—'}</span></td>
         <td>${b.package_type === 'mix' ? 'СМЕШЕНИЕ' : 'ПК'}</td>
-        <td><b style="color:#34d399;font-size:14px;">${kg.toLocaleString('ru-RU')} кг</b></td>
+        <td><b style="color:#34d399;font-size:14px;">${kg.toLocaleString('ru-RU')} кг</b><br>${batchContributionButton(b.id)}</td>
         <td style="color:#fbbf24;font-weight:700;">${chips.toLocaleString('ru-RU')} кг</td>
         <td>—</td><td>${Number(b.dust_kg||0).toFixed(1)} кг</td>
         <td>—</td><td>—</td><td>—</td>
