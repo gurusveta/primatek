@@ -915,12 +915,17 @@ function getMascotAsset(message, kind) {
     }).join('');
   }
 
+  function isRepairEvent(report) {
+    return report.event_type === 'STATUS_CHANGE' && report.line_status === 'РЕМОНТ';
+  }
+
   function exportToExcel() {
     if (!rawReports.length) { showNotice("Нет данных для выгрузки"); return; }
-    const excelData = rawReports.filter(r => r.event_type === 'SHIFT_CLOSE' || r.event_type === 'PARTY_CLOSE').map(r => {
+    const excelData = rawReports.filter(r => r.event_type === 'SHIFT_CLOSE' || r.event_type === 'PARTY_CLOSE' || isRepairEvent(r)).map(r => {
       return {
         "Дата и время": new Date(r.created_at).toLocaleString('ru-RU'),
-        "Тип записи": r.event_type === 'SHIFT_CLOSE' ? 'Сдача смены' : 'Закрытие партии',
+        "Тип записи": r.event_type === 'SHIFT_CLOSE' ? 'Сдача смены' : isRepairEvent(r) ? 'Ремонт' : 'Закрытие партии',
+        "Причина ремонта": isRepairEvent(r) ? (r.repair_reason || '') : '',
         "Линия": "№" + r.line_number, "Оператор": r.operator_name || "", "Партия": r.batch_number || "", "Код продукта": r.product_code || "", "Цвет RAL": r.ral_color || "",
         "Диапазон": (r.unit_from && r.unit_to) ? `№ ${r.unit_from} — № ${r.unit_to}` : "",
         "Краска (кг)": r.total_good_kg || 0, "Чипсы / П-ф (кг)": r.chips_kg || 0, "Брак (кг)": r.defect_kg || 0,

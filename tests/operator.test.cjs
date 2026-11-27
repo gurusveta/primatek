@@ -19,15 +19,18 @@ const mockSDK = `
     constructor(table) { this.table = table; this.filters = {}; }
     select() { return this; }
     eq(key, value) { this.filters[key] = value; return this; }
+    is(key, value) { return this.eq(key, value); }
     in(key, values) { this.filters[key] = values; return this; }
     order() { return this; }
     limit() { return this; }
     range() { return this; }
+    single() { this.one = true; return this; }
+    maybeSingle() { return this.single(); }
     insert(rows) { this.rows = rows; return this; }
     update(row) { this.updateRow = row; return this; }
     then(resolve, reject) {
       return request(this.rows ? 'insert' : this.updateRow ? 'update' : 'select',
-        this.table, { filters: this.filters, rows: this.rows, update: this.updateRow }).then(resolve, reject);
+        this.table, { filters: this.filters, rows: this.rows, update: this.updateRow, one: this.one }).then(resolve, reject);
     }
   }
   window.supabase = { createClient: () => ({
@@ -61,10 +64,19 @@ function handleRequest({ method, table, args }) {
       database.batch = { id: randomUUID(), opened_at: '2026-11-27T16:00:00Z', ...args.rows[0] };
       return { data: [database.batch] };
     }
-    database.reports.unshift(...args.rows);
-    return {};
+    const rows = args.rows.map(row => ({
+      id: database.reports.length + 1, created_at: '2026-11-27T16:32:00Z', ...row
+    }));
+    database.reports.unshift(...rows);
+    return { data: args.one ? rows[0] : rows };
   }
   if (method === 'update') {
+    if (table === 'shift_reports') {
+      const row = database.reports.find(row => Object.entries(args.filters)
+        .every(([key, value]) => row[key] === value));
+      if (row) Object.assign(row, args.update);
+      return { data: row || null };
+    }
     Object.assign(database.batch, args.update);
     return {};
   }
@@ -86,7 +98,9 @@ function handleRequest({ method, table, args }) {
     batches: [database.batch], shift_reports: database.reports,
     shift_plans: database.plans || []
   }[table];
-  return { data: rows.filter(row => Object.entries(args.filters).every(([key, value]) => Array.isArray(value) ? value.includes(row[key]) : row[key] === value)) };
+  const selected = rows.filter(row => Object.entries(args.filters)
+    .every(([key, value]) => Array.isArray(value) ? value.includes(row[key]) : row[key] === value));
+  return { data: args.one ? selected[0] || null : selected };
 }
 
 before(async () => {
@@ -424,4 +438,52 @@ test('updating in the existing mobile browser profile preserves an accepted shif
   assert.equal(await page.locator('#badgeDust').innerText(), '2.0 кг');
   assert.equal(await page.locator('#badgeDefect').innerText(), '20 кг');
   assert.equal(await page.locator('#boxUnitInput').inputValue(), previousOperatorFile ? '359' : '362');
+});
+
+test('repair reasons stay distinct in RU, UZ, TJ, on dashboard and in export without altering the historical reason', async t => {
+  const { page } = await openApp(t, '2026-11-27T19:30:00+03:00');
+  const planned = 'Плановая замена сита';
+  const rupture = 'Разрыв сита';
+  const historical = 'Замена сита';
+  database.reports = [{
+    id: 1, line_number: 6, event_type: 'STATUS_CHANGE', line_status: 'РЕМОНТ',
+    repair_reason: historical, created_at: '2026-11-27T16:15:00Z'
+  }];
+  for (const [lang, labels] of [
+    ['ru', [planned, rupture]],
+    ['uz', ['Elakni rejali almashtirish', 'Elakning yirtilishi']],
+    ['tg', ['Ивазкунии нақшавии элак', 'Канда шудани элак']]
+  ]) {
+    await page.evaluate(lang => setPrimatekLanguage(lang), lang);
+    for (const id of ['handoverRepairReason', 'repairReasonSelect']) {
+      const options = await page.locator('#' + id + ' option').evaluateAll(rows =>
+        rows.slice(1, 3).map(option => [option.value, option.textContent]));
+      assert.deepEqual(options, [[planned, labels[0]], [rupture, labels[1]]]);
+    }
+  }
+
+  await page.locator('#operatorName').fill('Тест Оператор');
+  await page.selectOption('#handoverShift', '2026-11-27|НОЧЬ');
+  await page.evaluate(() => selectHandoverStatus('РЕМОНТ', document.querySelector('.hand-btn.st-repair')));
+  await page.selectOption('#handoverRepairReason', planned);
+  await page.evaluate(() => acceptHandover());
+  assert.equal(database.reports[0].repair_reason, planned);
+  assert.equal(database.reports[1].repair_reason, historical);
+
+  await page.selectOption('#repairReasonSelect', rupture);
+  await page.waitForFunction(reason => local.repairReason === reason, rupture);
+  assert.deepEqual(database.reports.map(row => row.repair_reason), [rupture, planned, historical]);
+
+  await page.goto(url + '/docs/dashboard.html');
+  await page.getByText(rupture, { exact: true }).waitFor();
+  const exported = await page.evaluate(() => {
+    let rows;
+    window.XLSX = {
+      utils: { json_to_sheet(data) { rows = data; }, book_new() {}, book_append_sheet() {} },
+      writeFile() {}
+    };
+    exportToExcel();
+    return rows.map(row => row['Причина ремонта']);
+  });
+  assert.deepEqual(exported, [rupture, planned, historical]);
 });
