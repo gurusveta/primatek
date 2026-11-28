@@ -1730,7 +1730,7 @@ function openStatsModal() {
 }
 
 async function loadStats() {
-  const op = document.getElementById('statsOperatorName').value;
+  const op = document.getElementById('statsOperatorName').value.trim().toUpperCase();
   const from = document.getElementById('customDateFrom').value, to = document.getElementById('customDateTo').value;
   if (!op||!from||!to) return;
   try {
