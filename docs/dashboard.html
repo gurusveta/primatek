@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PRIMATEK — Панель начальника</title>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -217,6 +217,58 @@
     .btn-refresh, .shift-badge { color: #d0e7fc; border-color: #617c98; background: #384d64; }
     .btn-refresh:hover { background: #465f7a; }
     .btn-refresh:disabled { opacity: .75; cursor: wait; }
+
+    [hidden] { display: none !important; }
+    .board-stack { display: grid; gap: 14px; }
+    .board-actions, .board-filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .board-filters { align-items: end; }
+    .board-actions button, .board-filters button, .board-dialog button, .history-report {
+      background: #394e64; color: #edf3fa; border: 1px solid #617890;
+      border-radius: 8px; padding: 7px 10px; cursor: pointer; font-size: 13px;
+    }
+    .board-actions button[aria-pressed="true"], .board-actions button:hover { background: #4a6682; }
+    .line-actions { margin-top: auto; }
+    .line-actions button { padding: 6px 8px; }
+    .board-dialog { margin: auto; width: min(1050px, calc(100% - 24px)); max-height: 90vh; overflow: auto;
+      background: #303b4a; color: #e5ebf3; border: 1px solid #617890; border-radius: 14px; padding: 20px; }
+    .board-dialog::backdrop { background: #101821b8; }
+    .board-dialog header { justify-content: space-between; border-bottom: 1px solid #526176; padding-bottom: 12px; margin-bottom: 14px; }
+    .board-dialog h2, section h2 { font-size: 21px; }
+    .board-dialog label, .board-filters label, .plan-grid label { display: grid; gap: 4px; font-size: 13px; }
+    .board-dialog input, .board-dialog select, .board-dialog textarea, .board-filters input, .board-filters select {
+      width: 100%; min-width: 0; background: #293442; color: #edf3fa; border: 1px solid #617890; padding: 7px; border-radius: 6px; }
+    .board-muted { color: #c3cedc; font-size: 13px; }
+    .plan-grid, .correction-grid, .fishbone, .analytics-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr)); gap: 12px; }
+    .correction-grid, .history-group { border: 1px solid #526176; padding: 10px; border-radius: 8px; margin: 6px 0; }
+    .handover-list { padding: 12px 0 12px 18px; line-height: 1.7; }
+    .analytics-preview { color: #edf3fa; background: #303b4a; border: 1px solid #617890; border-radius: 12px;
+      padding: 14px; cursor: pointer; text-align: left; display: grid; gap: 8px; min-width: 0; }
+    .analytics-preview > strong { font-size: 17px; }
+    .chart-content canvas, #expandedChart canvas { width: 100%; height: auto; }
+    .board-bars { display: grid; gap: 6px; }
+    .board-bars > div { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; font-size: 12px; }
+    .board-bar { grid-column: 1/-1; background: #465568; height: 6px; border-radius: 4px; }
+    .board-bar i { display: block; height: 100%; border-radius: inherit; }
+    #analyticsResults, #expandedChart { display: grid; gap: 10px; }
+    summary { cursor: pointer; }
+    @media print {
+      @page { size: A4 landscape; margin: 12mm; }
+      body:has(#dashboardDialog[open]) > :not(#dashboardDialog) { display: none !important; }
+      #dashboardDialog[open] { display: block; position: static; width: auto; max-height: none; overflow: visible; margin: 0; border: 0; background: white; color: black; padding: 0; }
+      #dashboardDialog::backdrop { background: none; }
+      #dashboardDialog form, #dashboardDialog .board-actions button, #dashboardDialog select { display: none !important; }
+      #dashboardDialog .scroll-table { overflow: visible; max-height: none; }
+      #dashboardDialog th, #dashboardDialog td { color: black; background: white; border-color: #aaa; white-space: normal; }
+    }
+    .line-title-button { background: transparent; border: 0; text-align: left; cursor: pointer; }
+    .line-title-button:hover { text-decoration: underline; }
+    .fishbone { grid-template-columns: repeat(2, minmax(0, 1fr)); position: relative; gap: 30px 14px; }
+    .fishbone::before { content: ''; position: absolute; top: 50%; width: 100%; height: 2px; background: #8cbbe2; }
+    .fishbone label { position: relative; }
+    .fishbone label::after { content: ''; position: absolute; height: 15px; width: 2px; background: #8cbbe2; left: 50%; }
+    .fishbone label:nth-child(-n+2)::after { top: 100%; transform: rotate(-25deg); transform-origin: top; }
+    .fishbone label:nth-child(n+3)::after { bottom: 100%; transform: rotate(25deg); transform-origin: bottom; }
 </style>
 </head>
 <body>
@@ -251,115 +303,51 @@
     <div class="header-actions">
       <div class="sync-time" id="lastSyncTime">
         <div><span class="live-dot"></span> Онлайн (Realtime)</div>
-        <div id="syncErrorMsg" class="sync-err hidden"></div>
       </div>
+      <div id="syncErrorMsg" class="sync-err hidden"></div>
       <button id="refreshDashboardButton" class="btn-refresh" type="button" onclick="refreshDashboard()">Обновить</button>
-      <button class="btn-excel" onclick="exportToExcel()">Скачать смены в Excel</button>
+
     </div>
   </div>
 
-  <div class="summary-grid">
-    <div class="summary-card" style="border-left-color: #6366f1;">
-      <div class="card-title">ПЛАН НА СМЕНУ (ЦЕХ)</div>
-      <div class="plan-input-group">
-        <input type="number" id="shiftPlanInput" class="plan-input" value="20000" step="500">
-        <span style="font-weight: 800; font-size: 16px; color:#fff;">кг</span>
-        <button class="btn-save-plan" onclick="saveGeneralPlan()">Сохранить</button>
+  <nav class="board-actions board-nav" aria-label="Разделы">
+    <button id="nav-live" aria-pressed="true" onclick="switchDashboard('live')">Текущая смена</button>
+    <button id="nav-analytics" aria-pressed="false" onclick="switchDashboard('analytics')">Аналитика цеха</button>
+    <button id="nav-archive" aria-pressed="false" onclick="switchDashboard('archive')">Архив</button>
+  </nav>
+  <section id="view-live" class="board-stack">
+    <div class="section-header board-actions">
+      <h2 class="section-title">Текущее состояние линий</h2>
+      <div class="board-actions">
+        <span id="supervisorShiftLabel" role="status">Проверяем приёмку…</span>
+        <button id="acceptSupervisorButton" onclick="openSupervisorAcceptance()">Принять смену</button>
+        <button onclick="openShiftPlan()">План смены</button>
+        <button onclick="openSupervisorReport()">Отчёт смены</button>
       </div>
-      <div class="card-sub" id="planRemainingSub">Общий план для отчетности</div>
-    </div>
-
-    <div class="summary-card" style="border-left-color: #38bdf8;">
-      <div class="card-title">ИЗГОТОВЛЕНО ПО ФАКТУ</div>
-      <div class="card-val" id="sumLiveKg" style="color: #38bdf8;">0 кг</div>
-      <div class="card-sub" id="sumLivePcs">0 кор./меш. краски</div>
-    </div>
-
-    <div class="summary-card" style="border-left-color: #10b981;">
-      <div class="card-title">
-        <span>ВЫПОЛНЕНИЕ ПЛАНА</span>
-        <span id="sumPlanPercent" style="color: #34d399; font-weight: 900; font-size: 14px;">0%</span>
-      </div>
-      <div class="progress-bar-bg">
-        <div id="sumProgressBar" class="progress-bar-fill"></div>
-      </div>
-      <div class="card-sub" id="sumPaceText">Идет учет текущей смены</div>
-    </div>
-
-    <div class="summary-card" style="border-left-color: #ef4444;">
-      <div class="card-title">БРАК ЗА СМЕНУ</div>
-      <div class="card-val" id="sumDefectKg" style="color: #f87171;">0 кг</div>
-      <div class="card-sub" id="sumDefectBoxes">0 коробок</div>
-    </div>
-
-    <div class="summary-card" style="border-left-color: #f59e0b;">
-      <div class="card-title">ЧИПСЫ / П-Ф ЗА СМЕНУ</div>
-      <div class="card-val" id="sumChipsKg" style="color: #fbbf24;">0 кг</div>
-      <div class="card-sub" id="sumDustKg">Пыль: 0 кг</div>
-    </div>
-
-    <div class="oem-total-card">
-      <div class="oem-total-title">OEM ПО ЦЕХУ</div>
-      <div class="oem-total-value">в разработке</div>
-      <div class="card-sub" style="color: #6366f1;">Доступность линий</div>
-    </div>
-  </div>
-
-  <div>
-    <div class="section-header">
-      <div class="section-title">Текущее состояние линий <span class="live-dot"></span></div>
-      <span style="font-size: 12px; color: #64748b;">Данные обновляются в реальном времени</span>
     </div>
     <div class="lines-grid" id="linesGrid"></div>
-  </div>
-
-  <div class="table-card">
-    <div class="table-toolbar">
-      <div>
-        <div style="font-size: 16px; font-weight: 900; color: #fff;">Журнал событий (Архив)</div>
-        <div style="font-size: 11px; color: #64748b;">Закрытые партии и сданные смены</div>
-      </div>
-      
-      <div class="filters-group">
-        <div class="tabs-group">
-          <button id="tab-shifts" class="tab-btn active" onclick="setArchiveTab('shifts')">Смены</button>
-          <button id="tab-parties" class="tab-btn" onclick="setArchiveTab('parties')">Партии</button>
-        </div>
-        <select id="filterLine" class="filter-select" onchange="filterShiftsTable()">
-          <option value="all">Все линии</option>
-        </select>
-        <input type="text" id="searchInput" class="search-input" placeholder="Поиск (оператор, RAL, партия)..." oninput="filterShiftsTable()">
-      </div>
-    </div>
-
-    <div class="scroll-table">
-      <table>
-        <thead>
-          <tr>
-            <th>Время</th>
-            <th>Линия</th>
-            <th>Оператор</th>
-            <th>Партия</th>
-            <th>Код продукта</th>
-            <th>Цвет RAL</th>
-            <th>Диапазон</th>
-            <th>Краска (кг)</th>
-            <th>Чипсы / П-ф</th>
-            <th>Брак</th>
-            <th>Пыль</th>
-            <th>План (кг)</th>
-            <th>Вып. плана (%)</th>
-            <th>Смена</th>
-          </tr>
-        </thead>
-        <tbody id="shiftsTableBody">
-          <tr><td colspan="14" style="text-align: center; color: #64748b; padding: 25px;">Загрузка истории...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
+  </section>
+  <section id="view-analytics" class="board-stack" hidden></section>
+  <section id="view-archive" class="board-stack" hidden>
+    <h2>Архив</h2>
+    <form id="historyForm" class="board-filters">
+      <label>Линия<select id="historyLine"></select></label>
+      <label>Партия<input id="historyParty" type="search"></label>
+      <label>Оператор<input id="historyOperator" type="search"></label>
+      <label>№ коробки или мешка<input id="historyBox" type="number" min="1" step="1"></label>
+      <button type="submit">Найти</button>
+    </form>
+    <div id="historyResults" class="board-stack" aria-live="polite"></div>
+  </section>
 </div>
+
+<dialog id="dashboardDialog" class="board-dialog">
+  <header class="board-actions">
+    <h2 id="dashboardPanelTitle"></h2>
+    <form method="dialog"><button aria-label="Закрыть">Закрыть</button></form>
+  </header>
+  <div id="dashboardPanel"></div>
+</dialog>
 
 <dialog id="batchContributionDialog" class="rounded-xl border border-[#233152] bg-[#131c31] p-5 text-white max-w-sm w-[calc(100%-2rem)]">
   <form method="dialog" class="space-y-3">
@@ -379,14 +367,9 @@
   let rawReports = [];
   const latestPaceByLine = new Map();
   let rawBatches = [];
-  let allBatches = [];
   let rawPlans = [];
-  let currentArchiveTab = 'shifts';
-  let shiftPlanKg = 0;
-  let totalGeneralPlanKg = 0;
 
   window.onload = () => {
-    populateLineFilter();
     updateDateAndShiftDisplay();
     loadDashboardData();
     setupRealtime();
@@ -417,44 +400,25 @@
     localStorage.setItem('primatek_supervisor', val);
   }
 
-  function populateLineFilter() {
-    const sel = document.getElementById('filterLine');
-    sel.innerHTML = '<option value="all">Все линии</option>' +
-      PRIMATEK_LINES.map(l => `<option value="${l}">Линия №${l}</option>`).join('');
-  }
-
   function getCurrentShiftInfo() {
-    const now = new Date();
-    const h = now.getHours();
-    let start = new Date(now);
-    let end = new Date(now);
-    let shiftName = 'ДЕНЬ';
-
-    if (h >= 8 && h < 20) {
-      shiftName = 'ДЕНЬ';
-      start.setHours(8, 0, 0, 0);
-      end.setHours(20, 0, 0, 0);
-    } else if (h >= 20) {
-      shiftName = 'НОЧЬ';
-      start.setHours(20, 0, 0, 0);
-      end.setDate(end.getDate() + 1);
-      end.setHours(8, 0, 0, 0);
-    } else {
-      shiftName = 'НОЧЬ';
-      start.setDate(start.getDate() - 1);
-      start.setHours(20, 0, 0, 0);
-      end.setHours(8, 0, 0, 0);
-    }
-    const yyyy = start.getFullYear();
-    const mm = String(start.getMonth() + 1).padStart(2, '0');
-    const dd = String(start.getDate()).padStart(2, '0');
-    const planDate = `${yyyy}-${mm}-${dd}`;
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Moscow', year: 'numeric', month: '2-digit',
+      day: '2-digit', hour: '2-digit', hourCycle: 'h23'
+    }).formatToParts(new Date());
+    const fields = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    const date = fields.year + '-' + fields.month + '-' + fields.day;
+    const hour = Number(fields.hour);
+    const shiftName = hour >= 8 && hour < 20 ? 'ДЕНЬ' : 'НОЧЬ';
+    const start = new Date(date + (shiftName === 'ДЕНЬ' ? 'T08:00:00+03:00' : 'T20:00:00+03:00'));
+    if (hour < 8) start.setUTCDate(start.getUTCDate() - 1);
+    const end = new Date(start.getTime() + 12 * 60 * 60 * 1000);
+    const planDate = start.toLocaleDateString('sv-SE', {timeZone: 'Europe/Moscow'});
     return { start, end, shiftName, planDate };
   }
 
   function updateDateAndShiftDisplay() {
     const now = new Date();
-    document.getElementById('currentDateText').innerText = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    document.getElementById('currentDateText').innerText = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Moscow' });
     const { shiftName } = getCurrentShiftInfo();
     document.getElementById('currentShiftBadge').innerText = 'СМЕНА: ' + (shiftName === 'ДЕНЬ' ? 'ДЕНЬ (08:00 – 20:00)' : 'НОЧЬ (20:00 – 08:00)');
   }
@@ -517,6 +481,7 @@ function getMascotAsset(message, kind) {
   }
 
   async function fetchDashboardData() {
+    updateDateAndShiftDisplay();
     const syncText = document.getElementById('lastSyncTime');
     const syncErr = document.getElementById('syncErrorMsg');
     syncErr.classList.add('hidden');
@@ -528,27 +493,18 @@ function getMascotAsset(message, kind) {
       const signal = AbortSignal.timeout(12000);
       const [reports, batches, plans] = await Promise.all([
         client.from('shift_reports').select('*').order('created_at', { ascending: false }).limit(500).abortSignal(signal),
-        client.from('batches').select('*').order('opened_at', { ascending: false }).limit(500).abortSignal(signal),
+        client.from('batches').select('*').eq('status','open').order('opened_at', { ascending: false }).limit(500).abortSignal(signal),
         client.from('shift_plans').select('*').eq('plan_date', today).eq('shift', shiftName).abortSignal(signal),
         loadLinePace(today + '|' + shiftName, signal)
       ]);
       const error = reports.error || batches.error || plans.error;
       if (error) throw error;
       rawReports = reports.data || [];
-      allBatches = batches.data || [];
-      rawBatches = allBatches.filter(b => b.status === 'open');
+      rawBatches = batches.data || [];
       rawPlans = plans.data || [];
 
-      const genPlan = rawPlans.find(p => Number(p.line_number) === 0);
-      totalGeneralPlanKg = genPlan ? Number(genPlan.plan_kg) : 0;
-      
-      shiftPlanKg = rawPlans.filter(p => PRIMATEK_LINES.includes(Number(p.line_number))).reduce((sum, p) => sum + Number(p.plan_kg), 0);
-
-      document.getElementById('shiftPlanInput').value = totalGeneralPlanKg > 0 ? totalGeneralPlanKg : 20000;
-
-      renderTopSummary();
       renderLiveLineCards();
-      filterShiftsTable();
+      void refreshSupervisorShift();
       
       syncText.innerHTML = `<div><span class="live-dot"></span> Онлайн • автообновление 30 сек • ${new Date().toLocaleTimeString('ru-RU')}</div>`;
       return true;
@@ -584,133 +540,10 @@ function getMascotAsset(message, kind) {
       .subscribe();
   }
 
-  async function saveGeneralPlan() {
-    const val = Number(document.getElementById('shiftPlanInput').value) || 0;
-    const { planDate: today, shiftName } = getCurrentShiftInfo();
-
-    try {
-      const { error } = await client.from('shift_plans').upsert({
-        plan_date: today,
-        shift: shiftName,
-        line_number: 0,
-        plan_kg: val
-      }, { onConflict: 'plan_date,shift,line_number' });
-      
-      if (error) throw error;
-      showNotice(`Общий план ${val} кг сохранен (для отчетности цеха).`);
-      loadDashboardData();
-    } catch (e) {
-      showNotice("Не удалось сохранить общий план. Проверьте соединение и попробуйте ещё раз.", "error");
-    }
-  }
-
-  async function saveLinePlan(lineNum, inputId) {
-    const input = document.getElementById(inputId);
-    const val = input ? Number(input.value) : NaN;
-    const line = Number(lineNum);
-    const { planDate: today, shiftName } = getCurrentShiftInfo();
-
-    if (!Number.isInteger(line) || !Number.isFinite(val) || val < 0) {
-      showNotice("Введите корректный план в килограммах.", "warning");
-      return;
-    }
-
-    const planRecord = {
-      plan_date: today,
-      shift: shiftName,
-      line_number: line,
-      plan_kg: val
-    };
-
-    try {
-      const { error } = await client.from('shift_plans').upsert(
-        planRecord,
-        { onConflict: 'plan_date,shift,line_number' }
-      );
-
-      if (error) {
-        // Иногда соединение обрывается уже после того, как сервер успел записать строку.
-        // Перепроверяем запись, чтобы не показывать ложную ошибку при успешном сохранении.
-        const { data: saved, error: verifyError } = await client.from('shift_plans')
-          .select('plan_kg')
-          .eq('plan_date', today)
-          .eq('shift', shiftName)
-          .eq('line_number', line)
-          .maybeSingle();
-
-        if (verifyError || !saved || Number(saved.plan_kg) !== val) throw error;
-      }
-    } catch (e) {
-      console.error('Ошибка сохранения плана линии:', e);
-      showNotice(
-        `Не удалось сохранить план линии №${line}. ${e && e.message ? e.message : 'Проверьте соединение и попробуйте ещё раз.'}`,
-        "error"
-      );
-      return;
-    }
-
-    const btn = document.getElementById(`savebtn-${line}`);
-    if (btn) btn.style.display = 'none';
-
-    // Сохранение подтверждено. Обновление дашборда — отдельная операция.
-    showNotice(`План линии №${line} на ${val.toLocaleString('ru-RU')} кг сохранён.`, "success");
-
-    try {
-      await loadDashboardData();
-    } catch (e) {
-      console.error('План сохранён, но обновить дашборд не удалось:', e);
-      showNotice("План сохранён. Не удалось обновить данные на экране — они обновятся при следующей синхронизации.", "warning");
-    }
-  }
-
-  function showSaveBtn(lineNum) {
-    const btn = document.getElementById(`savebtn-${lineNum}`);
-    if (btn) btn.style.display = 'inline-block';
-  }
-
   function inReportPeriod(report, period) {
     if (report.shift_key) return report.shift_key === `${period.planDate}|${period.shiftName}`;
     const timestamp = new Date(report.created_at).getTime();
     return timestamp >= period.start.getTime() && timestamp < period.end.getTime();
-  }
-
-  function renderTopSummary() {
-    const period = getCurrentShiftInfo();
-    const shiftReports = rawReports.filter(report => inReportPeriod(report, period));
-
-    let totalLiveKg = 0, totalLivePcs = 0, shiftDefectKg = 0, shiftDefectBoxes = 0, shiftChipsKg = 0, shiftDustKg = 0;
-
-    // Каждая запись PRODUCTION / PARTY_CLOSE / SHIFT_CLOSE содержит прирост
-    // с момента предыдущей успешной отправки. Суммируем события смены,
-    // а не берём только последнюю запись (она часто бывает нулевой).
-    PRIMATEK_LINES.forEach(lineNum => {
-      const lineReports = shiftReports.filter(r =>
-        Number(r.line_number) === lineNum &&
-        ['PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type)
-      );
-
-      totalLiveKg += lineReports.reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
-      totalLivePcs += lineReports.reduce((sum, r) => sum + (Number(r.good_boxes || r.good_bags) || 0), 0);
-      shiftDefectKg += lineReports.reduce((sum, r) => sum + (Number(r.defect_kg) || 0), 0);
-      shiftDefectBoxes += lineReports.reduce((sum, r) => sum + (Number(r.defect_boxes) || 0), 0);
-      shiftChipsKg += lineReports.reduce((sum, r) => sum + (Number(r.chips_kg) || 0), 0);
-      shiftDustKg += lineReports.reduce((sum, r) => sum + (Number(r.dust_kg) || 0), 0);
-    });
-
-    document.getElementById('sumLiveKg').innerText = totalLiveKg.toLocaleString('ru-RU') + ' кг';
-    document.getElementById('sumLivePcs').innerText = `${totalLivePcs} кор./меш. краски`;
-    
-    const plan = totalGeneralPlanKg > 0 ? totalGeneralPlanKg : 1;
-    const percent = Math.min(100, Math.round((totalLiveKg / plan) * 100));
-    document.getElementById('sumPlanPercent').innerText = `${percent}%`;
-    document.getElementById('sumProgressBar').style.width = `${percent}%`;
-    const remaining = Math.max(0, plan - totalLiveKg);
-    document.getElementById('planRemainingSub').innerText = `Осталось: ${remaining.toLocaleString('ru-RU')} кг`;
-    
-    document.getElementById('sumDefectKg').innerText = `${shiftDefectKg.toLocaleString('ru-RU')} кг`;
-    document.getElementById('sumDefectBoxes').innerText = `${shiftDefectBoxes} коробок`;
-    document.getElementById('sumChipsKg').innerText = `${shiftChipsKg.toLocaleString('ru-RU')} кг`;
-    document.getElementById('sumDustKg').innerText = `Пыль: ${shiftDustKg.toFixed(1)} кг`;
   }
 
   function escapeHtml(value) {
@@ -729,7 +562,7 @@ function getMascotAsset(message, kind) {
       const paceData = pace?.shiftKey === period.planDate + '|' + period.shiftName ? pace.data : null;
       const paceText = paceData
         ? 'Последний замер: ' + Math.round(20 * 3600000 / paceData.elapsed_ms).toLocaleString('ru-RU') +
-          ' кг/ч · ' + new Date(paceData.measured_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})
+          ' кг/ч · ' + new Date(paceData.measured_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit', timeZone: 'Europe/Moscow'})
         : '';
       const latestAny = rawReports.find(r =>
         Number(r.line_number) === lineNum && inReportPeriod(r, period) &&
@@ -819,9 +652,10 @@ function getMascotAsset(message, kind) {
 
       const card = document.createElement('div');
       card.className = 'line-card';
+      card.dataset.line = lineNum;
       card.innerHTML = `
         <div class="line-card-top">
-          <span class="line-num">Линия №${lineNum}</span>
+          <button class="line-num line-title-button" onclick="showLineDetails(${lineNum})">Линия №${lineNum}</button>
           <span class="status-badge ${statusClass}"><span class="status-dot"></span>${statusText}</span>
         </div>
 
@@ -846,54 +680,17 @@ function getMascotAsset(message, kind) {
           ${batchContributionButton(activeBatch.id)}
         </details>` : ''}
         <div class="line-plan-block">
-          <div class="line-plan-row">
-            <span class="line-plan-label">План:</span>
-            <div class="flex items-center gap-1">
-               <input type="number" id="plan-input-${lineNum}" class="line-plan-input" value="${linePlan || ''}" placeholder="0" oninput="showSaveBtn(${lineNum})" onkeypress="if(event.key === 'Enter') saveLinePlan(${lineNum}, 'plan-input-${lineNum}')">
-               <button id="savebtn-${lineNum}" class="btn-save-mini" onclick="saveLinePlan(${lineNum}, 'plan-input-${lineNum}')">✓</button>
-               <span style="font-size:10px; color:#64748b;">кг</span>
-            </div>
-          </div>
-          ${linePlan > 0 && latestOutput ? `<div class="line-plan-row"><span>Выполнено</span><strong>${planPercent}%</strong></div>
-          <div class="line-progress-bg"><div class="${progressClass}" style="width: ${Math.min(100, planPercent)}%"></div></div>` : ''}
+          <div class="line-plan-row"><span>${linePlan > 0 ? 'План ' + kgText(linePlan) : 'План не задан'}</span>
+          ${linePlan > 0 && latestOutput ? `<strong>${planPercent}%</strong>` : ''}</div>
+          ${linePlan > 0 && latestOutput ? `<div class="line-progress-bg"><div class="${progressClass}" style="width: ${Math.min(100, planPercent)}%"></div></div>` : ''}
+        </div>
+        <div class="board-actions line-actions">
+          <button onclick="openAnalytics(${lineNum})">Аналитика</button>
+          <button onclick="openLineHistory(${lineNum})">История</button>
         </div>
       `;
       grid.appendChild(card);
     });
-  }
-
-  function setArchiveTab(tab) {
-    currentArchiveTab = tab;
-    document.getElementById('tab-shifts').className = tab === 'shifts' ? 'tab-btn active' : 'tab-btn';
-    document.getElementById('tab-parties').className = tab === 'parties' ? 'tab-btn active' : 'tab-btn';
-    filterShiftsTable();
-  }
-
-  function filterShiftsTable() {
-    const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
-    const lineVal = document.getElementById('filterLine').value;
-    if (currentArchiveTab === 'parties') {
-      const filteredBatches = allBatches.filter(b => {
-        if (b.status !== 'closed') return false;
-        const searchText = [b.batch_number, b.ral_color, b.product_code, b.closed_by, b.opened_by].join(' ').toLowerCase();
-        return (!searchVal || searchText.includes(searchVal)) &&
-          (lineVal === 'all' || String(b.line_number) === String(lineVal));
-      });
-      renderPartyArchive(filteredBatches);
-      return;
-    }
-
-    const filtered = rawReports.filter(r => {
-      if (r.event_type !== 'SHIFT_CLOSE') return false;
-      const op = (r.operator_name || '').toLowerCase();
-      const batch = (r.batch_number || '').toLowerCase();
-      const product = (r.product_code || '').toLowerCase();
-      const ral = (r.ral_color || '').toLowerCase();
-      const matchSearch = !searchVal || op.includes(searchVal) || batch.includes(searchVal) || product.includes(searchVal) || ral.includes(searchVal);
-      const matchLine = (lineVal === 'all') || (String(r.line_number) === String(lineVal));
-      return matchSearch && matchLine;
-    });
-    renderShiftsTable(filtered);
   }
 
   function batchContributionButton(id) {
@@ -950,98 +747,8 @@ function getMascotAsset(message, kind) {
     }
   }
 
-  function renderPartyArchive(batches) {
-    const tbody = document.getElementById('shiftsTableBody');
-    if (!batches.length) {
-      tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;color:#64748b;padding:25px;">Закрытых партий не найдено</td></tr>`;
-      return;
-    }
-    tbody.innerHTML = batches.map(b => {
-      const events = rawReports.filter(r => r.batch_id === b.id &&
-        ['PRODUCTION','PARTY_CLOSE','SHIFT_CLOSE'].includes(r.event_type));
-      const initialUnits = b.package_type === 'mix'
-        ? (Number(b.initial_comp1)||0) + (Number(b.initial_comp2)||0) + (Number(b.initial_finished)||0)
-        : (Number(b.initial_unit)||0);
-      const kg = initialUnits * 20 + events.reduce((sum,r) => sum + (Number(r.total_good_kg)||0),0);
-      const chips = events.reduce((sum,r) => sum + (Number(r.chips_kg)||0),0);
-      const dt = b.closed_at ? new Date(b.closed_at) : new Date(b.opened_at);
-      const time = dt.toLocaleDateString('ru-RU') + ' ' + dt.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
-      return `<tr>
-        <td style="color:#94a3b8;font-family:monospace;">${time}</td>
-        <td><b>№${b.line_number}</b></td>
-        <td><b>${b.closed_by || b.opened_by || '—'}</b></td>
-        <td>${b.batch_number || '—'}</td>
-        <td><b>${b.product_code || '—'}</b></td>
-        <td><span class="ral-tag">${b.ral_color || '—'}</span></td>
-        <td>${b.package_type === 'mix' ? 'СМЕШЕНИЕ' : 'ПК'}</td>
-        <td><b style="color:#34d399;font-size:14px;">${kg.toLocaleString('ru-RU')} кг</b><br>${batchContributionButton(b.id)}</td>
-        <td style="color:#fbbf24;font-weight:700;">${chips.toLocaleString('ru-RU')} кг</td>
-        <td>—</td><td>${Number(b.dust_kg||0).toFixed(1)} кг</td>
-        <td>—</td><td>—</td><td>—</td>
-      </tr>`;
-    }).join('');
-  }
-
-  function renderShiftsTable(reports) {
-    const tbody = document.getElementById('shiftsTableBody');
-    if (!reports.length) {
-      tbody.innerHTML = `<tr><td colspan="14" style="text-align: center; color: #64748b; padding: 25px;">Записей не найдено</td></tr>`;
-      return;
-    }
-
-    tbody.innerHTML = reports.map(r => {
-      const dt = new Date(r.created_at);
-      const timeStr = dt.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'}) + ' ' + dt.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
-      const boxHtml = (r.unit_from && r.unit_to) ? `<span class="tag-range">№ ${r.unit_from} — № ${r.unit_to}</span>` : `<span style="color:#64748b;">—</span>`;
-      const planKg = Number(r.plan_kg) || 0;
-      const planPercent = planKg > 0 ? Math.round((Number(r.total_good_kg || 0) / planKg) * 100) : 0;
-      const shiftType = r.event_type === 'SHIFT_CLOSE' ? (r.shift_key?.split('|')[1] || (dt.getHours() >= 8 && dt.getHours() < 20 ? 'ДЕНЬ' : 'НОЧЬ')) : '—';
-
-      return `
-        <tr>
-          <td style="color: #94a3b8; font-family: monospace;">${timeStr}</td>
-          <td><b>№${r.line_number}</b></td>
-          <td><b>${r.operator_name || '—'}</b></td>
-          <td>${r.batch_number || '—'}</td>
-          <td><b>${r.product_code || '—'}</b></td>
-          <td><span class="ral-tag">${r.ral_color || '—'}</span></td>
-          <td>${boxHtml}</td>
-          <td><b style="color: #34d399; font-size:14px;">${r.total_good_kg || 0} кг</b></td>
-          <td style="color: #fbbf24; font-weight:700;">${r.chips_kg || 0} кг</td>
-          <td style="color: #f87171;">${r.defect_kg || 0} кг</td>
-          <td style="color: #94a3b8;">${Number(r.dust_kg || 0).toFixed(1)} кг</td>
-          <td style="color: #38bdf8; font-weight:700;">${planKg > 0 ? planKg + ' кг' : '—'}</td>
-          <td style="color: #10b981; font-weight:700;">${planKg > 0 ? planPercent + '%' : '—'}</td>
-          <td>${shiftType}</td>
-        </tr>
-      `;
-    }).join('');
-  }
-
-  function isRepairEvent(report) {
-    return report.event_type === 'STATUS_CHANGE' && report.line_status === 'РЕМОНТ';
-  }
-
-  function exportToExcel() {
-    if (!rawReports.length) { showNotice("Нет данных для выгрузки"); return; }
-    const excelData = rawReports.filter(r => r.event_type === 'SHIFT_CLOSE' || r.event_type === 'PARTY_CLOSE' || isRepairEvent(r)).map(r => {
-      return {
-        "Дата и время": new Date(r.created_at).toLocaleString('ru-RU'),
-        "Тип записи": r.event_type === 'SHIFT_CLOSE' ? 'Сдача смены' : isRepairEvent(r) ? 'Ремонт' : 'Закрытие партии',
-        "Причина ремонта": isRepairEvent(r) ? (r.repair_reason || '') : '',
-        "Линия": "№" + r.line_number, "Оператор": r.operator_name || "", "Партия": r.batch_number || "", "Код продукта": r.product_code || "", "Цвет RAL": r.ral_color || "",
-        "Диапазон": (r.unit_from && r.unit_to) ? `№ ${r.unit_from} — № ${r.unit_to}` : "",
-        "Краска (кг)": r.total_good_kg || 0, "Чипсы / П-ф (кг)": r.chips_kg || 0, "Брак (кг)": r.defect_kg || 0,
-        "Пыль (кг)": r.dust_kg || 0, "План (кг)": r.plan_kg || "",
-        "Выполнение плана (%)": r.plan_kg ? Math.round((Number(r.total_good_kg || 0) / r.plan_kg) * 100) : ""
-      };
-    });
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Журнал PRIMATEK");
-    XLSX.writeFile(workbook, `PRIMATEK_Дашборд_${new Date().toISOString().slice(0,10)}.xlsx`);
-  }
 </script>
 
+<script src="./dashboard-workspace.js"></script>
 </body>
 </html>
