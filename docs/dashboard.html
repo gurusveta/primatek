@@ -321,6 +321,7 @@
   const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let rawReports = [];
+  const latestPaceByLine = new Map();
   let rawBatches = [];
   let allBatches = [];
   let rawPlans = [];
@@ -472,6 +473,7 @@ function getMascotAsset(message, kind) {
 
       document.getElementById('shiftPlanInput').value = totalGeneralPlanKg > 0 ? totalGeneralPlanKg : 20000;
 
+      await loadLinePace(today + '|' + shiftName);
       renderTopSummary();
       renderLiveLineCards();
       filterShiftsTable();
@@ -485,6 +487,21 @@ function getMascotAsset(message, kind) {
     } finally {
       dashboardRefreshInProgress = false;
     }
+  }
+
+  async function loadLinePace(shiftKey) {
+    await Promise.all(PRIMATEK_LINES.map(async line => {
+      try {
+        const { data, error } = await client.from('line_pace_measurements')
+          .select('elapsed_ms, measured_at')
+          .eq('shift_key', shiftKey).eq('line_number', line)
+          .order('measured_at', { ascending: false }).limit(1).maybeSingle();
+        if (error) throw error;
+        latestPaceByLine.set(line, { shiftKey, data });
+      } catch (error) {
+        console.error(error);
+      }
+    }));
   }
 
   function setupRealtime() {
@@ -630,6 +647,12 @@ function getMascotAsset(message, kind) {
     const period = getCurrentShiftInfo();
 
     PRIMATEK_LINES.forEach(lineNum => {
+      const pace = latestPaceByLine.get(lineNum);
+      const paceData = pace?.shiftKey === period.planDate + '|' + period.shiftName ? pace.data : null;
+      const paceText = paceData
+        ? 'Последний замер: ' + Math.round(20 * 3600000 / paceData.elapsed_ms).toLocaleString('ru-RU') +
+          ' кг/ч · ' + new Date(paceData.measured_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})
+        : '';
       const latestAny = rawReports.find(r => Number(r.line_number) === lineNum);
       
       let statusClass = 'st-idle';
@@ -734,6 +757,7 @@ function getMascotAsset(message, kind) {
           <div class="output-sub">${boxText}</div>
           ${chipsKg > 0 ? `<div class="output-chips">Чипсы / п-ф: ${chipsKg.toLocaleString('ru-RU')} кг</div>` : ''}
           <div class="output-time">${timeText}</div>
+          ${paceText ? `<div class="output-sub">${paceText}</div>` : ''}
         </div>
         <div class="line-output-box" style="margin-top:10px;">
           <div class="output-label">ВЫРАБОТКА ТЕКУЩЕЙ ПАРТИИ</div>
