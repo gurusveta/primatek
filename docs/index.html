@@ -259,6 +259,7 @@
           <button onclick="sendCheckpoint()" class="py-3 bg-[#1e1b4b] border border-[#4338ca] font-extrabold rounded-xl text-[#a5b4fc] text-xs uppercase btn-press">Отправить на дашборд</button>
           <button onclick="openClosePartyModal()" class="py-3 bg-[#1c2742] border border-[#ef4444] text-[#fca5a5] font-extrabold rounded-xl text-xs uppercase btn-press">Закрыть партию</button>
         </div>
+        <button id="openPaceButton" type="button" onclick="openPaceMeasurement()" class="hidden mt-2 w-full py-3 border border-[#38bdf8] rounded-xl text-[#a5dfff] font-extrabold text-sm btn-press">Замерить темп</button>
         <div id="lastSyncNotice" class="hidden text-[10px] text-center text-[#34d399]"></div>
       </div>
     </div>
@@ -278,6 +279,17 @@
     <button id="btnSubmitShift" onclick="openSummary()" class="w-full py-4 bg-gradient-to-r from-[#0072ce] to-[#0284c7] font-black rounded-2xl text-white text-sm uppercase tracking-wider shadow-xl btn-press">СДАТЬ СМЕНУ И ОТПРАВИТЬ ОТЧЁТ</button>
   </div>
 </main>
+
+<div id="modalPace" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="paceTitle">
+  <div class="bg-[#131c31] border border-[#2d3e66] rounded-2xl p-5 w-full max-w-sm space-y-4 text-center">
+    <h3 id="paceTitle" class="text-lg font-black">Замер темпа</h3>
+    <div id="paceReadout" class="text-4xl font-black tabular-nums">00:00</div>
+    <p id="paceHint" class="text-sm text-[#a5b4ce]">Пустая коробка въехала</p>
+    <button id="paceAction" type="button" onclick="advancePaceMeasurement()" class="w-full py-4 bg-[#0072ce] rounded-xl text-white text-lg font-black disabled:opacity-50">Старт</button>
+    <button id="paceRetry" type="button" onclick="resetPaceMeasurement()" class="hidden w-full py-2 text-[#a5b4ce]">Повторить</button>
+    <button id="paceCancel" type="button" onclick="cancelPaceMeasurement()" class="w-full py-2 text-[#a5b4ce]">Отмена</button>
+  </div>
+</div>
 
 <!-- МОДАЛКА: НОВАЯ ПАРТИЯ -->
 <div id="modalOpenBatch" class="modal-overlay">
@@ -913,6 +925,7 @@ function updateCompactBar() {
 }
 
 function highlightStatusButtons() {
+  updatePaceAvailability();
   document.querySelectorAll('.st-btn').forEach(b => b.classList.toggle('active', b.innerText === local.lineStatus));
   const map = { 'В РАБОТЕ':'#34d399','ЧИСТКА':'#fbbf24','ПРОБЫ':'#38bdf8','РЕМОНТ':'#f87171' };
   const t = document.getElementById('statusTimer');
@@ -1127,6 +1140,7 @@ async function confirmOpenBatch() {
 
 // ===== UI партии =====
 function updateBatchUI() {
+  updatePaceAvailability();
   const openSec = document.getElementById('openBatchSection');
   const actSec = document.getElementById('activeBatchSection');
   if (!batch) { openSec.classList.remove('hidden'); actSec.classList.add('hidden'); return; }
@@ -1416,6 +1430,117 @@ async function resolvePendingProduction() {
     loadPlanFromCloud();
   }
   return true;
+}
+
+let paceStartedAt = null;
+let paceRecord = null;
+let paceTimer = null;
+let paceSending = false;
+
+function canMeasurePace() {
+  return local.shiftAccepted && batch && local.lineStatus === 'В РАБОТЕ';
+}
+
+function updatePaceAvailability() {
+  document.getElementById('openPaceButton').classList.toggle('hidden', !canMeasurePace());
+}
+
+function openPaceMeasurement() {
+  if (!canMeasurePace()) return;
+  resetPaceMeasurement();
+  openModal('modalPace');
+  document.getElementById('paceAction').focus();
+}
+
+function resetPaceMeasurement() {
+  if (paceSending) return;
+  clearInterval(paceTimer);
+  paceStartedAt = null;
+  paceRecord = null;
+  document.getElementById('paceReadout').textContent = '00:00';
+  document.getElementById('paceHint').textContent = 'Пустая коробка въехала';
+  document.getElementById('paceHint').classList.remove('hidden');
+  document.getElementById('paceAction').textContent = 'Старт';
+  document.getElementById('paceRetry').classList.add('hidden');
+}
+
+function cancelPaceMeasurement() {
+  if (paceSending) return;
+  resetPaceMeasurement();
+  closeModal('modalPace');
+}
+
+function renderPaceTimer() {
+  const seconds = Math.max(0, Math.floor((Date.now() - paceStartedAt) / 1000));
+  const min = String(Math.floor(seconds / 60)).padStart(2, '0');
+  const sec = String(seconds % 60).padStart(2, '0');
+  document.getElementById('paceReadout').textContent = min + ':' + sec;
+}
+
+async function advancePaceMeasurement() {
+  if (paceSending) return;
+  if (paceRecord?.elapsed_ms) {
+    await sendPaceMeasurement();
+    return;
+  }
+  if (!canMeasurePace()) {
+    cancelPaceMeasurement();
+    return;
+  }
+  const now = Date.now();
+  if (paceStartedAt === null) {
+    paceRecord = {
+      id: crypto.randomUUID(),
+      line_number: local.line,
+      shift_key: getReportPeriod().key,
+      batch_id: String(batch.id),
+      production_stage: batch.package_type === 'mix' ? activeComp : 'unit'
+    };
+    paceStartedAt = now;
+    document.getElementById('paceHint').textContent = 'Полная коробка выехала';
+    document.getElementById('paceAction').textContent = 'Стоп';
+    paceTimer = setInterval(renderPaceTimer, 250);
+    return;
+  }
+  const elapsed = now - paceStartedAt;
+  if (elapsed < 1000) return;
+  const stage = batch.package_type === 'mix' ? activeComp : 'unit';
+  if (String(batch.id) !== paceRecord.batch_id || stage !== paceRecord.production_stage ||
+      local.line !== paceRecord.line_number || getReportPeriod().key !== paceRecord.shift_key) {
+    cancelPaceMeasurement();
+    return;
+  }
+  clearInterval(paceTimer);
+  paceRecord.elapsed_ms = elapsed;
+  paceRecord.measured_at = new Date(now).toISOString();
+  document.getElementById('paceReadout').textContent =
+    Math.round(UNIT_WEIGHT * 3600000 / elapsed).toLocaleString('ru-RU') + ' кг/ч';
+  document.getElementById('paceHint').classList.add('hidden');
+  document.getElementById('paceAction').textContent = 'Отправить замер';
+  document.getElementById('paceRetry').classList.remove('hidden');
+}
+
+async function sendPaceMeasurement() {
+  paceSending = true;
+  const controls = ['paceAction', 'paceRetry', 'paceCancel'].map(id => document.getElementById(id));
+  controls.forEach(button => { button.disabled = true; });
+  let saved = false;
+  try {
+    const { error } = await client.from('line_pace_measurements')
+      .upsert(paceRecord, { onConflict: 'id', ignoreDuplicates: true });
+    if (error) throw error;
+    saved = true;
+  } catch (error) {
+    console.error(error);
+    showNotice('Замер не отправлен. Попробуйте ещё раз.', 'error');
+  } finally {
+    paceSending = false;
+    controls.forEach(button => { button.disabled = false; });
+  }
+  if (saved) {
+    cancelPaceMeasurement();
+    showNotice('Замер отправлен');
+  }
 }
 
 async function sendCheckpoint(silent = false) {
@@ -1731,6 +1856,16 @@ const PRIMATEK_I18N = {
     "Текущий статус линии":"Liniyaning joriy holati","+ Открыть новую партию":"+ Yangi partiya ochish",
     "Партия:":"Partiya:","RAL:":"RAL:","Номер последней выпущенной коробки":"Oxirgi ishlab chiqarilgan quti raqami",
     "Сейчас делаю:":"Hozir ishlab chiqarilmoqda:","Готовая":"Tayyor mahsulot","Номер последнего мешка":"Oxirgi qop raqami",
+    "Замерить темп":"Tezlikni o‘lchash",
+    "Замер темпа":"Tezlikni o‘lchash",
+    "Пустая коробка въехала":"Bo‘sh quti kirdi",
+    "Полная коробка выехала":"To‘la quti chiqdi",
+    "Старт":"Boshlash",
+    "Стоп":"To‘xtatish",
+    "Отправить замер":"Natijani yuborish",
+    "Повторить":"Qayta o‘lchash",
+    "Замер отправлен":"Natija yuborildi",
+    "Замер не отправлен. Попробуйте ещё раз.":"Natija yuborilmadi. Qayta urinib ko‘ring.",
     "Отправить на дашборд":"Boshqaruv paneliga yuborish","Закрыть партию":"Partiyani yopish",
     "Пыль":"Chang","СДАТЬ СМЕНУ И ОТПРАВИТЬ ОТЧЁТ":"SMENANI TOPSHIRISH VA HISOBOT YUBORISH",
     "Открытие партии":"Partiyani ochish","Состояние производства":"Ishlab chiqarish holati","Новая партия":"Yangi partiya","Уже производится":"Allaqachon ishlab chiqarilmoqda","Новая партия: первая коробка будет № 1.":"Yangi partiya: birinchi quti № 1 bo‘ladi.","Партия уже существует на линии, но ещё не зарегистрирована в PRIMATEK. Укажите первый номер, который произведёте.":"Partiya liniyada allaqachon mavjud, ammo PRIMATEK’da hali ro‘yxatdan o‘tmagan. Ishlab chiqaradigan birinchi raqamingizni kiriting.","С какого номера начинаете вы?":"Siz qaysi raqamdan boshlaysiz?","Первая коробка моей выработки":"Mening ishlab chiqarishimdagi birinchi quti","Укажите номер первой коробки или мешка, который произведёте. Предыдущие единицы останутся в общей нумерации партии, но не попадут в вашу выработку.":"Ishlab chiqaradigan birinchi quti yoki qop raqamini kiriting. Oldingi birliklar partiyaning umumiy raqamlanishida qoladi, lekin sizning ishlab chiqarishingizga qo‘shilmaydi.","Укажите корректный номер первой производимой единицы.":"Birinchi ishlab chiqariladigan birlikning to‘g‘ri raqamini kiriting.","№ Партии":"Partiya №","Код продукта":"Mahsulot kodi","Введите код продукта":"Mahsulot kodini kiriting",
@@ -1769,6 +1904,16 @@ const PRIMATEK_I18N = {
     "Текущий статус линии":"Ҳолати ҷории хат","+ Открыть новую партию":"+ Кушодани партияи нав",
     "Партия:":"Партия:","RAL:":"RAL:","Номер последней выпущенной коробки":"Рақами қуттии охирини истеҳсолшуда",
     "Сейчас делаю:":"Ҳоло истеҳсол мекунам:","Готовая":"Маҳсулоти тайёр","Номер последнего мешка":"Рақами халтаи охирин",
+    "Замерить темп":"Суръатро чен кунед",
+    "Замер темпа":"Ченкунии суръат",
+    "Пустая коробка въехала":"Қуттии холӣ ворид шуд",
+    "Полная коробка выехала":"Қуттии пур баромад",
+    "Старт":"Оғоз",
+    "Стоп":"Ист",
+    "Отправить замер":"Фиристодани натиҷа",
+    "Повторить":"Такрор",
+    "Замер отправлен":"Натиҷа фиристода шуд",
+    "Замер не отправлен. Попробуйте ещё раз.":"Натиҷа фиристода нашуд. Боз кӯшиш кунед.",
     "Отправить на дашборд":"Ба панели идоракунӣ фиристодан","Закрыть партию":"Пӯшидани партия",
     "Пыль":"Ғубор","СДАТЬ СМЕНУ И ОТПРАВИТЬ ОТЧЁТ":"СУПОРИДАНИ БАСТ ВА ФИРИСТОДАНИ ҲИСОБОТ",
     "Открытие партии":"Кушодани партия","Состояние производства":"Ҳолати истеҳсолот","Новая партия":"Партияи нав","Уже производится":"Аллакай истеҳсол мешавад","Новая партия: первая коробка будет № 1.":"Партияи нав: қуттии аввал № 1 мешавад.","Партия уже существует на линии, но ещё не зарегистрирована в PRIMATEK. Укажите первый номер, который произведёте.":"Партия аллакай дар хат мавҷуд аст, аммо дар PRIMATEK сабт нашудааст. Рақами аввалин воҳидеро, ки истеҳсол мекунед, ворид намоед.","С какого номера начинаете вы?":"Шумо аз кадом рақам оғоз мекунед?","Первая коробка моей выработки":"Қуттии аввалини истеҳсоли ман","Укажите номер первой коробки или мешка, который произведёте. Предыдущие единицы останутся в общей нумерации партии, но не попадут в вашу выработку.":"Рақами қуттӣ ё халтаи аввалинеро, ки истеҳсол мекунед, ворид кунед. Воҳидҳои қаблӣ дар рақамгузории умумии партия мемонанд, аммо ба истеҳсоли шумо дохил намешаванд.","Укажите корректный номер первой производимой единицы.":"Рақами дурусти воҳиди аввалини истеҳсолшавандаро ворид кунед.","№ Партии":"№ партия","Код продукта":"Рамзи маҳсулот","Введите код продукта":"Рамзи маҳсулотро ворид кунед",
