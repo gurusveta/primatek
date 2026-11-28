@@ -397,6 +397,16 @@ function escapeAttribute(value) {
 const statusesForChart = ['В РАБОТЕ','ЧИСТКА','ПРОБЫ','РЕМОНТ'];
 const statusColors = ['#82c8ac','#e3bf79','#8cbbe2','#e59ba0'];
 const hoursText = ms => (ms / 3600000).toLocaleString('ru-RU',{maximumFractionDigits:2}) + ' ч';
+function availabilityPercent(intervals) {
+  const recorded = intervals.filter(row => statusesForChart.includes(row.status));
+  const total = recorded.reduce((sum,row) => sum + row.ms, 0);
+  const worked = recorded.filter(row => row.status === 'В РАБОТЕ').reduce((sum,row) => sum + row.ms, 0);
+  return total ? worked / total * 100 : null;
+}
+function availabilityText(intervals) {
+  const percent = availabilityPercent(intervals);
+  return percent === null ? 'Нет данных' : percent.toLocaleString('ru-RU', {maximumFractionDigits:1}) + '%';
+}
 let analyticsRoot;
 let analyticsState = null;
 let analyticsRequest = 0;
@@ -509,12 +519,11 @@ async function loadAnalytics(line) {
       lines:PRIMATEK_LINES.map(number=>({line:number,...shiftTotals(produced.filter(row=>Number(row.line_number)===number))}))};
     const plan=points.reduce((sum,p)=>sum+p.plan,0), fact=points.reduce((sum,p)=>sum+p.paint,0);
     const last=analyticsState.pace.at(-1);
-    const repair=scoped.filter(row=>row.status==='РЕМОНТ').reduce((sum,row)=>sum+row.ms,0);
     output.innerHTML='<div class="analytics-grid">'+
       previewChart('plan','План и факт',plan?Math.round(fact/plan*100)+'% · '+kgText(fact):kgText(fact)+' · план не задан')+
       (line ? previewChart('pace','Темп линии',last?Math.round(72000000/last.elapsed_ms)+' кг/ч':'Замеров пока нет') :
         previewChart('lines','Выпуск по линиям',kgText(fact)))+
-      previewChart('status','Время по статусам','Ремонт · '+hoursText(repair))+'</div>'+
+      previewChart('status','Время по статусам','Доступность · '+availabilityText(scoped))+'</div>'+
       '<p class="board-muted">План сравнивается с выпуском готовой краски. Время рассчитывается по зарегистрированным статусам.</p>';
     for(const kind of ['plan',line?'pace':'lines','status']) renderChart(kind,output.querySelector('[data-preview="'+kind+'"]'),false);
   } catch(error) {
@@ -569,11 +578,15 @@ function renderChart(kind,target,expanded) {
     target.innerHTML=chartBars(lines.map(row=>({label:'№'+row.line,value:row.paint,display:kgText(row.paint)})))+
       (expanded?'<div class="board-actions">'+lines.map(row=>'<button onclick="openAnalytics('+row.line+',analyticsState.range)">Линия №'+row.line+'</button>').join('')+'</div>':'');
   } else {
-    target.innerHTML=chartBars(statusesForChart.map((status,i)=>{
+    target.innerHTML=(expanded ? '<p><strong>Доступность · '+availabilityText(intervals)+
+      '</strong></p><p class="board-muted">Время в работе ÷ время по четырём статусам. Участки без статуса исключены.</p>' : '')+
+      chartBars(statusesForChart.map((status,i)=>{
       const ms=intervals.filter(row=>row.status===status).reduce((sum,row)=>sum+row.ms,0);
       return {label:status,value:ms,display:hoursText(ms),color:statusColors[i]};
     }))+(expanded?'<button onclick="showRepairPareto()">Парето по ремонту</button>':'');
-    if (expanded && !analyticsState.line) target.insertAdjacentHTML('beforeend', '<h3>По линиям</h3>'+chartBars(lines.map(row=>{
+    if (expanded && !analyticsState.line) target.insertAdjacentHTML('beforeend', '<h3>Доступность по линиям</h3><table><thead><tr><th>Линия</th><th>Доступность</th></tr></thead><tbody>'+
+      lines.map(row=>'<tr><td>№'+row.line+'</td><td>'+availabilityText(intervals.filter(item=>item.line===row.line))+
+        '</td></tr>').join('')+'</tbody></table><h3>Остановки по линиям</h3>'+chartBars(lines.map(row=>{
       const ms=intervals.filter(item=>item.line===row.line&&item.status!=='В РАБОТЕ').reduce((sum,item)=>sum+item.ms,0);
       return {label:'№'+row.line,value:ms,display:hoursText(ms)};
     })));
