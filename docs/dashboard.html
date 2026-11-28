@@ -161,6 +161,40 @@
     #primatekNotice.info #primatekNoticeClose{background:#0369a1}
     #primatekNotice.hidden{display:none}
     @media(max-width:430px){#primatekNotice{padding:12px}#primatekNoticeCard{grid-template-columns:minmax(105px,.82fr) 1.18fr;gap:10px;padding:20px 14px;min-height:245px}#primatekNoticeMascot img{max-height:230px}#primatekNoticeMark{width:42px;height:42px;font-size:25px;margin-bottom:10px}#primatekNoticeClose{margin-top:14px;min-width:110px;padding:10px 12px}}
+
+    body { background: #f4f6fa; color: #19263b; }
+    .header, .summary-card, .oem-total-card, .line-card, .table-card {
+      background: #fff; border-color: #dce4ef;
+    }
+    .header { box-shadow: 0 2px 12px #2232490b; }
+    .section-title, .date-badge, .card-val, .line-num, .line-details b { color: #19263b; }
+    .card-title, .line-details, .output-time, .line-plan-label { color: #536479; }
+    .line-card-top { border-color: #e4eaf2; gap: 8px; }
+    .line-card:hover { border-color: #aebfd5; transform: none; }
+    .line-output-box, .line-plan-block { background: #f6f8fc; border-color: #e2e9f2; text-align: left; }
+    .output-val { color: #19263b; font-weight: 750; }
+    .output-label { text-transform: none; letter-spacing: 0; font-size: 12px; }
+    .output-sub { color: #455870; font-weight: 600; }
+    .line-party-details { color: #455870; font-size: 13px; line-height: 1.6; }
+    .line-party-details summary { color: #155b9a; cursor: pointer; }
+    .status-badge { text-transform: none; text-align: left; }
+    .status-dot { flex: 0 0 7px; }
+    .status-badge .status-dot { box-shadow: none; background: currentColor; }
+    .st-work { color: #116647; background: #eaf7f0; }
+    .st-clean { color: #855300; background: #fff4dc; }
+    .st-sample { color: #175a8b; background: #e8f4fc; }
+    .st-repair { color: #a52626; background: #fcecec; }
+    .st-idle { color: #47586e; background: #eef2f7; border-color: #dbe3ee; }
+    .line-plan-input, .plan-input, .filter-select, .search-input, .shift-select {
+      background: #fff; color: #19263b; border-color: #aebfd5;
+    }
+    .line-plan-input:focus { background: #fff; }
+    .tabs-group, th, .progress-bar-bg, .line-progress-bg { background: #e8edf5; }
+    .tabs-group, td { border-color: #dce4ef; }
+    th, td { color: #273750; }
+    tr:hover td { background: #f1f5fa; }
+    .btn-refresh, .shift-badge { color: #155b9a; border-color: #bdcfe5; background: #edf4fc; }
+    .btn-refresh:hover { background: #dceaf8; }
 </style>
 </head>
 <body>
@@ -641,6 +675,12 @@ function getMascotAsset(message, kind) {
     document.getElementById('sumDustKg').innerText = `Пыль: ${shiftDustKg.toFixed(1)} кг`;
   }
 
+  function escapeHtml(value) {
+    const span = document.createElement('span');
+    span.textContent = String(value ?? '');
+    return span.innerHTML;
+  }
+
   function renderLiveLineCards() {
     const grid = document.getElementById('linesGrid');
     grid.innerHTML = '';
@@ -653,10 +693,13 @@ function getMascotAsset(message, kind) {
         ? 'Последний замер: ' + Math.round(20 * 3600000 / paceData.elapsed_ms).toLocaleString('ru-RU') +
           ' кг/ч · ' + new Date(paceData.measured_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})
         : '';
-      const latestAny = rawReports.find(r => Number(r.line_number) === lineNum);
+      const latestAny = rawReports.find(r =>
+        Number(r.line_number) === lineNum && inReportPeriod(r, period) &&
+        ['STATUS_CHANGE', 'PRODUCTION', 'PARTY_CLOSE', 'SHIFT_CLOSE'].includes(r.event_type)
+      );
       
       let statusClass = 'st-idle';
-      let statusText = 'НЕТ ДАННЫХ';
+      let statusText = 'Смена не принята';
       let op = '—', batch = '—', ral = '—', boxText = '—', timeText = 'Замеров не было';
       let shiftKg = 0, partyKg = 0, chipsKg = 0;
       const activeBatch = rawBatches.find(b => Number(b.line_number) === lineNum) || null;
@@ -682,33 +725,33 @@ function getMascotAsset(message, kind) {
       shiftKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.total_good_kg) || 0), 0);
       chipsKg = currentShiftEvents.reduce((sum, r) => sum + (Number(r.chips_kg) || 0), 0);
 
-      if (latestAny && (inReportPeriod(latestAny, period) || new Date(latestAny.created_at) >= period.start)) {
-        statusText = latestAny.line_status || 'В РАБОТЕ';
-        if (statusText === 'В РАБОТЕ') statusClass = 'st-work';
-        else if (statusText === 'ЧИСТКА') statusClass = 'st-clean';
-        else if (statusText === 'ПРОБЫ') statusClass = 'st-sample';
-        else if (statusText === 'РЕМОНТ') statusClass = 'st-repair';
-
-        op = latestAny.operator_name || 'Не указан';
-        if (latestAny.unit_from && latestAny.unit_to) boxText = `№ ${latestAny.unit_from} — № ${latestAny.unit_to}`;
-        
-        const t = new Date(latestAny.created_at);
-        timeText = `Данные в ${t.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}`;
+      if (latestAny?.event_type === 'SHIFT_CLOSE') {
+        statusText = 'Смена сдана';
       } else if (latestAny) {
-        statusText = latestAny.line_status || 'В РАБОТЕ';
-        if (statusText === 'В РАБОТЕ') statusClass = 'st-work';
-        else if (statusText === 'ЧИСТКА') statusClass = 'st-clean';
-        else if (statusText === 'ПРОБЫ') statusClass = 'st-sample';
-        else if (statusText === 'РЕМОНТ') statusClass = 'st-repair';
-        
-        boxText = 'Ожидание данных...';
-        timeText = 'Нет данных за текущую смену';
+        const statuses = {
+          'В РАБОТЕ': 'st-work', 'ЧИСТКА': 'st-clean',
+          'ПРОБЫ': 'st-sample', 'РЕМОНТ': 'st-repair'
+        };
+        statusClass = statuses[latestAny.line_status] || 'st-idle';
+        statusText = statusClass === 'st-idle' ? 'Статус не указан' : latestAny.line_status;
+        op = latestAny.operator_name || 'Не указан';
       }
+      const latestOutput = currentShiftEvents[0];
+      if (latestOutput) {
+        if (latestOutput.unit_from && latestOutput.unit_to) {
+          boxText = `№ ${latestOutput.unit_from} — № ${latestOutput.unit_to}`;
+        }
+        timeText = 'Данные на ' + new Date(latestOutput.created_at)
+          .toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+      } else {
+        timeText = '';
+      }
+      const finishedKg = Math.max(0, shiftKg - chipsKg);
 
       const linePlanObj = rawPlans.find(p => Number(p.line_number) === lineNum);
       const linePlan = linePlanObj ? Number(linePlanObj.plan_kg) : 0;
-      const planPercent = linePlan > 0 ? Math.min(999, Math.round((shiftKg / linePlan) * 100)) : 0;
-      const isOverPlan = linePlan > 0 && shiftKg > linePlan;
+      const planPercent = linePlan > 0 ? Math.min(999, Math.round((finishedKg / linePlan) * 100)) : 0;
+      const isOverPlan = linePlan > 0 && finishedKg > linePlan;
       const progressClass = isOverPlan ? 'line-progress-fill gold' : 'line-progress-fill';
 
       let repairInfoHtml = '';
@@ -730,7 +773,7 @@ function getMascotAsset(message, kind) {
           repairInfoHtml = `
             <div class="line-output-box" style="margin-top:10px;border-color:rgba(239,68,68,.45);">
               <div class="output-label" style="color:#f87171;">РЕМОНТ · ${elapsedText}</div>
-              <div class="output-sub">Причина: <b>${reasonText}</b></div>
+              <div class="output-sub">Причина: <b>${escapeHtml(reasonText)}</b></div>
               <div class="output-time">Начало: ${startText}</div>
             </div>`;
         }
@@ -746,26 +789,24 @@ function getMascotAsset(message, kind) {
 
 
         <div class="line-details">
-          <div>Оператор: <b>${op}</b></div>
-          <div>Партия: <b>${batch}</b> | <span class="ral-tag">${ral}</span></div>
+          ${op !== '—' ? `<div>Оператор: <b>${escapeHtml(op)}</b></div>` : ''}
+          ${activeBatch ? `<div>Партия <b>${escapeHtml(batch)}</b> · RAL ${escapeHtml(ral)}</div>` : '<div>Нет открытой партии</div>'}
         </div>
         ${repairInfoHtml}
 
         <div class="line-output-box">
-          <div class="output-label">ВЫРАБОТКА ЗА СМЕНУ</div>
-          <div class="output-val">${shiftKg.toLocaleString('ru-RU')} кг</div>
-          <div class="output-sub">${boxText}</div>
-          ${chipsKg > 0 ? `<div class="output-chips">Чипсы / п-ф: ${chipsKg.toLocaleString('ru-RU')} кг</div>` : ''}
+          <div class="output-label">Готовая краска за смену</div>
+          <div class="output-val">${latestOutput ? finishedKg.toLocaleString('ru-RU') + ' кг' : '—'}</div>
+          ${chipsKg > 0 ? `<div class="output-sub">Полукомпоненты: ${chipsKg.toLocaleString('ru-RU')} кг</div>` : ''}
           <div class="output-time">${timeText}</div>
           ${paceText ? `<div class="output-sub">${paceText}</div>` : ''}
         </div>
-        <div class="line-output-box" style="margin-top:10px;">
-          <div class="output-label">ВЫРАБОТКА ТЕКУЩЕЙ ПАРТИИ</div>
-          <div class="output-val">${activeBatch ? partyKg.toLocaleString('ru-RU') + ' кг' : 'Нет открытой партии'}</div>
-          <div class="output-sub">${activeBatch ? 'Партия №' + activeBatch.batch_number + ' · ' + (activeBatch.ral_color || 'RAL не указан') : 'Откройте партию для начала учёта'}</div>
-          ${activeBatch ? batchContributionButton(activeBatch.id) : ''}
-        </div>
-
+        ${activeBatch ? `<details class="line-party-details">
+          <summary>Подробности партии</summary>
+          <div>Выпуск по партии: ${partyKg.toLocaleString('ru-RU')} кг</div>
+          ${boxText !== '—' ? `<div>Последний диапазон: ${boxText}</div>` : ''}
+          ${batchContributionButton(activeBatch.id)}
+        </details>` : ''}
         <div class="line-plan-block">
           <div class="line-plan-row">
             <span class="line-plan-label">План:</span>
@@ -775,8 +816,8 @@ function getMascotAsset(message, kind) {
                <span style="font-size:10px; color:#64748b;">кг</span>
             </div>
           </div>
-          <div class="line-plan-row"><span class="line-plan-label">Факт:</span><span class="line-plan-fact">${shiftKg.toLocaleString('ru-RU')} кг <span class="line-plan-percent">(${planPercent}%)</span></span></div>
-          <div class="line-progress-bg"><div class="${progressClass}" style="width: ${Math.min(100, planPercent)}%"></div></div>
+          ${linePlan > 0 && latestOutput ? `<div class="line-plan-row"><span>Выполнено</span><strong>${planPercent}%</strong></div>
+          <div class="line-progress-bg"><div class="${progressClass}" style="width: ${Math.min(100, planPercent)}%"></div></div>` : ''}
         </div>
       `;
       grid.appendChild(card);
