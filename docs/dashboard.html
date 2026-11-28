@@ -195,6 +195,28 @@
     tr:hover td { background: #f1f5fa; }
     .btn-refresh, .shift-badge { color: #155b9a; border-color: #bdcfe5; background: #edf4fc; }
     .btn-refresh:hover { background: #dceaf8; }
+
+    body { background: #252e3b; color: #e0e7f0; }
+    .header, .summary-card, .oem-total-card, .line-card, .table-card { background: #303b4a; border-color: #465568; }
+    .section-title, .date-badge, .card-val, .line-num, .line-details b, th, td { color: #e5ebf3; }
+    .card-title, .card-sub, .line-details, .output-time, .line-plan-label, .sync-time { color: #becbdc; }
+    .line-card-top, .tabs-group, td { border-color: #465568; }
+    .line-card:hover { border-color: #60768e; }
+    .line-output-box, .line-plan-block, .tabs-group, th { background: #293442; border-color: #465568; }
+    .output-val { color: #e5ebf3; }
+    .output-sub, .output-label, .line-party-details, .tab-btn { color: #c5d2e1; }
+    .line-party-details summary { color: #b8d8f7; }
+    .st-work { color: #a2dfc1; background: #304b42; }
+    .st-clean { color: #f0d49b; background: #4b4132; }
+    .st-sample { color: #b6d8f4; background: #30475e; }
+    .st-repair { color: #f0b5b8; background: #513b42; }
+    .st-idle { color: #c7d4e4; background: #3a4758; border-color: #55657a; }
+    .line-plan-input, .plan-input, .filter-select, .search-input, .shift-select { background: #293442; color: #e5ebf3; border-color: #687c92; }
+    .line-plan-input:focus, tr:hover td { background: #38485a; }
+    .progress-bar-bg, .line-progress-bg { background: #455569; }
+    .btn-refresh, .shift-badge { color: #d0e7fc; border-color: #617c98; background: #384d64; }
+    .btn-refresh:hover { background: #465f7a; }
+    .btn-refresh:disabled { opacity: .75; cursor: wait; }
 </style>
 </head>
 <body>
@@ -231,7 +253,7 @@
         <div><span class="live-dot"></span> Онлайн (Realtime)</div>
         <div id="syncErrorMsg" class="sync-err hidden"></div>
       </div>
-      <button class="btn-refresh" onclick="loadDashboardData()">Обновить</button>
+      <button id="refreshDashboardButton" class="btn-refresh" type="button" onclick="refreshDashboard()">Обновить</button>
       <button class="btn-excel" onclick="exportToExcel()">Скачать смены в Excel</button>
     </div>
   </div>
@@ -362,7 +384,6 @@
   let currentArchiveTab = 'shifts';
   let shiftPlanKg = 0;
   let totalGeneralPlanKg = 0;
-  let dashboardRefreshInProgress = false;
 
   window.onload = () => {
     populateLineFilter();
@@ -471,9 +492,31 @@ function getMascotAsset(message, kind) {
     setTimeout(()=>{if(!root.classList.contains('show'))root.classList.add('hidden');},220);
   }
 
-  async function loadDashboardData() {
-    if (dashboardRefreshInProgress) return;
-    dashboardRefreshInProgress = true;
+  let dashboardRequest = null;
+
+  async function refreshDashboard() {
+    const button = document.getElementById('refreshDashboardButton');
+    if (button.disabled) return;
+    button.disabled = true;
+    button.textContent = 'Обновляем…';
+    try {
+      if (dashboardRequest) await dashboardRequest;
+      const success = await loadDashboardData();
+      button.textContent = success ? 'Обновлено' : 'Повторить';
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function loadDashboardData() {
+    if (dashboardRequest) return dashboardRequest;
+    dashboardRequest = fetchDashboardData().finally(() => {
+      dashboardRequest = null;
+    });
+    return dashboardRequest;
+  }
+
+  async function fetchDashboardData() {
     const syncText = document.getElementById('lastSyncTime');
     const syncErr = document.getElementById('syncErrorMsg');
     syncErr.classList.add('hidden');
@@ -482,23 +525,19 @@ function getMascotAsset(message, kind) {
       syncText.innerHTML = `<div><span class="live-dot"></span> Синхронизация...</div>`;
       const { planDate: today, shiftName } = getCurrentShiftInfo();
 
-      const { data: reports, error: repErr } = await client.from('shift_reports')
-        .select('*').order('created_at', { ascending: false }).limit(500);
-      
-      if (repErr) throw repErr;
-      rawReports = reports || [];
-
-      const { data: batches, error: batchErr } = await client.from('batches')
-        .select('*').order('opened_at', { ascending: false }).limit(500);
-      if (batchErr) throw batchErr;
-      allBatches = batches || [];
+      const signal = AbortSignal.timeout(12000);
+      const [reports, batches, plans] = await Promise.all([
+        client.from('shift_reports').select('*').order('created_at', { ascending: false }).limit(500).abortSignal(signal),
+        client.from('batches').select('*').order('opened_at', { ascending: false }).limit(500).abortSignal(signal),
+        client.from('shift_plans').select('*').eq('plan_date', today).eq('shift', shiftName).abortSignal(signal),
+        loadLinePace(today + '|' + shiftName, signal)
+      ]);
+      const error = reports.error || batches.error || plans.error;
+      if (error) throw error;
+      rawReports = reports.data || [];
+      allBatches = batches.data || [];
       rawBatches = allBatches.filter(b => b.status === 'open');
-
-      const { data: plans, error: planErr } = await client.from('shift_plans')
-        .select('*').eq('plan_date', today).eq('shift', shiftName);
-      
-      if (planErr) throw planErr;
-      rawPlans = plans || [];
+      rawPlans = plans.data || [];
 
       const genPlan = rawPlans.find(p => Number(p.line_number) === 0);
       totalGeneralPlanKg = genPlan ? Number(genPlan.plan_kg) : 0;
@@ -507,29 +546,28 @@ function getMascotAsset(message, kind) {
 
       document.getElementById('shiftPlanInput').value = totalGeneralPlanKg > 0 ? totalGeneralPlanKg : 20000;
 
-      await loadLinePace(today + '|' + shiftName);
       renderTopSummary();
       renderLiveLineCards();
       filterShiftsTable();
       
       syncText.innerHTML = `<div><span class="live-dot"></span> Онлайн • автообновление 30 сек • ${new Date().toLocaleTimeString('ru-RU')}</div>`;
+      return true;
     } catch (e) {
       console.error(e);
       syncText.innerHTML = `<div style="color:#ef4444; font-weight:bold;">Ошибка связи</div>`;
       syncErr.innerText = 'Не удалось обновить данные. Проверьте соединение и попробуйте ещё раз.';
       syncErr.classList.remove('hidden');
-    } finally {
-      dashboardRefreshInProgress = false;
+      return false;
     }
   }
 
-  async function loadLinePace(shiftKey) {
+  async function loadLinePace(shiftKey, signal) {
     await Promise.all(PRIMATEK_LINES.map(async line => {
       try {
         const { data, error } = await client.from('line_pace_measurements')
           .select('elapsed_ms, measured_at')
           .eq('shift_key', shiftKey).eq('line_number', line)
-          .order('measured_at', { ascending: false }).limit(1).maybeSingle();
+          .order('measured_at', { ascending: false }).limit(1).abortSignal(signal).maybeSingle();
         if (error) throw error;
         latestPaceByLine.set(line, { shiftKey, data });
       } catch (error) {
